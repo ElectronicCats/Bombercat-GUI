@@ -1,75 +1,93 @@
-<div align="center">
+<p align="center">
+  <pre>
+███████╗███╗   ███╗██╗   ██╗██╗   ██╗
+██╔════╝████╗ ████║██║   ██║╚██╗ ██╔╝
+█████╗  ██╔████╔██║██║   ██║ ╚████╔╝ 
+██╔══╝  ██║╚██╔╝██║╚██╗ ██╔╝  ╚██╔╝  
+███████╗██║ ╚═╝ ██║ ╚████╔╝    ██║   
+╚══════╝╚═╝     ╚═╝  ╚═══╝     ╚═╝    
+        C  O  N  T  R  O  L  L  E  R
+  </pre>
+</p>
 
-# EMVy Controller
+<p align="center">
+  <strong>Desarrollado por Glitchboi</strong><br>
+  Seguridad desde México para todos
+</p>
 
-**Suite funcional de pruebas de seguridad para tarjetas bancarias**
-Chip **EMV** (PC/SC) · **NFC/contactless** · **banda magnética** · **BomberCat**
-
-[![Estado](https://img.shields.io/badge/estado-BETA-orange)](https://github.com/Glitchboi-sudo/EMVy_Controller/releases)
-[![Licencia](https://img.shields.io/badge/licencia-MIT-blue)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB)](https://www.python.org/)
-[![Plataforma](https://img.shields.io/badge/plataforma-Linux-333)](#descarga-linux)
-[![Tests](https://img.shields.io/badge/tests-238%20passing-brightgreen)](tests/)
-
-</div>
-
----
-
-> ## ⚠️ Software en BETA
->
-> EMVy Controller está en **fase beta**. Funciona y está probado (238 tests, hardware real),
-> pero **la API, la CLI y los formatos de datos pueden cambiar** entre versiones. Úsalo
-> esperando aristas y reporta lo que encuentres.
-
-> ## 🔒 Uso previsto y responsable
->
-> Herramienta para **pruebas de seguridad autorizadas**: pentest, laboratorio, CTF e
-> investigación con tarjetas **propias o de laboratorio**. La suite **lee y explora** la
-> tarjeta; los valores de "terminal" son **de laboratorio** y **no generan transacciones
-> válidas**.
->
-> **No la uses contra tarjetas ajenas ni para fraude.** El uso indebido es responsabilidad
-> exclusiva de quien lo realiza. Ver [`SECURITY.md`](SECURITY.md).
+<p align="center">
+  <img src="https://img.shields.io/badge/estado-BETA-orange" alt="Estado" />
+  <img src="https://img.shields.io/badge/license-GNU_AGPLv3-blue" alt="License" />
+  <img src="https://img.shields.io/badge/python-3.10%2B-3776AB" alt="Python" />
+  <img src="https://img.shields.io/badge/plataforma-Linux-333" alt="Plataforma" />
+  <img src="https://img.shields.io/badge/tests-238%20passing-brightgreen" alt="Tests" />
+</p>
 
 ---
 
-## ¿Qué hace?
+> ### ⚠️ Software en BETA
+> EMVy Controller funciona y está probado (238 tests + hardware real), pero **la API, la CLI y los
+> formatos de datos pueden cambiar** entre versiones. Úsalo esperando aristas y reporta lo que encuentres.
+
+> ### 🔒 Uso responsable
+> Herramienta para **pruebas de seguridad autorizadas** (pentest, laboratorio, CTF) con tarjetas
+> **propias o de laboratorio**. La suite **lee y explora**; los valores de "terminal" son de
+> laboratorio y **no generan transacciones válidas**. **No la uses contra tarjetas ajenas ni para
+> fraude.** Ver [`SECURITY.md`](SECURITY.md).
+
+---
+
+## Tabla de Contenidos
+
+- [¿Qué es EMVy Controller?](#qué-es-emvy-controller)
+- [Descarga (Linux)](#descarga-linux)
+- [Instalación desde fuente](#instalación-desde-fuente)
+- [Uso](#uso)
+- [Hardware soportado](#hardware-soportado)
+- [Wiki y documentación](#wiki-y-documentación)
+- [Arquitectura](#arquitectura)
+- [Desarrollo](#desarrollo)
+- [Contribuir](#contribuir)
+- [Créditos](#créditos)
+- [Licencia](#licencia)
+
+---
+
+## ¿Qué es EMVy Controller?
+
+**EMVy Controller** es una suite **funcional** de **pruebas de seguridad para tarjetas bancarias**:
+controla múltiples lectores (chip **EMV** vía PC/SC, **NFC/contactless**, **banda magnética** y
+**BomberCat**), organiza el trabajo en **proyectos**, gestiona **variables de entorno** (perfil de
+terminal EMV + variables libres) y ofrece una **TUI**, una **GUI** de escritorio y una **CLI**.
 
 Descubre y explora todo lo accesible en una tarjeta de pago, y ayuda a **perfilar terminales/POS**:
 
-- **Descubre** aplicaciones EMV (PSE/PPSE/AIDs), lee FCI, ejecuta el GPO (AIP/AFL), lee registros
-  y contadores (`GET DATA`), y decodifica pistas de **banda magnética**.
+- **Descubre** aplicaciones EMV (PSE/PPSE/AIDs), lee FCI, ejecuta el GPO (AIP/AFL), lee registros y
+  contadores (`GET DATA`), y decodifica pistas de **banda magnética**.
 - **Analiza** la seguridad de la tarjeta: AIP/AUC, lista de **CVM**, **ODA** (SDA/DDA/CDA, claves
   débiles, verificación RSA del certificado del emisor) y genera hallazgos.
-- **Organiza** el trabajo en **proyectos** con **variables** (perfil de terminal EMV + libres) y
-  **perfiles** de terminal preconfigurados (kiosko sin CVM, POS atendido, ATM…).
-- **Escribe** en tarjetas de laboratorio (UPDATE RECORD/BINARY, PUT DATA, APPEND) y **fuzzea**
-  terminales con pistas mutadas (magspoof), registros EMV mutados y **tags NDEF** malformados.
-- **BomberCat**: lector EMV contactless, passthrough APDU, magspoof, **emulación de tag NDEF** y
-  **emulación de tarjeta EMV** (para perfilar/fuzzear terminales), flasheo de firmware.
+- **Escribe** en tarjetas de laboratorio y **fuzzea** terminales con pistas mutadas (magspoof),
+  registros EMV mutados y **tags NDEF** malformados.
+- **BomberCat**: lector EMV contactless, passthrough APDU, magspoof, **emulación** de tag NDEF y de
+  **tarjeta EMV** (para perfilar/fuzzear terminales), y flasheo de firmware.
 - **PoCs**: framework con runner + plugins por proyecto y plantillas ISO 8583 (sign-on / compra /
   reverso) para flujos de switch/adquirente.
 - Busca **flags** automáticamente en cada byte devuelto (útil en CTF).
-
-Tres interfaces sobre el **mismo núcleo puro**: una **TUI** (Textual), una **GUI** de escritorio
-(PySide6/Qt) y una **CLI** para scripting.
 
 ---
 
 ## Descarga (Linux)
 
-<a name="descarga-linux"></a>
-
 Los binarios se publican en **[Releases](https://github.com/Glitchboi-sudo/EMVy_Controller/releases)**.
 
-```sh
-# Descarga el AppImage de la última release (o hazlo desde la web de Releases)
+```bash
+# Descarga el AppImage de la última release
 chmod +x EMVy_Controller-*-beta-x86_64.AppImage
 ./EMVy_Controller-*-beta-x86_64.AppImage
 ```
 
 El **AppImage** trae la **GUI** completa + núcleo + lectores PC/SC y BomberCat (serie), sin instalar
-nada de Python. Requisitos del sistema destino (no se pueden empaquetar):
+Python. Requisitos del sistema destino (no se pueden empaquetar):
 
 | Necesitas… | Instala en el destino |
 |---|---|
@@ -77,10 +95,8 @@ nada de Python. Requisitos del sistema destino (no se pueden empaquetar):
 | **NFC** (`nfcpy`) / **banda** (`evdev`) | deps propias del backend (opcionales) |
 | **Flashear firmware** BomberCat | `arduino-cli` (o arrastrar el `.uf2` incluido a la unidad `RPI-RP2`) |
 
-> El socket `pcscd.socket` lo **arranca la app sola** al abrir (vía `systemctl start`, sin sudo en la
-> mayoría de setups con polkit). Si no tiene permiso: `sudo systemctl enable --now pcscd.socket`.
-
-¿Prefieres instalar desde el código? Ver **[Instalación desde fuente](#instalación-desde-fuente)**.
+> El socket `pcscd.socket` lo **arranca la app sola** al abrir. Si no tiene permiso:
+> `sudo systemctl enable --now pcscd.socket`.
 
 ---
 
@@ -88,7 +104,7 @@ nada de Python. Requisitos del sistema destino (no se pueden empaquetar):
 
 Requiere **Python 3.10+** (probado hasta 3.14). Recomendado con [`uv`](https://docs.astral.sh/uv/):
 
-```sh
+```bash
 git clone https://github.com/Glitchboi-sudo/EMVy_Controller.git
 cd EMVy_Controller
 
@@ -98,7 +114,7 @@ uv pip install --python .venv -e '.[dev,tui]'   # + [gui] [nfc] [msr] [bombercat
 
 Con `pip` estándar:
 
-```sh
+```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev,tui]'
 ```
@@ -111,69 +127,42 @@ pip install -e '.[dev,tui]'
 | Debian/Ubuntu | `sudo apt install pcscd libpcsclite-dev swig build-essential` |
 | Fedora | `sudo dnf install pcsc-lite pcsc-lite-devel swig gcc` |
 
-Extras opcionales (`pyproject.toml`): `tui` (Textual) · `gui` (PySide6) · `nfc` (nfcpy) ·
-`msr` (pyserial+evdev) · `bombercat` (pyserial) · `relay` (paho-mqtt) · `dev` (pytest).
+Guía detallada en la **[Wiki → Instalación](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Instalación)**.
 
 ---
 
-## Uso rápido
+## Uso
 
 ### TUI (recomendada)
 
-```sh
+```bash
 ./emvyctl.py tui      # o: emvy tui
 ```
 
-Pestañas: **Inicio · Proyectos · Variables · Lectores · Explorador · Consola (Flags/ISO 8583/Escritura)
-· Cobros · PoC · Intercept · BomberCat · Fuzzing**. Atajo `?` abre la ayuda con todos los atajos.
-
 ### GUI de escritorio (Qt)
 
-```sh
+```bash
 uv pip install --python .venv -e '.[gui]'
 ./emvyctl.py gui      # o: emvy gui
 ```
 
-Frontend nativo con **paridad de funciones** con la TUI, barra lateral por secciones, editor de
-tarjeta EMV, IDE de PoCs y una **consola cruda** que muestra todo el TX/RX del hardware.
-
 ### CLI (scripting)
 
-```sh
+```bash
 ./emvyctl.py readers                 # lista lectores (todos los backends)
 ./emvyctl.py info                    # resumen legible + búsqueda de flags
 ./emvyctl.py discover                # apps EMV (PPSE/PSE/bruteforce)
-./emvyctl.py dump -o card.json       # volcado completo a JSON
-./emvyctl.py dump --save cap1        # guardar como captura del proyecto activo
+./emvyctl.py dump --save cap1        # captura del proyecto activo
 ./emvyctl.py analyze                 # análisis de seguridad EMV (AIP/AUC/CVM/ODA)
 ./emvyctl.py flags --file card.json  # buscar flags offline sobre un dump
-./emvyctl.py search 'flag\{[^}]+\}'  # regex propio
-
-# Banda magnética
-./emvyctl.py track '%B...^DOE/JOHN^2512...?;...=2512...?'
 
 # Proyectos y variables
 ./emvyctl.py project new lab --desc "pentest lab"
-./emvyctl.py var set amount 000000001500      # alias terminal (hex)
-./emvyctl.py var set merchant_name "ACME"      # tag texto (an/ans)
 ./emvyctl.py var apply contactless-kiosk       # perfil de terminal en un paso
 ```
 
-Selección de lector: `-r <índice|nombre|backend|id>`. El perfil de terminal para el GPO sale del
-**proyecto activo**. Guía completa de comandos en **[`docs/USO.md`](docs/USO.md)**.
-
-### Como librería
-
-```python
-from emvy.readers import registry
-from emvy.session import capture_card, find_flags
-
-dev = registry.list_all_devices()[0]
-with registry.open_device(dev) as r:
-    dump = capture_card(r.transceive, atr=r.atr(), reader=r.device.name)
-    for hit in find_flags(dump):
-        print(hit.match, "->", hit.source)
-```
+Selección de lector: `-r <índice|nombre|backend|id>`. La referencia completa está en la
+**[Wiki → Guía de uso](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Guía-de-uso)**.
 
 ---
 
@@ -184,38 +173,34 @@ with registry.open_device(dev) as r:
 | **pcsc** | pyscard | chip de contacto + contactless PC/SC | requiere `pcscd` + driver `ccid` |
 | **nfc** | nfcpy | NFC/ISO-DEP (EMV contactless, Type 4) | PN532/PN533, ACR122, RC-S380 |
 | **msr** | evdev / pyserial | banda magnética (HID / serie) | parsea el swipe con `core.track` |
-| **bombercat** | pyserial | EMV contactless, passthrough APDU, magspoof, relay, emulación | Electronic Cats RP2040 |
+| **bombercat** | pyserial | EMV contactless, passthrough, magspoof, emulación | Electronic Cats RP2040 |
 
 **Degradación elegante**: si falta una dependencia o el hardware, ese backend simplemente no aporta
-dispositivos — el resto sigue funcionando.
-
-### BomberCat (Electronic Cats)
-
-```sh
-./emvyctl.py bombercat setup                 # prepara el framework oficial (venv aislado)
-./emvyctl.py bombercat read --save cap1      # lee EMV contactless → captura
-./emvyctl.py bombercat fw list               # firmwares oficiales (UF2)
-./emvyctl.py bombercat fw flash NFCGate      # descarga + flashea (bootloader UF2)
-./emvyctl.py bombercat devices|status|tags|readers
-```
-
-Incluye un firmware unificado "navaja suiza" (`firmware/EMVyBomberCat/`: EMV + passthrough + tags +
-magspoof + emulación NDEF/EMV). Detalles en **[`docs/HARDWARE.md`](docs/HARDWARE.md)** y en
-**[`CLAUDE.md §9 y §12`](CLAUDE.md)**.
+dispositivos — el resto sigue funcionando. Detalle en la
+**[Wiki → Hardware y lectores](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Hardware-y-lectores)**.
 
 ---
 
-## Documentación
+## Wiki y documentación
 
-| Documento | Contenido |
+📖 **La documentación completa vive en la [Wiki del proyecto](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki)**:
+
+| Página | Contenido |
 |---|---|
-| **[`docs/INSTALACION.md`](docs/INSTALACION.md)** | Instalación detallada por distro, extras, y requisitos de hardware. |
-| **[`docs/USO.md`](docs/USO.md)** | Guía completa de la CLI, TUI y flujo de pentest sugerido. |
-| **[`docs/HARDWARE.md`](docs/HARDWARE.md)** | Lectores soportados, PC/SC, NFC, banda magnética y BomberCat. |
-| **[`packaging/README.md`](packaging/README.md)** | Cómo construir binarios (AppImage / .exe). |
-| **[`CLAUDE.md`](CLAUDE.md)** | Wiki de arquitectura completa (referencia para contribuir). |
-| **[`CONTRIBUTING.md`](CONTRIBUTING.md)** | Cómo contribuir, estilo de código y convenciones. |
-| **[`CHANGELOG.md`](CHANGELOG.md)** | Historial de versiones. |
+| [Inicio](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki) | Qué es, qué hace y cómo funciona. |
+| [Instalación](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Instalación) | Por distro, extras y requisitos de hardware. |
+| [Guía de uso](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Guía-de-uso) | CLI, TUI, GUI y flujo de pentest sugerido. |
+| [Arquitectura](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Arquitectura) | Diseño funcional, capas y el `Transceiver`. |
+| [Hardware y lectores](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Hardware-y-lectores) | PC/SC, NFC, banda y BomberCat. |
+| [BomberCat](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/BomberCat) | Firmware, emulación NDEF/EMV y flasheo. |
+| [Variables y perfiles](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Variables-y-perfiles) | Perfil de terminal EMV y variables libres. |
+| [Análisis de seguridad](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Análisis-de-seguridad) | AIP/AUC, CVM y ODA. |
+| [PoCs y Cobros](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/PoCs-y-Cobros) | Framework de PoCs y switch ISO 8583. |
+| [Fuzzing](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Fuzzing) | Probar terminales/POS con datos fuera de norma. |
+| [FAQ](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/FAQ) | Preguntas y problemas frecuentes. |
+
+En el repo también hay copias en [`docs/`](docs/), la wiki de arquitectura para contribuir
+([`CLAUDE.md`](CLAUDE.md)) y el [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -230,7 +215,7 @@ emvy/
 ├── readers/    lectores: pcsc · nfc · msr · bombercat (tras un `Transceiver`)
 ├── payments/   helpers de pago puros: EmvCard, ISO 8583, cryptogram, switch
 ├── session/    captura/volcado de tarjeta (CardDump)
-├── project/    proyectos + variables (perfil terminal EMV + libres) + perfiles
+├── project/    proyectos + variables + perfiles
 ├── poc/        framework de PoCs (runner + plugins del proyecto)
 ├── tui/        interfaz TUI (Textual)
 ├── gui/        interfaz GUI de escritorio (PySide6/Qt)
@@ -238,23 +223,46 @@ emvy/
 ```
 
 La abstracción clave es `Transceiver = Callable[[APDU|bytes], Response]`: **toda** la lógica EMV
-recibe una función `send`, no un objeto con estado — desacopla la lógica del backend y la hace
-testeable con una tarjeta simulada. Wiki completa en **[`CLAUDE.md`](CLAUDE.md)**.
+recibe una función `send`, no un objeto con estado. Más en la
+**[Wiki → Arquitectura](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki/Arquitectura)**.
 
 ---
 
 ## Desarrollo
 
-```sh
+```bash
 .venv/bin/python -m pytest tests/ -q     # suite offline (238 tests, sin hardware)
 ```
 
-`tests/fakecard.py` es una tarjeta Mastercard **simulada** (un `Transceiver` falso) que permite
-probar todo el flujo EMV sin hardware. Ver **[`CONTRIBUTING.md`](CONTRIBUTING.md)** para el flujo de
-trabajo y las convenciones de código.
+`tests/fakecard.py` es una tarjeta simulada (un `Transceiver` falso) que permite probar todo el flujo
+EMV sin hardware. Ver [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+---
+
+## Contribuir
+
+Los PRs son bienvenidos. Antes de empezar, lee [`CONTRIBUTING.md`](CONTRIBUTING.md): convenciones de
+código (núcleo puro, inmutabilidad, efectos en los bordes), cómo correr los tests y qué **nunca**
+subir (datos de tarjeta, capturas, datos de cliente). Reporta bugs y mejoras con las plantillas de
+[issues](https://github.com/Glitchboi-sudo/EMVy_Controller/issues).
+
+---
+
+## Créditos
+
+Desarrollado por **[Glitchboi](https://github.com/Glitchboi-sudo)** — *Seguridad desde México para
+todos*.
+
+- Integra el framework oficial **[bombercat-tools](https://github.com/ElectronicCats/bombercat-tools)**
+  de [Electronic Cats](https://electroniccats.com/) (vendorizado en `vendor/`, con su propia licencia).
+- Construido sobre `pyscard`, `nfcpy`, `Textual`, `PySide6` y el ecosistema Python.
 
 ---
 
 ## Licencia
 
-[MIT](LICENSE) © 2026 glitchboi. El código vendorizado en `vendor/` conserva su propia licencia.
+Copyright © 2026 **glitchboi**. Distribuido bajo la **[GNU Affero General Public License v3.0 o
+posterior](LICENSE)** (AGPL-3.0-or-later).
+
+El código de terceros vendorizado en `vendor/` conserva su **propia licencia** (ver
+`vendor/bombercat-tools/LICENSE`) y **no** está cubierto por la AGPL de este proyecto.

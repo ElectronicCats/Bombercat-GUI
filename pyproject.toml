@@ -4,8 +4,15 @@ version = "0.5.0"
 description = "Suite funcional de pruebas de seguridad para tarjetas bancarias (chip EMV, NFC, banda magnética, BomberCat) con framework de PoCs"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "glitchboi" }]
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Security",
+    "Development Status :: 4 - Beta",
+]
 dependencies = ["pyscard>=2.0"]
 
 [project.optional-dependencies]
