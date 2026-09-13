@@ -74,7 +74,12 @@ jobs:
           El detalle de cambios está en `CHANGELOG.md`.
           EOF
           )"
-          gh release create "$TAG" dist/* \
-            --title "EMVy Controller $TAG (BETA)" \
-            --notes "$NOTES" \
-            --prerelease
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # La release ya existe (p.ej. creada a mano): solo sube/actualiza los artefactos.
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --title "EMVy Controller $TAG (BETA)" \
+              --notes "$NOTES" \
+              --prerelease
+          fi
