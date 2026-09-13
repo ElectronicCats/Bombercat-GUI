@@ -1,0 +1,9 @@
+# Núcleo (chip EMV vía PC/SC)
+pyscard>=2.0
+
+# Interfaz TUI (recomendada)
+textual>=0.60
+
+# Backends opcionales de hardware (instala según tu lector):
+#   NFC / contactless:   nfcpy>=1.0
+#   Banda magnética:     pyserial>=3.5   evdev>=1.6

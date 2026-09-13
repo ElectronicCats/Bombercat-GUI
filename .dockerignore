@@ -1,0 +1,24 @@
+# Excluir del contexto de build (y por tanto del binario) todo lo que NO debe
+# distribuirse: datos de cliente, entornos, artefactos y control de versiones.
+engagements/            # proyectos/datos de cliente (NUNCA se empaquetan)
+**/captures/            # capturas de tarjeta (por si alguna vive en el árbol)
+**/*.capture.json
+.venv/
+venv/
+dist/
+build/
+packaging/out/
+**/__pycache__/
+**/*.pyc
+.git/
+.pytest_cache/
+*.zip
+vendor/                 # bombercat-tools vendorizado (usa su propio venv; opcional)
+# Firmware: se incluye el CÓDIGO (.ino/.h/.cpp) y el .uf2 flasheable; se dejan
+# fuera los intermedios pesados de compilación.
+firmware/*/build/*.elf
+firmware/*/build/*.bin
+firmware/*/build/*.map
+firmware/*/build/*.hex
+firmware/*/build/*.a
+firmware/*/build/*.o

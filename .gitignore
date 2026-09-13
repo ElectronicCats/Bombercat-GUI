@@ -1,0 +1,64 @@
+# ─── Datos sensibles / de cliente (NUNCA subir) ────────────────────────────
+# Los engagements contienen datos de cliente; solo se versiona el README guía.
+engagements/*
+!engagements/README.md
+# Capturas de tarjeta que pudieran quedar sueltas en el árbol.
+**/captures/
+*.capture.json
+card*.json
+mock_card_*.json
+transactions/
+poc_runs/
+logs/
+
+# ─── Entornos virtuales ────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+# venv aislado del framework vendorizado (se recrea con `emvy bombercat setup`).
+vendor/bombercat-tools/.venv/
+
+# ─── Artefactos de build / distribución ────────────────────────────────────
+/dist/
+/build/
+packaging/out/
+*.egg-info/
+*.egg
+wheels/
+*.whl
+*.tar.gz
+# AppImage / binarios (se publican en Releases, no en git).
+*.AppImage
+*.exe
+
+# ─── Firmware: solo el .uf2 flasheable; fuera los intermedios pesados ───────
+firmware/*/build/*
+!firmware/*/build/*.uf2
+# certs TLS del firmware: se generan con generate_cert.py, no se versionan
+# (contendrían una clave privada). El .ino no los usa hoy (panel web = HTTP).
+firmware/*/certs.h
+
+# ─── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ─── Editores / SO ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Configuración local ───────────────────────────────────────────────────
+.env
+.env.local

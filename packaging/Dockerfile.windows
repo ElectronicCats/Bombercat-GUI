@@ -1,0 +1,23 @@
+# Construye un .exe de EMVy Controller (GUI) desde Linux usando Wine + PyInstaller.
+# Best-effort: PyInstaller no compila cruzado, así que se usa un Python de Windows
+# bajo Wine. PySide6 bajo Wine puede ser delicado; si falla, compila en Windows
+# nativo (o en un runner windows-latest de CI) con `pyinstaller packaging/EMVyController.spec`.
+#
+#   docker build -f packaging/Dockerfile.windows -t emvy-win .
+#   docker run --rm -v "$PWD/dist:/out" emvy-win
+FROM tobix/pywine:3.12
+
+ENV WINEDEBUG=-all
+WORKDIR /src
+COPY . /src
+
+# Deps de la app + PyInstaller dentro del Python de Windows (bajo Wine).
+RUN wine python -m pip install --no-cache-dir --upgrade pip \
+    && wine python -m pip install --no-cache-dir pyinstaller \
+    && wine python -m pip install --no-cache-dir ".[gui]" pyserial
+
+# Empaqueta (onedir → dist/EMVyController/EMVyController.exe).
+RUN wine pyinstaller --noconfirm --clean packaging/EMVyController.spec
+
+# Copia la carpeta del .exe a /out (zip recomendado para distribuir).
+CMD sh -c 'mkdir -p /out && cp -r dist/EMVyController /out/ && echo "EXE en /out/EMVyController/EMVyController.exe"'

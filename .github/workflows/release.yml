@@ -1,0 +1,80 @@
+name: Release (Linux)
+
+# Publica una release BETA con el AppImage de Linux + el paquete Python (wheel/sdist).
+# Se dispara al empujar un tag `v*` (p.ej. v0.5.0-beta) o manualmente.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a publicar (p.ej. v0.5.0-beta)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Construir y publicar (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolver el tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Construir el AppImage (Docker, Ubuntu 22.04)
+        run: bash packaging/build-appimage.sh
+
+      - name: Construir el paquete Python (wheel + sdist)
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Listar artefactos
+        run: ls -la dist/
+
+      - name: Publicar la release (BETA / prerelease)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          NOTES="$(cat <<'EOF'
+          ## EMVy Controller — versión BETA
+
+          > ⚠️ **Software en BETA.** Funciona y está probado, pero la API, la CLI y los
+          > formatos de datos pueden cambiar entre versiones.
+
+          ### Descarga (Linux)
+
+          - **`EMVy_Controller-*-beta-x86_64.AppImage`** — GUI lista para usar (chip PC/SC +
+            BomberCat). `chmod +x` y ejecutar. Necesita `pcscd`/`ccid` en el sistema para
+            lectores de chip (ver el README).
+          - **`*.whl` / `*.tar.gz`** — paquete Python (`pip install`) con CLI + TUI + librería.
+
+          ### Uso responsable
+
+          Solo para pruebas de seguridad **autorizadas** con tarjetas propias o de laboratorio.
+          Ver `SECURITY.md`.
+
+          El detalle de cambios está en `CHANGELOG.md`.
+          EOF
+          )"
+          gh release create "$TAG" dist/* \
+            --title "EMVy Controller $TAG (BETA)" \
+            --notes "$NOTES" \
+            --prerelease
