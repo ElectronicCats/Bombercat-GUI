@@ -5,7 +5,7 @@ title: "[bug] "
 labels: bug
 ---
 
-> ⚠️ **No incluyas datos de tarjeta** (PAN, tracks, fecha de caducidad, titular, claves) ni
+> **No incluyas datos de tarjeta** (PAN, tracks, fecha de caducidad, titular, claves) ni
 > capturas reales. Anonimiza cualquier salida antes de pegarla.
 
 ## Descripción

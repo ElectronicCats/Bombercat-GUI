@@ -56,7 +56,7 @@ jobs:
           NOTES="$(cat <<'EOF'
           ## EMVy Controller — versión BETA
 
-          > ⚠️ **Software en BETA.** Funciona y está probado, pero la API, la CLI y los
+          > **Software en BETA.** Funciona y está probado, pero la API, la CLI y los
           > formatos de datos pueden cambiar entre versiones.
 
           ### Descarga (Linux)

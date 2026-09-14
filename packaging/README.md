@@ -5,13 +5,13 @@ Genera binarios **de la GUI** de EMVy Controller. La misma `EMVyController.spec`
 
 ## Qué se incluye / qué NO
 
-- ✅ La aplicación (GUI PySide6) + núcleo + lectores (PC/SC, BomberCat serie).
-- ✅ **`firmware/`** (código de los sketches + el `.uf2` flasheable) — para
+- **Sí:** La aplicación (GUI PySide6) + núcleo + lectores (PC/SC, BomberCat serie).
+- **Sí:** **`firmware/`** (código de los sketches + el `.uf2` flasheable) — para
   compilar/flashear desde la pestaña BomberCat.
-- ❌ **Proyectos y capturas**: viven en el directorio XDG del sistema
+- **No:** **Proyectos y capturas**: viven en el directorio XDG del sistema
   (`~/.local/share/emvy`), nunca dentro del binario.
-- ❌ **`engagements/`** (datos de cliente): excluidos por `.dockerignore`.
-- ❌ `vendor/bombercat-tools`: opcional, usa su propio venv; no se empaqueta.
+- **No:** **`engagements/`** (datos de cliente): excluidos por `.dockerignore`.
+- **No:** `vendor/bombercat-tools`: opcional, usa su propio venv; no se empaqueta.
 
 ## Linux — AppImage (recomendado)
 

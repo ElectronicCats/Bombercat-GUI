@@ -25,11 +25,11 @@
 
 ---
 
-> ### ⚠️ Software en BETA
+> ### Software en BETA
 > EMVy Controller funciona y está probado (238 tests + hardware real), pero **la API, la CLI y los
 > formatos de datos pueden cambiar** entre versiones. Úsalo esperando aristas y reporta lo que encuentres.
 
-> ### 🔒 Uso responsable
+> ### Uso responsable
 > Herramienta para **pruebas de seguridad autorizadas** (pentest, laboratorio, CTF) con tarjetas
 > **propias o de laboratorio**. La suite **lee y explora**; los valores de "terminal" son de
 > laboratorio y **no generan transacciones válidas**. **No la uses contra tarjetas ajenas ni para
@@ -183,7 +183,7 @@ dispositivos — el resto sigue funcionando. Detalle en la
 
 ## Wiki y documentación
 
-📖 **La documentación completa vive en la [Wiki del proyecto](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki)**:
+**La documentación completa vive en la [Wiki del proyecto](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki)**:
 
 | Página | Contenido |
 |---|---|
