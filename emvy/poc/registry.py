@@ -4,6 +4,7 @@ Los PoCs se declaran con el decorador `@poc(...)`. El core no trae PoCs
 integrados: se cargan como plugins desde `<proyecto>/pocs/*.py` con
 `load_plugins(project)`.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -12,17 +13,30 @@ from pathlib import Path
 from .model import Poc, PocMeta, Severity
 
 _REGISTRY: dict[str, Poc] = {}
-_SOURCES: dict[str, str] = {}     # poc_id -> archivo fuente (basename)
+_SOURCES: dict[str, str] = {}  # poc_id -> archivo fuente (basename)
 
 
-def poc(id: str, *, title: str = "", category: str = "general",
-        severity: Severity | str = Severity.INFO, description: str = "",
-        authorization: str = "", tags=()):
+def poc(
+    id: str,
+    *,
+    title: str = "",
+    category: str = "general",
+    severity: Severity | str = Severity.INFO,
+    description: str = "",
+    authorization: str = "",
+    tags=(),
+):
     """Decorador para registrar un PoC. La función decorada es `run(ctx)`."""
     sev = severity if isinstance(severity, Severity) else Severity(str(severity))
-    meta = PocMeta(id=id, title=title or id, category=category, severity=sev,
-                   description=description, authorization=authorization,
-                   tags=tuple(tags))
+    meta = PocMeta(
+        id=id,
+        title=title or id,
+        category=category,
+        severity=sev,
+        description=description,
+        authorization=authorization,
+        tags=tuple(tags),
+    )
 
     def wrap(fn):
         register(Poc(meta=meta, run=fn))

@@ -1,4 +1,5 @@
 """Tests del framework de PoCs: registro, plugins, runner, HTTP (dry-run/RO)."""
+
 import types
 
 import pytest
@@ -19,7 +20,7 @@ def project(tmp_path):
     return proj
 
 
-PLUGIN = '''
+PLUGIN = """
 from emvy.poc import poc, Severity, Status
 @poc(id="demo", title="Demo", category="api", severity=Severity.HIGH, authorization="lab")
 def run(ctx):
@@ -27,7 +28,7 @@ def run(ctx):
     tgt = ctx.var("target", "n/a")
     return ctx.result(Status.VULNERABLE, f"target={tgt}",
                       [ctx.finding("hallazgo", Severity.HIGH, "detalle")])
-'''
+"""
 
 
 def test_load_and_run_plugin(project):
@@ -38,7 +39,9 @@ def test_load_and_run_plugin(project):
 
     p = pk.get("demo")
     run_dir = pk.runner.run_dir_for(project, "demo")
-    ctx = pk.make_context(project, variables={"target": "x"}, run_dir=run_dir, dry_run=True)
+    ctx = pk.make_context(
+        project, variables={"target": "x"}, run_dir=run_dir, dry_run=True
+    )
     res = pk.run_poc(p, ctx)
     pk.save_result(ctx, p.meta, res)
     assert res.status == pk.Status.VULNERABLE
@@ -58,6 +61,7 @@ def test_broken_plugin_does_not_crash(project):
 def test_runner_catches_exceptions(project):
     def boom(ctx):
         raise RuntimeError("kaboom")
+
     p = pk.Poc(meta=pk.PocMeta(id="boom"), run=boom)
     ctx = pk.make_context(None, variables={}, run_dir=project.path / "r")
     res = pk.run_poc(p, ctx)

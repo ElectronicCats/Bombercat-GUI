@@ -4,6 +4,7 @@ Los datos del usuario (proyectos, capturas) viven en el directorio XDG del siste
 (`~/.local/share/emvy`), NO dentro del binario — por eso no se empaqueta ninguno.
 El firmware sí va incluido (ver EMVyController.spec) para poder compilar/flashear.
 """
+
 import sys
 
 from emvy.gui.app import run_gui

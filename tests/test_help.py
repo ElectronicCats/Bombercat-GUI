@@ -1,4 +1,5 @@
 """Modal de ayuda (?) y footer: se abre/cierra y no rompe la app."""
+
 import asyncio
 
 import pytest
@@ -35,7 +36,7 @@ def test_help_action_is_idempotent():
             await pilot.pause()
             app.action_help()
             await pilot.pause()
-            app.action_help()          # segundo intento: no debe apilar
+            app.action_help()  # segundo intento: no debe apilar
             await pilot.pause()
             assert sum(isinstance(s, HelpScreen) for s in app.screen_stack) == 1
 

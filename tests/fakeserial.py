@@ -4,6 +4,7 @@ para probar el backend `emvy.readers.bombercat` sin hardware.
 `install()` inyecta un módulo `serial` falso en sys.modules, de modo que
 `emvy.readers.bombercat` lo use tal cual (import perezoso).
 """
+
 from __future__ import annotations
 
 import json
@@ -15,11 +16,17 @@ from emvy.core.hexutil import from_hex, to_hex
 from fakecard import AID, TRACK2, build_fake_card
 
 _EMV_JSON = {
-    "ok": True, "pan": "4189143370041827",
+    "ok": True,
+    "pan": "4189143370041827",
     "track2": "4189143370041827D29092211000002600000F",
-    "expiry": "2909", "aid": "A0000000031010", "aidName": "VISA",
-    "aip": "2000", "atc": "002F", "arqc": "D6F5B2E0E50B0F9C",
-    "iad": "06011203A02000", "un": "ED999B69",
+    "expiry": "2909",
+    "aid": "A0000000031010",
+    "aidName": "VISA",
+    "aip": "2000",
+    "atc": "002F",
+    "arqc": "D6F5B2E0E50B0F9C",
+    "iad": "06011203A02000",
+    "un": "ED999B69",
 }
 
 
@@ -31,10 +38,10 @@ class FakeSerial:
         self.baudrate = baud
         self.timeout = timeout
         self.dtr = True
-        self._in = bytearray()     # líneas pendientes del host
-        self._out = bytearray()    # bytes listos para readline()
+        self._in = bytearray()  # líneas pendientes del host
+        self._out = bytearray()  # bytes listos para readline()
         self._card, _ = build_fake_card()
-        self._emulating = False    # estado de emulación NDEF (comando EMU:)
+        self._emulating = False  # estado de emulación NDEF (comando EMU:)
 
     # -- API pyserial usada por el backend ---------------------------------
     def reset_input_buffer(self):
@@ -45,7 +52,7 @@ class FakeSerial:
         while b"\n" in self._in:
             idx = self._in.index(b"\n")
             line = bytes(self._in[:idx]).decode("utf-8", "replace").strip()
-            del self._in[:idx + 1]
+            del self._in[: idx + 1]
             self._handle(line)
         return len(data)
 
@@ -56,8 +63,8 @@ class FakeSerial:
         if b"\n" not in self._out:
             return b""
         idx = self._out.index(b"\n")
-        line = bytes(self._out[:idx + 1])
-        del self._out[:idx + 1]
+        line = bytes(self._out[: idx + 1])
+        del self._out[: idx + 1]
         return line
 
     def close(self):
@@ -94,11 +101,16 @@ class FakeSerial:
                 self._emit("OK")
         elif line == "CARDSCAN" or line.startswith("CARDSCAN "):
             # Simula leer una tarjeta y guardarla en la RAM del firmware.
-            self._ram_card = {"aid": "A0000000031010", "pan": "4111111111111111",
-                              "exp": "2909"}
+            self._ram_card = {
+                "aid": "A0000000031010",
+                "pan": "4111111111111111",
+                "exp": "2909",
+            }
             self._emit("# CARDSCAN: acerca la tarjeta contactless a leer...")
-            self._emit(f"EMU:SCANNED aid={self._ram_card['aid']} "
-                       f"pan={self._ram_card['pan']} exp={self._ram_card['exp']} t2len=19")
+            self._emit(
+                f"EMU:SCANNED aid={self._ram_card['aid']} "
+                f"pan={self._ram_card['pan']} exp={self._ram_card['exp']} t2len=19"
+            )
         elif line.startswith("EMUEMV"):
             # Emulación de tarjeta EMV: simula el flujo de un terminal de pago
             # (PPSE → SELECT AID → GPO con PDOL decodificado → READ RECORD →
@@ -114,18 +126,24 @@ class FakeSerial:
                         aid = ram["aid"]
                 else:
                     fields = (rest + "|||").split("|")
-                    self._emit(f"EMU:CARD aid={len(fields[0])//2 if fields[0] else 0} "
-                               f"pan={len(fields[1])//2 if fields[1] else 0} "
-                               f"exp={len(fields[2])//2 if fields[2] else 0} "
-                               f"t2={len(fields[3])//2 if fields[3] else 0}")
+                    self._emit(
+                        f"EMU:CARD aid={len(fields[0])//2 if fields[0] else 0} "
+                        f"pan={len(fields[1])//2 if fields[1] else 0} "
+                        f"exp={len(fields[2])//2 if fields[2] else 0} "
+                        f"t2={len(fields[3])//2 if fields[3] else 0}"
+                    )
                     if fields[0]:
                         aid = fields[0].upper()
             self._emit("EMU:START mode=emv")
-            self._emit("EMU:RX SELECT-PPSE 2PAY.SYS.DDF01 00A404000E325041592E5359532E444446303100")
+            self._emit(
+                "EMU:RX SELECT-PPSE 2PAY.SYS.DDF01 00A404000E325041592E5359532E444446303100"
+            )
             self._emit("EMU:TX 6F...9000")
             self._emit(f"EMU:RX SELECT-AID {aid} ({scheme}) 00A40400")
             self._emit("EMU:TX 6F...9000")
-            self._emit("EMU:RX GPO 80A8000023832136000000000000001000000000000000048400000000000000098409090000009000")
+            self._emit(
+                "EMU:RX GPO 80A8000023832136000000000000001000000000000000048400000000000000098409090000009000"
+            )
             self._emit("  PDOL TTQ(9F66)=36000000")
             self._emit("  PDOL Monto(9F02)=000000001000")
             self._emit("  PDOL Pais(9F1A)=0484")

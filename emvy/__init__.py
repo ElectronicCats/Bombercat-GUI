@@ -20,10 +20,11 @@ Uso rápido como librería:
         for app in emv.discover(rdr.transceive):
             print(app.aid, app.scheme)
 """
+
 from __future__ import annotations
 
 __version__ = "0.5.0"
-__release__ = "BETA"        # canal de publicación (se muestra junto a la versión)
+__release__ = "BETA"  # canal de publicación (se muestra junto a la versión)
 
 from . import core  # noqa: F401  (subpaquetes con IO se importan bajo demanda)
 

@@ -18,6 +18,7 @@ gated por capacidad de firmware y pasan por el auto-flash; `_env()` fija
 `BOMBERCAT_AUTO_FLASH=never` para que EMVy nunca dispare un flasheo/prompt
 implícito por subprocess (ver `_env`).
 """
+
 from __future__ import annotations
 
 import json
@@ -60,8 +61,9 @@ def venv_ready(root: Path | None = None) -> bool:
     if not py.exists():
         return False
     # 'serial' es la primera dependencia que importa bombercat.py
-    r = subprocess.run([str(py), "-c", "import serial, click, rich"],
-                       capture_output=True)
+    r = subprocess.run(
+        [str(py), "-c", "import serial, click, rich"], capture_output=True
+    )
     return r.returncode == 0
 
 
@@ -79,17 +81,21 @@ def ensure_venv(root: Path | None = None, *, log=None) -> Path:
     if shutil.which("uv"):
         say("Creando venv de bombercat-tools con uv…")
         subprocess.run(["uv", "venv", str(root / ".venv")], check=True)
-        subprocess.run(["uv", "pip", "install", "--python", str(py), "-r", str(req)],
-                       check=True)
+        subprocess.run(
+            ["uv", "pip", "install", "--python", str(py), "-r", str(req)], check=True
+        )
     else:
         say("Creando venv de bombercat-tools con venv+pip…")
         subprocess.run([sys.executable, "-m", "venv", str(root / ".venv")], check=True)
         subprocess.run([str(py), "-m", "pip", "install", "-q", "-U", "pip"], check=True)
-        subprocess.run([str(py), "-m", "pip", "install", "-q", "-r", str(req)], check=True)
+        subprocess.run(
+            [str(py), "-m", "pip", "install", "-q", "-r", str(req)], check=True
+        )
 
     if not venv_ready(root):
         raise BombercatToolsError(
-            "El venv de bombercat-tools quedó incompleto tras instalar deps.")
+            "El venv de bombercat-tools quedó incompleto tras instalar deps."
+        )
     return py
 
 
@@ -124,12 +130,15 @@ def run_passthrough(args: list[str], *, log=None) -> int:
     return subprocess.run(cmd, cwd=str(root), env=_env()).returncode
 
 
-def run_capture(args: list[str], *, timeout: float | None = 120) -> subprocess.CompletedProcess:
+def run_capture(
+    args: list[str], *, timeout: float | None = 120
+) -> subprocess.CompletedProcess:
     root = locate()
     ensure_venv(root)
     cmd = _base_cmd(root) + list(args)
-    return subprocess.run(cmd, cwd=str(root), env=_env(),
-                          capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(
+        cmd, cwd=str(root), env=_env(), capture_output=True, text=True, timeout=timeout
+    )
 
 
 def run_json(args: list[str], *, timeout: float | None = 120):
@@ -143,7 +152,8 @@ def run_json(args: list[str], *, timeout: float | None = 120):
         # llegue al usuario, no solo el stderr.
         tail = (cp.stderr.strip() or cp.stdout.strip())[:400]
         raise BombercatToolsError(
-            f"El comando no devolvió JSON (rc={cp.returncode}).\n{tail}")
+            f"El comando no devolvió JSON (rc={cp.returncode}).\n{tail}"
+        )
     return objs if len(objs) > 1 else objs[0]
 
 
@@ -188,8 +198,14 @@ def fw_list() -> int:
     return run_passthrough(["flash", "--list"])
 
 
-def flash(name: str, *, port: str | None = None, device_id: int | None = None,
-          yes: bool = False, log=None) -> int:
+def flash(
+    name: str,
+    *,
+    port: str | None = None,
+    device_id: int | None = None,
+    yes: bool = False,
+    log=None,
+) -> int:
     args = ["flash", name]
     if port:
         args += ["-p", port]
@@ -206,13 +222,17 @@ def parse_fw_names(text: str) -> list[str]:
     names: list[str] = []
     for line in text.splitlines():
         s = line.strip()
-        if not s.startswith("│"):                 # solo filas de tabla ligera
+        if not s.startswith("│"):  # solo filas de tabla ligera
             continue
         cells = [c.strip() for c in s.strip("│").split("│")]
         if len(cells) < 2:
             continue
         name = cells[0]
-        if name and name != "Firmware" and all(ch.isalnum() or ch in "._-" for ch in name):
+        if (
+            name
+            and name != "Firmware"
+            and all(ch.isalnum() or ch in "._-" for ch in name)
+        ):
             names.append(name)
     return names
 
@@ -223,8 +243,13 @@ def fw_list_names(timeout: float = 90) -> list[str]:
     return parse_fw_names(cp.stdout)
 
 
-def flash_capture(name: str, *, port: str | None = None, device_id: int | None = None,
-                  timeout: float = 300):
+def flash_capture(
+    name: str,
+    *,
+    port: str | None = None,
+    device_id: int | None = None,
+    timeout: float = 300,
+):
     """Flashea `name` capturando la salida (para mostrarla en la TUI). Siempre
     con `-y` (no interactivo). Devuelve el CompletedProcess."""
     args = ["flash", name, "-y"]
@@ -240,7 +265,9 @@ def devices_text(timeout: float = 30) -> str:
 
 
 def status_text(port: str | None = None, timeout: float = 30) -> str:
-    return run_capture(["status"] + (["-p", port] if port else []), timeout=timeout).stdout
+    return run_capture(
+        ["status"] + (["-p", port] if port else []), timeout=timeout
+    ).stdout
 
 
 def tags_read(timeout: int = 20):
@@ -279,30 +306,41 @@ def setup_env_gui(*, progress=None) -> subprocess.CompletedProcess:
     inner = [str(py), "bombercat.py", "setup-env"]
 
     if os.name == "nt":
-        raise BombercatToolsError("setup-env es solo para Linux (reglas udev + usermod).")
+        raise BombercatToolsError(
+            "setup-env es solo para Linux (reglas udev + usermod)."
+        )
 
-    if os.geteuid() == 0:                        # ya root: directo
-        return subprocess.run(inner, cwd=str(root), env=_env(),
-                              capture_output=True, text=True, timeout=120)
+    if os.geteuid() == 0:  # ya root: directo
+        return subprocess.run(
+            inner,
+            cwd=str(root),
+            env=_env(),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
 
     pkexec = shutil.which("pkexec")
     if not pkexec:
         sudo_cmd = "sudo " + " ".join(inner)
         raise BombercatToolsError(
             "Se requiere root y no encuentro `pkexec` para elevar gráficamente.\n"
-            f"Ejecuta a mano en una terminal:\n  cd {root} && {sudo_cmd}")
+            f"Ejecuta a mano en una terminal:\n  cd {root} && {sudo_cmd}"
+        )
 
     user = os.environ.get("SUDO_USER") or _login_name()
     # `pkexec env SUDO_USER=<user> <py> bombercat.py setup-env`: env corre como
     # root fijando la variable que _target_user() de las tools lee.
     cmd = [pkexec, "env", f"SUDO_USER={user}", *inner]
-    return subprocess.run(cmd, cwd=str(root), env=_env(),
-                          capture_output=True, text=True, timeout=180)
+    return subprocess.run(
+        cmd, cwd=str(root), env=_env(), capture_output=True, text=True, timeout=180
+    )
 
 
 def _login_name() -> str:
     try:
         import getpass
+
         return getpass.getuser()
     except Exception:
         return os.environ.get("USER", "")

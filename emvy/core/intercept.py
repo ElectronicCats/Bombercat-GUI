@@ -14,6 +14,7 @@ DSL de reglas (una por línea, `#` = comentario):
     resp replace <FROMHEX> <TOHEX>
 Sufijo opcional `@<INSHEX>` para aplicar solo a cierto INS (p.ej. `@B2`).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
@@ -28,9 +29,9 @@ from .hexutil import from_hex, to_hex
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Rule:
-    scope: str                 # "cmd" | "resp"
-    action: str                # "set-tag" | "set-sw" | "replace"
-    args: tuple                # bytes/strings ya normalizados
+    scope: str  # "cmd" | "resp"
+    action: str  # "set-tag" | "set-sw" | "replace"
+    args: tuple  # bytes/strings ya normalizados
     when_ins: int | None = None
     raw: str = ""
 
@@ -86,7 +87,9 @@ def _build_rule(scope, action, args, when_ins, raw) -> Rule:
     if action == "replace":
         if len(args) != 2:
             raise ValueError("replace requiere <FROMHEX> <TOHEX>")
-        return Rule(scope, "replace", (from_hex(args[0]), from_hex(args[1])), when_ins, raw)
+        return Rule(
+            scope, "replace", (from_hex(args[0]), from_hex(args[1])), when_ins, raw
+        )
     raise ValueError(f"acción desconocida: {action}")
 
 
@@ -138,8 +141,9 @@ def apply_command(apdu: APDU, rules: list[Rule]) -> tuple[APDU, list[str]]:
     return (replace(apdu, data=data) if data != apdu.data else apdu), notes
 
 
-def apply_response(resp: Response, rules: list[Rule],
-                   ins: int | None = None) -> tuple[Response, list[str]]:
+def apply_response(
+    resp: Response, rules: list[Rule], ins: int | None = None
+) -> tuple[Response, list[str]]:
     data, sw1, sw2 = resp.data, resp.sw1, resp.sw2
     notes: list[str] = []
     for r in rules:
@@ -158,7 +162,7 @@ def apply_response(resp: Response, rules: list[Rule],
             if frm in data:
                 data = data.replace(frm, to)
                 notes.append(f"resp replace {to_hex(frm)}→{to_hex(to)}")
-    changed = (data != resp.data or sw1 != resp.sw1 or sw2 != resp.sw2)
+    changed = data != resp.data or sw1 != resp.sw1 or sw2 != resp.sw2
     return (Response(data, sw1, sw2) if changed else resp), notes
 
 
@@ -192,8 +196,8 @@ def to_apdu(command) -> APDU:
         le = rest[0]
     elif len(rest) >= 2:
         lc = rest[0]
-        data = rest[1:1 + lc]
-        after = rest[1 + lc:]
+        data = rest[1 : 1 + lc]
+        after = rest[1 + lc :]
         le = after[0] if after else None
     return APDU(cla, ins, p1, p2, data, le)
 
@@ -202,13 +206,18 @@ def intercepting(send, rules: list[Rule], on_event=None):
     """Envuelve un `Transceiver` con el interceptor: aplica reglas al comando y a
     la respuesta, emite un `Exchange` por cada intercambio, y devuelve la
     respuesta (posiblemente modificada)."""
+
     def transceiver(command) -> Response:
         cmd_before = to_apdu(command)
         cmd_after, cnotes = apply_command(cmd_before, rules)
         resp_before = send(cmd_after)
         resp_after, rnotes = apply_response(resp_before, rules, cmd_after.ins)
         if on_event:
-            on_event(Exchange(cmd_before, cmd_after, resp_before, resp_after,
-                              cnotes + rnotes))
+            on_event(
+                Exchange(
+                    cmd_before, cmd_after, resp_before, resp_after, cnotes + rnotes
+                )
+            )
         return resp_after
+
     return transceiver

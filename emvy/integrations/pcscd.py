@@ -8,6 +8,7 @@ sudo; si no es el caso aquí (systemctl ausente, sin permiso, timeout…), las
 funciones devuelven `False` en vez de lanzar — la herramienta sigue funcionando
 igual, solo que el usuario deberá arrancar `pcscd` a mano (ver `pcsc.PCSC_HELP`).
 """
+
 from __future__ import annotations
 
 import shutil
@@ -23,8 +24,9 @@ def available() -> bool:
 
 def _run(*args: str) -> subprocess.CompletedProcess | None:
     try:
-        return subprocess.run(["systemctl", *args], capture_output=True,
-                              text=True, timeout=_TIMEOUT)
+        return subprocess.run(
+            ["systemctl", *args], capture_output=True, text=True, timeout=_TIMEOUT
+        )
     except Exception:
         return None
 

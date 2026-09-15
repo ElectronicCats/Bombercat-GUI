@@ -4,6 +4,7 @@ Se abre con `?` desde cualquier pestaña y se cierra con `escape`, `?` o `q`. Se
 mantiene aquí (no en el footer, que se saturaba) toda la lista de atajos; el
 footer sólo muestra los esenciales.
 """
+
 from __future__ import annotations
 
 from textual.binding import Binding
@@ -12,23 +13,46 @@ from textual.screen import ModalScreen
 from textual.widgets import Static
 
 _SECTIONS = (
-    ("Navegación (pestañas)", (
-        ("p", "Proyectos"), ("v", "Variables"), ("l", "Lectores"),
-        ("e", "Explorador (captura + consola APDU)"), ("b", "Cobros"),
-        ("o", "PoC"), ("i", "Intercept"), ("m", "BomberCat"), ("u", "Fuzzing"),
-    )),
-    ("Herramientas (pestaña Consola)", (
-        ("f", "Flags — busca flags en la última captura"),
-        ("8", "ISO 8583 — constructor + traducción + envío"),
-        ("w", "Escritura — UPDATE RECORD/BINARY, PUT DATA…"),
-    )),
-    ("Copiar al portapapeles", (
-        ("Ctrl+C", "copia: nodo del árbol · fila de tabla · selección de texto"),
-        ("arrastra", "en paneles de texto (consola, ISO, flags): selecciona y Ctrl+C"),
-    )),
-    ("General", (
-        ("r", "Refrescar"), ("?", "Esta ayuda"), ("q", "Salir"),
-    )),
+    (
+        "Navegación (pestañas)",
+        (
+            ("p", "Proyectos"),
+            ("v", "Variables"),
+            ("l", "Lectores"),
+            ("e", "Explorador (captura + consola APDU)"),
+            ("b", "Cobros"),
+            ("o", "PoC"),
+            ("i", "Intercept"),
+            ("m", "BomberCat"),
+            ("u", "Fuzzing"),
+        ),
+    ),
+    (
+        "Herramientas (pestaña Consola)",
+        (
+            ("f", "Flags — busca flags en la última captura"),
+            ("8", "ISO 8583 — constructor + traducción + envío"),
+            ("w", "Escritura — UPDATE RECORD/BINARY, PUT DATA…"),
+        ),
+    ),
+    (
+        "Copiar al portapapeles",
+        (
+            ("Ctrl+C", "copia: nodo del árbol · fila de tabla · selección de texto"),
+            (
+                "arrastra",
+                "en paneles de texto (consola, ISO, flags): selecciona y Ctrl+C",
+            ),
+        ),
+    ),
+    (
+        "General",
+        (
+            ("r", "Refrescar"),
+            ("?", "Esta ayuda"),
+            ("q", "Salir"),
+        ),
+    ),
 )
 
 _FLOW = (

@@ -4,6 +4,7 @@ Refactor funcional de la antigua `ctf.full_dump`: recorre PPSE/PSE/AIDs, hace
 SELECT + GPO + lectura de registros (AFL + barrido bruto) + GET DATA, y acumula
 todo en un `CardDump` inmutable con `blobs` para búsqueda de flags.
 """
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -44,6 +45,7 @@ def capture_card(
       - "nfc": tag NFC genérico (no de pago) — se salta el descubrimiento EMV
         y va directo a NDEF Type 4 + escaneo crudo (AIDs no-EMV, ficheros).
     """
+
     def log(msg: str) -> None:
         if progress:
             progress(msg)
@@ -73,7 +75,9 @@ def capture_card(
         try:
             resp, app = emv.get_processing_options(send, app, profile)
             if resp.ok:
-                log(f"  GPO ok (AIP={to_hex(app.aip or b'')}, AFL={to_hex(app.afl or b'')})")
+                log(
+                    f"  GPO ok (AIP={to_hex(app.aip or b'')}, AFL={to_hex(app.afl or b'')})"
+                )
                 app = emv.read_afl_records(send, app)
         except Exception as e:  # una app rara no debe abortar el volcado
             log(f"  GPO falló: {e}")
@@ -83,15 +87,17 @@ def capture_card(
             app = emv.merge_records(app, emv.sweep_records(send))
 
         for r in app.records:
-            dump.blobs.append({"source": f"{app.aid}:SFI{r.sfi}/REC{r.number}",
-                               "hex": to_hex(r.raw)})
+            dump.blobs.append(
+                {"source": f"{app.aid}:SFI{r.sfi}/REC{r.number}", "hex": to_hex(r.raw)}
+            )
 
         # GET DATA (contadores, logs, saldos, propietarios)
         if get_data:
             app = app.with_data_objects(emv.get_data_sweep(send))
             for tag, val in app.data_objects.items():
-                dump.blobs.append({"source": f"{app.aid}:GETDATA {tag}",
-                                   "hex": to_hex(val)})
+                dump.blobs.append(
+                    {"source": f"{app.aid}:GETDATA {tag}", "hex": to_hex(val)}
+                )
 
         dump.applications.append(app_to_dict(app))
 
@@ -100,6 +106,7 @@ def capture_card(
     # haya en la tarjeta (AIDs, registros, GET DATA, binarios) + NDEF Type 4.
     if raw or mode == "nfc" or (mode != "emv" and not apps):
         from ..core.rawscan import raw_scan, read_type4_ndef
+
         log("Intentando NDEF (NFC Forum Type 4)...")
         try:
             ndef_result = read_type4_ndef(send)
@@ -107,14 +114,26 @@ def capture_card(
             ndef_result = None
         if ndef_result:
             log(f"  NDEF: {ndef_result['summary']}")
-            dump.blobs.append({"source": "NDEF:mensaje", "hex": ndef_result["ndef_hex"]})
-            dump.applications.append({
-                "aid": "D2760000850101", "scheme": "NDEF Type 4 (NFC Forum)",
-                "source": "ndef", "label": "tag NDEF", "aip": None, "afl": None,
-                "cardholder": {}, "records": [],
-                "get_data": {"CC": ndef_result["cc_hex"], "NDEF_FILE": ndef_result["ndef_file_id"]},
-                "ndef_records": ndef_result["records"],
-            })
+            dump.blobs.append(
+                {"source": "NDEF:mensaje", "hex": ndef_result["ndef_hex"]}
+            )
+            dump.applications.append(
+                {
+                    "aid": "D2760000850101",
+                    "scheme": "NDEF Type 4 (NFC Forum)",
+                    "source": "ndef",
+                    "label": "tag NDEF",
+                    "aip": None,
+                    "afl": None,
+                    "cardholder": {},
+                    "records": [],
+                    "get_data": {
+                        "CC": ndef_result["cc_hex"],
+                        "NDEF_FILE": ndef_result["ndef_file_id"],
+                    },
+                    "ndef_records": ndef_result["records"],
+                }
+            )
 
         log("Escaneo crudo (lee lo que haya conectado)...")
         # En modo "nfc" se salta el barrido ciego READ RECORD/GET DATA (hasta
@@ -123,22 +142,33 @@ def capture_card(
         # lo que de verdad encuentra contenido en tags no-EMV, y con muchos
         # menos intercambios se pierde bastante menos el campo RF de una
         # tarjeta/tag de rango corto sostenida a mano.
-        scan = raw_scan(send, progress=log,
-                        do_records=(mode != "nfc"), do_getdata=(mode != "nfc"))
+        scan = raw_scan(
+            send, progress=log, do_records=(mode != "nfc"), do_getdata=(mode != "nfc")
+        )
         dump.blobs.extend(scan.blobs())
         if not scan.is_empty():
             gd = dict(scan.get_data)
             gd.update({f"SELECT {label}": hx for label, hx in scan.selects})
             gd.update({f"BINARY {label}": hx for label, hx in scan.binaries})
-            dump.applications.append({
-                "aid": "RAW", "scheme": "lectura cruda", "source": "rawscan",
-                "label": "contenido en crudo", "aip": None, "afl": None,
-                "cardholder": {},
-                "records": [{"sfi": s, "record": r, "hex": h} for s, r, h in scan.records],
-                "get_data": gd,
-            })
-            log(f"  crudo: {len(scan.selects)} SELECT, {len(scan.records)} registros, "
-                f"{len(scan.get_data)} GET DATA, {len(scan.binaries)} binarios")
+            dump.applications.append(
+                {
+                    "aid": "RAW",
+                    "scheme": "lectura cruda",
+                    "source": "rawscan",
+                    "label": "contenido en crudo",
+                    "aip": None,
+                    "afl": None,
+                    "cardholder": {},
+                    "records": [
+                        {"sfi": s, "record": r, "hex": h} for s, r, h in scan.records
+                    ],
+                    "get_data": gd,
+                }
+            )
+            log(
+                f"  crudo: {len(scan.selects)} SELECT, {len(scan.records)} registros, "
+                f"{len(scan.get_data)} GET DATA, {len(scan.binaries)} binarios"
+            )
 
     log("Volcado completo.")
     return dump

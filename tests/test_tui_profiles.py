@@ -1,4 +1,5 @@
 """Prueba headless: aplicar un perfil de terminal desde la pestaña Variables."""
+
 import pytest
 
 pytest.importorskip("textual")

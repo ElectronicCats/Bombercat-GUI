@@ -12,28 +12,44 @@ Se aplica una sola vez sobre la `QApplication` (`apply_theme`), así **todos** l
 widgets y diálogos quedan estilizados sin tocar cada panel. La tipografía usa una
 sans moderna con fallbacks del sistema (IBM Plex Sans / Inter / Segoe UI…).
 """
+
 from __future__ import annotations
 
 # -- tokens de color (fuente de verdad) -------------------------------------
-BG        = "#0F172A"   # fondo de ventana (slate-900)
-BG_DEEP   = "#0B1220"   # inputs / consola (más profundo)
-PANEL     = "#1B2336"   # tarjetas / paneles / cabeceras
-SURFACE2  = "#272F42"   # hover / superficie elevada
-BORDER    = "#334155"   # bordes sutiles (slate-700)
-BORDER_HI = "#475569"   # bordes visibles (slate-600)
-TEXT      = "#F8FAFC"   # texto principal
-MUTED     = "#94A3B8"   # texto secundario/etiquetas
-ACCENT    = "#22C55E"   # acción/acento (green-500)
-ACCENT_HI = "#4ADE80"   # acento hover
-ACCENT_FG = "#0F172A"   # texto sobre acento
-WARNING   = "#F59E0B"
-ERROR     = "#EF4444"
-INFO      = "#38BDF8"
+BG = "#0F172A"  # fondo de ventana (slate-900)
+BG_DEEP = "#0B1220"  # inputs / consola (más profundo)
+PANEL = "#1B2336"  # tarjetas / paneles / cabeceras
+SURFACE2 = "#272F42"  # hover / superficie elevada
+BORDER = "#334155"  # bordes sutiles (slate-700)
+BORDER_HI = "#475569"  # bordes visibles (slate-600)
+TEXT = "#F8FAFC"  # texto principal
+MUTED = "#94A3B8"  # texto secundario/etiquetas
+ACCENT = "#22C55E"  # acción/acento (green-500)
+ACCENT_HI = "#4ADE80"  # acento hover
+ACCENT_FG = "#0F172A"  # texto sobre acento
+WARNING = "#F59E0B"
+ERROR = "#EF4444"
+INFO = "#38BDF8"
 
-FONT_FAMILIES = ["IBM Plex Sans", "Inter", "Segoe UI", "Cantarell",
-                 "Noto Sans", "Ubuntu", "DejaVu Sans", "sans-serif"]
-MONO_FAMILIES = ["JetBrains Mono", "Cascadia Code", "Fira Code", "IBM Plex Mono",
-                 "DejaVu Sans Mono", "Consolas", "monospace"]
+FONT_FAMILIES = [
+    "IBM Plex Sans",
+    "Inter",
+    "Segoe UI",
+    "Cantarell",
+    "Noto Sans",
+    "Ubuntu",
+    "DejaVu Sans",
+    "sans-serif",
+]
+MONO_FAMILIES = [
+    "JetBrains Mono",
+    "Cascadia Code",
+    "Fira Code",
+    "IBM Plex Mono",
+    "DejaVu Sans Mono",
+    "Consolas",
+    "monospace",
+]
 
 QSS = f"""
 /* ---- base ------------------------------------------------------------ */
@@ -200,9 +216,10 @@ QProgressBar::chunk {{ background-color: {ACCENT}; border-radius: 8px; }}
 def apply_theme(app) -> None:
     """Aplica el tema (fuente + QSS) a la `QApplication`. Idempotente."""
     from PySide6.QtGui import QFont
+
     font = QFont()
     try:
-        font.setFamilies(FONT_FAMILIES)   # Qt6: primera familia disponible
+        font.setFamilies(FONT_FAMILIES)  # Qt6: primera familia disponible
     except Exception:
         font.setFamily(FONT_FAMILIES[0])
     font.setPointSize(10)

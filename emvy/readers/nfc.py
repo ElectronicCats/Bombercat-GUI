@@ -7,6 +7,7 @@ funciona sin cambios.
 Degradación elegante: si `nfcpy` no está instalado o no hay lector, `available()`
 es False y `list_devices()` devuelve []; `open()` lanza ReaderError con ayuda.
 """
+
 from __future__ import annotations
 
 from ..core.apdu import make_transceiver
@@ -28,6 +29,7 @@ _DEFAULT_PATH = "usb"
 def available() -> bool:
     try:
         import nfc  # noqa: F401
+
         return True
     except Exception:
         return False
@@ -35,6 +37,7 @@ def available() -> bool:
 
 def _open_frontend(path: str = _DEFAULT_PATH):
     import nfc  # import perezoso
+
     return nfc.ContactlessFrontend(path)
 
 
@@ -50,8 +53,11 @@ def list_devices() -> list[DeviceInfo]:
         clf = _open_frontend()
         name = getattr(clf, "device", None)
         name = str(name) if name else "NFC frontend (usb)"
-        return [DeviceInfo(BACKEND, _DEFAULT_PATH, name,
-                           frozenset({Capability.CONTACTLESS}))]
+        return [
+            DeviceInfo(
+                BACKEND, _DEFAULT_PATH, name, frozenset({Capability.CONTACTLESS})
+            )
+        ]
     except Exception:
         return []
     finally:

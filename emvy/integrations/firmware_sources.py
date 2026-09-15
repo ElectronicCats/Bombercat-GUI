@@ -7,6 +7,7 @@ listarlos y limpiarlos. Efecto de red aislado (urllib, sin dependencias extra).
 
 Persistencia: `<config>/firmware_sources.json`. Caché: `<data>/firmware_cache/<fuente>/`.
 """
+
 from __future__ import annotations
 
 import json
@@ -29,8 +30,8 @@ def cache_dir() -> Path:
 @dataclass(frozen=True)
 class Source:
     name: str
-    kind: str          # "github" | "url"
-    ref: str           # "owner/repo" o una URL .uf2
+    kind: str  # "github" | "url"
+    ref: str  # "owner/repo" o una URL .uf2
 
     def to_dict(self) -> dict:
         return {"name": self.name, "kind": self.kind, "ref": self.ref}
@@ -89,10 +90,13 @@ def remove_source(name: str) -> None:
 
 # --- red: assets + descarga -------------------------------------------------
 def _get(url: str, timeout: float = 20):
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "EMVyController",
-        "Accept": "application/vnd.github+json",
-    })
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "EMVyController",
+            "Accept": "application/vnd.github+json",
+        },
+    )
     return urllib.request.urlopen(req, timeout=timeout)
 
 
@@ -103,12 +107,16 @@ def fetch_assets(source: Source, timeout: float = 20) -> list[tuple[str, str]]:
     api = f"https://api.github.com/repos/{source.ref}/releases/latest"
     with _get(api, timeout=timeout) as r:
         data = json.load(r)
-    return [(a["name"], a["browser_download_url"])
-            for a in data.get("assets", []) if a.get("name", "").endswith(".uf2")]
+    return [
+        (a["name"], a["browser_download_url"])
+        for a in data.get("assets", [])
+        if a.get("name", "").endswith(".uf2")
+    ]
 
 
-def download_source(source: Source, *, timeout: float = 90,
-                    progress=None) -> list[Path]:
+def download_source(
+    source: Source, *, timeout: float = 90, progress=None
+) -> list[Path]:
     """Descarga los `.uf2` de la fuente a la caché; devuelve las rutas."""
     dest = config.ensure_dir(cache_dir() / source.name)
     out: list[Path] = []

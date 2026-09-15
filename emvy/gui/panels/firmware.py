@@ -2,55 +2,84 @@
 arduino-cli (`integrations.arduino`). El flasheo por picotool sube el `.elf`
 (no `.uf2`); ver CLAUDE.md §12.
 """
+
 from __future__ import annotations
 
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QComboBox, QHBoxLayout, QLabel, QLineEdit, QPlainTextEdit, QPushButton,
-    QVBoxLayout, QWidget,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...integrations import arduino as ard
 
-_MONO = QFont("monospace"); _MONO.setStyleHint(QFont.Monospace)
+_MONO = QFont("monospace")
+_MONO.setStyleHint(QFont.Monospace)
 
 
 class FirmwarePanel(QWidget):
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win
-        sub = QLabel("Compila y sube el firmware BomberCat de `firmware/` con arduino-cli. "
-                     "Subir usa picotool (reset 1200-bps); requiere regla udev o sudo.")
-        sub.setWordWrap(True); sub.setStyleSheet("color:#8b949e")
+        sub = QLabel(
+            "Compila y sube el firmware BomberCat de `firmware/` con arduino-cli. "
+            "Subir usa picotool (reset 1200-bps); requiere regla udev o sudo."
+        )
+        sub.setWordWrap(True)
+        sub.setStyleSheet("color:#8b949e")
 
         self._sketch = QComboBox()
-        self._port = QLineEdit(); self._port.setPlaceholderText("puerto (opcional, p.ej. /dev/ttyACM0)")
+        self._port = QLineEdit()
+        self._port.setPlaceholderText("puerto (opcional, p.ej. /dev/ttyACM0)")
         self._port.setFixedWidth(220)
-        comp = QPushButton("Compilar"); comp.clicked.connect(lambda: self._go(False))
-        upl = QPushButton("Compilar y subir"); upl.clicked.connect(lambda: self._go(True))
-        rel = QPushButton("Recargar"); rel.clicked.connect(self.reload)
+        comp = QPushButton("Compilar")
+        comp.clicked.connect(lambda: self._go(False))
+        upl = QPushButton("Compilar y subir")
+        upl.clicked.connect(lambda: self._go(True))
+        rel = QPushButton("Recargar")
+        rel.clicked.connect(self.reload)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Sketch")); row.addWidget(self._sketch, 1)
-        row.addWidget(self._port); row.addWidget(comp); row.addWidget(upl); row.addWidget(rel)
+        row.addWidget(QLabel("Sketch"))
+        row.addWidget(self._sketch, 1)
+        row.addWidget(self._port)
+        row.addWidget(comp)
+        row.addWidget(upl)
+        row.addWidget(rel)
 
         # bombercat-tools >= v1.3.0: `setup-env` instala las reglas udev y añade
         # al usuario a dialout/plugdev — arregla el "try sudo or check your
         # permissions" del upload por picotool (CLAUDE.md §12). Se eleva con pkexec.
         udev = QPushButton("Permisos USB (udev)…")
-        udev.setToolTip("Instala reglas udev y grupos (dialout/plugdev) para subir sin sudo.\n"
-                        "Requiere pkexec (pedirá contraseña de administrador).")
+        udev.setToolTip(
+            "Instala reglas udev y grupos (dialout/plugdev) para subir sin sudo.\n"
+            "Requiere pkexec (pedirá contraseña de administrador)."
+        )
         udev.clicked.connect(lambda: self.win.setup_udev())
-        row2 = QHBoxLayout(); row2.addWidget(udev); row2.addStretch(1)
+        row2 = QHBoxLayout()
+        row2.addWidget(udev)
+        row2.addStretch(1)
 
-        self._log = QPlainTextEdit(readOnly=True); self._log.setFont(_MONO)
+        self._log = QPlainTextEdit(readOnly=True)
+        self._log.setFont(_MONO)
         lay = QVBoxLayout(self)
-        lay.addWidget(sub); lay.addLayout(row); lay.addLayout(row2); lay.addWidget(self._log, 1)
+        lay.addWidget(sub)
+        lay.addLayout(row)
+        lay.addLayout(row2)
+        lay.addWidget(self._log, 1)
         self.reload()
 
     def reload(self) -> None:
         self._sketch.clear()
         if not ard.arduino_cli_available():
-            self._log.appendPlainText("arduino-cli no disponible (instálalo para compilar/subir).")
+            self._log.appendPlainText(
+                "arduino-cli no disponible (instálalo para compilar/subir)."
+            )
         try:
             for p in ard.list_sketches():
                 self._sketch.addItem(p.name, str(p))

@@ -1,5 +1,6 @@
 """Tests del escaneo crudo (lee cualquier tarjeta ISO 7816) y su integración en
 el scanner (capture_card) cuando no hay app EMV."""
+
 from emvy.core import rawscan
 from emvy.core.apdu import (
     INS_GET_DATA,
@@ -15,6 +16,7 @@ from emvy.session import capture_card
 
 def _send_with_app():
     """Fake: responde SELECT de un AID, un registro y un GET DATA."""
+
     def send(cmd):
         a = cmd if isinstance(cmd, APDU) else None
         if a is None:
@@ -35,11 +37,13 @@ def _send_with_app():
         if a.ins == INS_READ_BINARY:
             return Response(b"", 0x6A, 0x82)
         return Response(b"", 0x6D, 0x00)
+
     return send
 
 
 def _send_no_app():
     """Fake sin app EMV: todo SELECT falla, pero hay un registro legible."""
+
     def send(cmd):
         a = cmd if isinstance(cmd, APDU) else None
         if a is None:
@@ -49,6 +53,7 @@ def _send_no_app():
         if a.ins == INS_READ_BINARY and a.p1 == (0x80 | 3):
             return Response(from_hex("DEADBEEF"), 0x90, 0x00)
         return Response(b"", 0x6A, 0x82)
+
     return send
 
 
@@ -65,14 +70,14 @@ def test_raw_scan_binary_and_records():
     scan = rawscan.raw_scan(_send_no_app())
     assert any(sfi == 2 and rec == 1 for sfi, rec, _ in scan.records)
     assert any(label == "sfi3" for label, _ in scan.binaries)
-    assert not scan.selects                       # ningún AID respondió
+    assert not scan.selects  # ningún AID respondió
 
 
 def test_capture_auto_raw_when_no_app():
     dump = capture_card(_send_no_app(), atr=from_hex("3B00"))
     raw_apps = [a for a in dump.applications if a["aid"] == "RAW"]
     assert raw_apps, "debería añadirse una app RAW cuando no hay EMV"
-    assert raw_apps[0]["records"]                 # trae el registro leído
+    assert raw_apps[0]["records"]  # trae el registro leído
     assert any(b["source"].startswith("RAW:") for b in dump.blobs)
 
 
@@ -97,8 +102,25 @@ _NDEF_AID_HEX = "D2760000850101"
 def _send_ndef_type4():
     """Fake: tag Type 4 con un único registro NDEF de texto ('hi', en inglés)."""
     ndef_msg = bytes([0xD1, 0x01, 0x05]) + b"T" + bytes([0x02]) + b"en" + b"hi"
-    ccb = bytes([0x00, 0x0F, 0x20, 0x00, 0x3B, 0x00, 0x34,
-                 0x04, 0x06, 0xE1, 0x04, 0x00, 0x3C, 0x00, 0xFF])
+    ccb = bytes(
+        [
+            0x00,
+            0x0F,
+            0x20,
+            0x00,
+            0x3B,
+            0x00,
+            0x34,
+            0x04,
+            0x06,
+            0xE1,
+            0x04,
+            0x00,
+            0x3C,
+            0x00,
+            0xFF,
+        ]
+    )
     ndef_body = bytes([0x00, len(ndef_msg)]) + ndef_msg
     state = {"cur": None}
 
@@ -123,6 +145,7 @@ def _send_ndef_type4():
             if state["cur"] == "ndef":
                 return Response(ndef_body, 0x90, 0x00)
         return Response(b"", 0x6A, 0x82)
+
     return send
 
 

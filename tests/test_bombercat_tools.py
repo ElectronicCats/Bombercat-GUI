@@ -3,13 +3,16 @@
 Las partes offline (parseo/ubicación) siempre corren; las que ejecutan el
 framework por subprocess se saltan si su venv no está listo (para no requerir
 red ni bootstrap en CI)."""
+
 import pytest
 
 from emvy import config
 from emvy.integrations import bombercat_tools as bt
 
 _HAS_VENDOR = (config.bombercat_tools_dir() / "bombercat.py").exists()
-pytestmark = pytest.mark.skipif(not _HAS_VENDOR, reason="bombercat-tools no vendorizado")
+pytestmark = pytest.mark.skipif(
+    not _HAS_VENDOR, reason="bombercat-tools no vendorizado"
+)
 
 
 def test_locate():
@@ -25,7 +28,7 @@ def test_version():
 def test_extract_json_from_noisy_output():
     text = (
         "╰─ banner rich ─╯\n"
-        'ID  Port\n'
+        "ID  Port\n"
         '{"uid": "04A1B2C3", "protocol": "ISODEP"}\n'
         "ℹ hint line\n"
     )
@@ -41,8 +44,10 @@ def test_extract_json_none():
     assert bt._extract_json("solo texto, sin json") == []
 
 
-@pytest.mark.skipif(not bt.venv_ready() if _HAS_VENDOR else True,
-                    reason="venv de bombercat-tools no está listo")
+@pytest.mark.skipif(
+    not bt.venv_ready() if _HAS_VENDOR else True,
+    reason="venv de bombercat-tools no está listo",
+)
 def test_run_capture_help():
     cp = bt.run_capture(["--help"], timeout=60)
     assert cp.returncode == 0

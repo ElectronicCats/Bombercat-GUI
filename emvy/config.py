@@ -3,6 +3,7 @@
 Un único lugar donde se resuelven los directorios de datos/config, para que
 `project.store` y la TUI no dupliquen lógica de rutas.
 """
+
 from __future__ import annotations
 
 import os

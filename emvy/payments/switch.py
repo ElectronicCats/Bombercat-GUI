@@ -9,6 +9,7 @@ El transporte (socket/TLS) vive aquí; el armado de mensajes reutiliza el codec
 puro `iso8583`. Las particularidades exactas de un switch (p.ej. longitud LLVAR en
 binario, tags F55 requeridos) se ajustan por configuración/engagement.
 """
+
 from __future__ import annotations
 
 import socket
@@ -32,31 +33,33 @@ class SwitchConfig:
     port: int = 0
     tls: bool = False
     verify_tls: bool = False
-    tpdu: bytes = b""                 # prefijo TPDU (p.ej. 6000000000), o vacío
-    header_len: int = 2              # bytes del prefijo de longitud (0 = sin prefijo)
+    tpdu: bytes = b""  # prefijo TPDU (p.ej. 6000000000), o vacío
+    header_len: int = 2  # bytes del prefijo de longitud (0 = sin prefijo)
     timeout: float = 20.0
-    keylog: str = ""                 # ruta TLS keylog (Wireshark), opcional
+    keylog: str = ""  # ruta TLS keylog (Wireshark), opcional
     # --- perfil de terminal (campos ISO/EMV) ---
-    tid: str = ""                    # F41 (8)
-    mid: str = ""                    # F42 (15)
-    mcc: str = "5999"                # F18
-    currency: str = "0484"           # F49 / 5F2A (hex)
-    country: str = "0484"            # 9F1A (hex)
-    term_type: str = "22"            # 9F35
-    ttq: str = "26000000"            # 9F66
-    cvm_results: str = "1F0002"      # 9F34
-    pos_entry: str = "0710"          # F22 (contactless EMV)
+    tid: str = ""  # F41 (8)
+    mid: str = ""  # F42 (15)
+    mcc: str = "5999"  # F18
+    currency: str = "0484"  # F49 / 5F2A (hex)
+    country: str = "0484"  # 9F1A (hex)
+    term_type: str = "22"  # 9F35
+    ttq: str = "26000000"  # 9F66
+    cvm_results: str = "1F0002"  # 9F34
+    pos_entry: str = "0710"  # F22 (contactless EMV)
 
     @classmethod
     def from_vars(cls, get) -> "SwitchConfig":
         """Construye la config leyendo variables del proyecto con `get(name)`
         (p.ej. `ctx.var`). Reconoce alias comunes (terminal_id/tid, etc.)."""
+
         def g(name, default=""):
             for k in (name if isinstance(name, tuple) else (name,)):
                 v = get(k)
                 if v not in (None, ""):
                     return v
             return default
+
         return cls(
             host=g("switch_host", "127.0.0.1"),
             port=int(g("switch_port", "0") or 0),
@@ -91,8 +94,10 @@ class FlowResult:
         lines = [f"request  {self.mti or '0200'}: {to_hex(self.request)}"]
         if self.response:
             lines.append(f"response {self.mti}: {to_hex(self.response)}")
-            lines.append(f"F39={self.rc}  {self.rc_meaning}  → "
-                         + ("APROBADA" if self.approved else "DECLINADA/otro"))
+            lines.append(
+                f"F39={self.rc}  {self.rc_meaning}  → "
+                + ("APROBADA" if self.approved else "DECLINADA/otro")
+            )
         lines.extend(self.log)
         return "\n".join(lines)
 
@@ -104,15 +109,20 @@ def build_purchase(cfg: SwitchConfig, card: EmvCard, amount_cents: int) -> bytes
     """0200 de compra con F55 (ICC/ARQC) desde un EmvCard, según la config."""
     now = datetime.now(timezone.utc)
     stan = str(now.microsecond % 1000000).zfill(6)
-    txn_date = card.txn_date or now.strftime("%y%m%d")     # YYMMDD
+    txn_date = card.txn_date or now.strftime("%y%m%d")  # YYMMDD
     mmdd = txn_date[2:6]
     pan = card.pan_digits or ""
     track2 = card.track2 or ""
     expiry = (card.expiry or "")[:4]
 
-    terminal = {"country": cfg.country, "currency": cfg.currency,
-                "txn_type": "00", "cvm_results": cfg.cvm_results,
-                "term_type": cfg.term_type, "ttq": cfg.ttq}
+    terminal = {
+        "country": cfg.country,
+        "currency": cfg.currency,
+        "txn_type": "00",
+        "cvm_results": cfg.cvm_results,
+        "term_type": cfg.term_type,
+        "ttq": cfg.ttq,
+    }
     f55 = iso8583.emv_icc(card, amount_cents=amount_cents, terminal=terminal)
 
     fields = {
@@ -121,24 +131,25 @@ def build_purchase(cfg: SwitchConfig, card: EmvCard, amount_cents: int) -> bytes
         4: iso8583.bcd_amount(amount_cents),
         11: iso8583.bcd(stan[:6]),
         12: iso8583.bcd(now.strftime("%H%M%S")),
-        13: iso8583.bcd(mmdd),                              # = 9A en F55
+        13: iso8583.bcd(mmdd),  # = 9A en F55
         14: iso8583.bcd(expiry),
         18: iso8583.bcd(cfg.mcc),
         22: from_hex(cfg.pos_entry),
         25: from_hex("00"),
         35: iso8583.bcd(track2) if track2 else b"",
-        37: (mmdd + stan.zfill(8)[:8]).ljust(12, "0")[:12].encode("ascii"),   # RRN (12)
+        37: (mmdd + stan.zfill(8)[:8]).ljust(12, "0")[:12].encode("ascii"),  # RRN (12)
         41: (cfg.tid or "").ljust(8)[:8].encode("ascii"),
         42: (cfg.mid or "").ljust(15)[:15].encode("ascii"),
         49: from_hex(cfg.currency),
         55: f55,
     }
-    fields = {k: v for k, v in fields.items() if v}       # descarta vacíos
+    fields = {k: v for k, v in fields.items() if v}  # descarta vacíos
     return iso8583.build("0200", fields)
 
 
-def build_reversal(cfg: SwitchConfig, *, stan: str, rrn: str, amount_cents: int,
-                   pan: str = "") -> bytes:
+def build_reversal(
+    cfg: SwitchConfig, *, stan: str, rrn: str, amount_cents: int, pan: str = ""
+) -> bytes:
     """0400 de reverso referenciando una transacción previa (sin F35/F55)."""
     fields = {
         3: from_hex("000000"),
@@ -197,7 +208,11 @@ def _recv(cfg: SwitchConfig, sock) -> bytes:
         if len(hdr) < cfg.header_len:
             return b""
         data = _recv_n(sock, int.from_bytes(hdr, "big"))
-    return data[len(cfg.tpdu):] if cfg.tpdu and data[:len(cfg.tpdu)] == cfg.tpdu else data
+    return (
+        data[len(cfg.tpdu) :]
+        if cfg.tpdu and data[: len(cfg.tpdu)] == cfg.tpdu
+        else data
+    )
 
 
 def exchange(cfg: SwitchConfig, sock, payload: bytes) -> bytes:
@@ -224,19 +239,49 @@ def run_signon(cfg: SwitchConfig) -> FlowResult:
     finally:
         sock.close()
     mti, fields, rc = _parse_and_rc(resp)
-    return FlowResult(req, resp, mti or "0810", fields, rc,
-                      iso8583.response_meaning(rc), rc in ("00", None), ["sign-on 0800/0810"])
+    return FlowResult(
+        req,
+        resp,
+        mti or "0810",
+        fields,
+        rc,
+        iso8583.response_meaning(rc),
+        rc in ("00", None),
+        ["sign-on 0800/0810"],
+    )
 
 
-def run_purchase(cfg: SwitchConfig, card: EmvCard, amount_cents: int, *,
-                 dry_run: bool = False, sign_on: bool = True) -> FlowResult:
+def run_purchase(
+    cfg: SwitchConfig,
+    card: EmvCard,
+    amount_cents: int,
+    *,
+    dry_run: bool = False,
+    sign_on: bool = True,
+) -> FlowResult:
     req = build_purchase(cfg, card, amount_cents)
     if dry_run:
-        return FlowResult(req, b"", "0200", {}, None, "(dry-run)", False,
-                          ["dry-run: mensaje construido, NO enviado"])
+        return FlowResult(
+            req,
+            b"",
+            "0200",
+            {},
+            None,
+            "(dry-run)",
+            False,
+            ["dry-run: mensaje construido, NO enviado"],
+        )
     if not cfg.host or not cfg.port:
-        return FlowResult(req, b"", "0200", {}, None, "(sin destino)", False,
-                          ["falta switch_host/switch_port"])
+        return FlowResult(
+            req,
+            b"",
+            "0200",
+            {},
+            None,
+            "(sin destino)",
+            False,
+            ["falta switch_host/switch_port"],
+        )
     log: list[str] = []
     sock = _connect(cfg)
     try:
@@ -247,20 +292,51 @@ def run_purchase(cfg: SwitchConfig, card: EmvCard, amount_cents: int, *,
     finally:
         sock.close()
     mti, fields, rc = _parse_and_rc(resp)
-    return FlowResult(req, resp, mti or "0210", fields, rc,
-                      iso8583.response_meaning(rc), rc in ("00", "11"), log)
+    return FlowResult(
+        req,
+        resp,
+        mti or "0210",
+        fields,
+        rc,
+        iso8583.response_meaning(rc),
+        rc in ("00", "11"),
+        log,
+    )
 
 
-def run_reversal(cfg: SwitchConfig, *, stan: str = "000001", rrn: str = "",
-                 amount_cents: int = 0, pan: str = "", dry_run: bool = False,
-                 sign_on: bool = True) -> FlowResult:
+def run_reversal(
+    cfg: SwitchConfig,
+    *,
+    stan: str = "000001",
+    rrn: str = "",
+    amount_cents: int = 0,
+    pan: str = "",
+    dry_run: bool = False,
+    sign_on: bool = True,
+) -> FlowResult:
     req = build_reversal(cfg, stan=stan, rrn=rrn, amount_cents=amount_cents, pan=pan)
     if dry_run:
-        return FlowResult(req, b"", "0400", {}, None, "(dry-run)", False,
-                          ["dry-run: 0400 construido, NO enviado"])
+        return FlowResult(
+            req,
+            b"",
+            "0400",
+            {},
+            None,
+            "(dry-run)",
+            False,
+            ["dry-run: 0400 construido, NO enviado"],
+        )
     if not cfg.host or not cfg.port:
-        return FlowResult(req, b"", "0400", {}, None, "(sin destino)", False,
-                          ["falta switch_host/switch_port"])
+        return FlowResult(
+            req,
+            b"",
+            "0400",
+            {},
+            None,
+            "(sin destino)",
+            False,
+            ["falta switch_host/switch_port"],
+        )
     log: list[str] = []
     sock = _connect(cfg)
     try:
@@ -271,5 +347,13 @@ def run_reversal(cfg: SwitchConfig, *, stan: str = "000001", rrn: str = "",
     finally:
         sock.close()
     mti, fields, rc = _parse_and_rc(resp)
-    return FlowResult(req, resp, mti or "0410", fields, rc,
-                      iso8583.response_meaning(rc), rc in ("00", "11"), log)
+    return FlowResult(
+        req,
+        resp,
+        mti or "0410",
+        fields,
+        rc,
+        iso8583.response_meaning(rc),
+        rc in ("00", "11"),
+        log,
+    )

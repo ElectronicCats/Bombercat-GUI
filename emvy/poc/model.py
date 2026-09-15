@@ -7,6 +7,7 @@ tarjeta capturada (`EmvCard`), un cliente HTTP con evidencia y helpers para
 registrar hallazgos y guardar evidencias. Los PoCs específicos del cliente viven
 como plugins del proyecto (`<proyecto>/pocs/*.py`); el core solo aporta el motor.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,11 +29,11 @@ class Severity(str, Enum):
 
 
 class Status(str, Enum):
-    PASSED = "passed"                 # el control resiste (no vulnerable)
-    VULNERABLE = "vulnerable"         # PoC confirmó la vulnerabilidad
+    PASSED = "passed"  # el control resiste (no vulnerable)
+    VULNERABLE = "vulnerable"  # PoC confirmó la vulnerabilidad
     NOT_VULNERABLE = "not_vulnerable"
-    FAILED = "failed"                 # el PoC no pudo completarse por el objetivo
-    ERROR = "error"                   # error interno del PoC
+    FAILED = "failed"  # el PoC no pudo completarse por el objetivo
+    ERROR = "error"  # error interno del PoC
     SKIPPED = "skipped"
     INFO = "info"
 
@@ -48,24 +49,34 @@ class Finding:
     evidence: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
-        return {"title": self.title, "severity": str(self.severity),
-                "detail": self.detail, "evidence": list(self.evidence)}
+        return {
+            "title": self.title,
+            "severity": str(self.severity),
+            "detail": self.detail,
+            "evidence": list(self.evidence),
+        }
 
 
 @dataclass(frozen=True)
 class PocMeta:
     id: str
     title: str = ""
-    category: str = "general"         # emv | switch | api | nfc | magstripe | ...
+    category: str = "general"  # emv | switch | api | nfc | magstripe | ...
     severity: Severity = Severity.INFO
     description: str = ""
-    authorization: str = ""           # nota de autorización del engagement
+    authorization: str = ""  # nota de autorización del engagement
     tags: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "title": self.title, "category": self.category,
-                "severity": str(self.severity), "description": self.description,
-                "authorization": self.authorization, "tags": list(self.tags)}
+        return {
+            "id": self.id,
+            "title": self.title,
+            "category": self.category,
+            "severity": str(self.severity),
+            "description": self.description,
+            "authorization": self.authorization,
+            "tags": list(self.tags),
+        }
 
 
 @dataclass
@@ -112,9 +123,10 @@ class Poc:
 class PocContext:
     """Todo lo que un PoC necesita. Los efectos (red, disco) pasan por aquí para
     poder registrarlos como evidencia y respetar dry-run / solo-lectura."""
+
     project: object | None = None
     variables: Mapping[str, str] = field(default_factory=dict)
-    card: object | None = None                    # EmvCard | None
+    card: object | None = None  # EmvCard | None
     evidence_dir: Path = field(default_factory=lambda: Path("."))
     dry_run: bool = False
     allow_write: bool = False
@@ -129,8 +141,10 @@ class PocContext:
     def require(self, name: str) -> str:
         val = self.variables.get(name)
         if not val:
-            raise PocError(f"Falta la variable requerida {name!r} en el proyecto "
-                           f"(añádela con: emvy var set {name} <valor>).")
+            raise PocError(
+                f"Falta la variable requerida {name!r} en el proyecto "
+                f"(añádela con: emvy var set {name} <valor>)."
+            )
         return val
 
     def log(self, msg: str) -> None:
@@ -152,14 +166,25 @@ class PocContext:
         return path
 
     # -- constructores de resultado ----------------------------------------
-    def finding(self, title: str, severity: Severity = Severity.INFO,
-                detail: str = "", evidence=()) -> Finding:
+    def finding(
+        self,
+        title: str,
+        severity: Severity = Severity.INFO,
+        detail: str = "",
+        evidence=(),
+    ) -> Finding:
         return Finding(title, severity, detail, tuple(evidence))
 
-    def result(self, status: Status, summary: str = "",
-               findings: list[Finding] | None = None) -> PocResult:
-        return PocResult(poc_id="", status=status, summary=summary,
-                         findings=list(findings or []), evidence=list(self.evidence))
+    def result(
+        self, status: Status, summary: str = "", findings: list[Finding] | None = None
+    ) -> PocResult:
+        return PocResult(
+            poc_id="",
+            status=status,
+            summary=summary,
+            findings=list(findings or []),
+            evidence=list(self.evidence),
+        )
 
 
 class PocError(RuntimeError):

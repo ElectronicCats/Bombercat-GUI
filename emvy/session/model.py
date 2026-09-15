@@ -4,6 +4,7 @@ Compatible en JSON con los dumps de la versión anterior: mismo esquema
 {atr, atr_info, reader, applications[], blobs[]}. `blobs` es la fuente para la
 búsqueda de flags (`core.search`).
 """
+
 from __future__ import annotations
 
 import json
@@ -20,7 +21,7 @@ class CardDump:
     atr_info: dict = field(default_factory=dict)
     reader: str = ""
     applications: list[dict] = field(default_factory=list)
-    blobs: list[dict] = field(default_factory=list)   # [{source, hex}]
+    blobs: list[dict] = field(default_factory=list)  # [{source, hex}]
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(asdict(self), indent=indent, ensure_ascii=False)
@@ -109,15 +110,26 @@ def from_bombercat(d: dict) -> CardDump:
         "source": "bombercat",
         "aip": card.aip or None,
         "afl": None,
-        "cardholder": {k: v for k, v in {
-            "pan": card.pan_digits, "track2": card.track2, "expiry": card.expiry,
-        }.items() if v},
+        "cardholder": {
+            k: v
+            for k, v in {
+                "pan": card.pan_digits,
+                "track2": card.track2,
+                "expiry": card.expiry,
+            }.items()
+            if v
+        },
         "records": [],
         "get_data": {},
     }
     # criptograma/transacción como get_data legible
-    for name, tag in (("arqc", "9F26"), ("atc", "9F36"), ("un", "9F37"),
-                      ("iad", "9F10"), ("cdol1", "8C")):
+    for name, tag in (
+        ("arqc", "9F26"),
+        ("atc", "9F36"),
+        ("un", "9F37"),
+        ("iad", "9F10"),
+        ("cdol1", "8C"),
+    ):
         val = getattr(card, name)
         if val:
             app["get_data"][tag] = val
@@ -128,6 +140,7 @@ def from_bombercat(d: dict) -> CardDump:
         if val:
             dump.blobs.append({"source": f"bombercat:{name}", "hex": val})
     if card.pan_digits:
-        dump.blobs.append({"source": "bombercat:pan",
-                           "hex": to_hex(card.pan_digits.encode())})
+        dump.blobs.append(
+            {"source": "bombercat:pan", "hex": to_hex(card.pan_digits.encode())}
+        )
     return dump

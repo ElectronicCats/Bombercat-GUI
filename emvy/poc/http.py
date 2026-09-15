@@ -1,9 +1,10 @@
 """Cliente HTTP para PoCs (stdlib `urllib`), con:
-  * evidencia automática (guarda request+response en el directorio del run),
-  * guard de **solo-lectura** (bloquea métodos no idempotentes salvo allow_write),
-  * `dry_run` (registra la petición sin enviarla),
-  * proxy y CA opcionales (útil con mitmproxy).
+* evidencia automática (guarda request+response en el directorio del run),
+* guard de **solo-lectura** (bloquea métodos no idempotentes salvo allow_write),
+* `dry_run` (registra la petición sin enviarla),
+* proxy y CA opcionales (útil con mitmproxy).
 """
+
 from __future__ import annotations
 
 import json as _json
@@ -44,8 +45,16 @@ class PocHttp:
     _n: int = field(default=0, init=False)
 
     # -- núcleo -------------------------------------------------------------
-    def request(self, method: str, url: str, *, headers: dict | None = None,
-                data: bytes | None = None, json=None, allow: bool = False) -> HttpResponse:
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict | None = None,
+        data: bytes | None = None,
+        json=None,
+        allow: bool = False,
+    ) -> HttpResponse:
         """`allow=True` autoriza puntualmente un método no idempotente (p.ej. un
         POST de login/probe) sin abrir `--allow-write` global; el PoC asume la
         responsabilidad. Sigue registrando evidencia y respetando dry_run."""
@@ -59,11 +68,13 @@ class PocHttp:
         if method not in _READONLY and not (self.ctx.allow_write or allow):
             raise PocError(
                 f"{method} {url} bloqueado (modo solo-lectura). "
-                "Usa --allow-write, o el PoC debe pasar allow=True si lo autoriza.")
+                "Usa --allow-write, o el PoC debe pasar allow=True si lo autoriza."
+            )
 
         self._n += 1
-        self._save(f"{self._n:02d}_req_{method}.txt",
-                   self._fmt_req(method, url, headers, data))
+        self._save(
+            f"{self._n:02d}_req_{method}.txt", self._fmt_req(method, url, headers, data)
+        )
 
         if self.ctx.dry_run:
             self.ctx.log(f"[dry-run] {method} {url}")
@@ -72,8 +83,7 @@ class PocHttp:
             return resp
 
         resp = self._send(method, url, headers, data)
-        self._save(f"{self._n:02d}_resp_{resp.status}.txt",
-                   self._fmt_resp(resp))
+        self._save(f"{self._n:02d}_resp_{resp.status}.txt", self._fmt_resp(resp))
         return resp
 
     def get(self, url, **kw):
@@ -98,10 +108,14 @@ class PocHttp:
     def _opener(self):
         handlers = []
         if self.proxy:
-            handlers.append(urllib.request.ProxyHandler(
-                {"http": self.proxy, "https": self.proxy}))
-        ctx = ssl.create_default_context(cafile=self.ca_cert) if self.ca_cert \
+            handlers.append(
+                urllib.request.ProxyHandler({"http": self.proxy, "https": self.proxy})
+            )
+        ctx = (
+            ssl.create_default_context(cafile=self.ca_cert)
+            if self.ca_cert
             else ssl.create_default_context()
+        )
         if not self.verify:
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE

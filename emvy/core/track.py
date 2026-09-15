@@ -7,6 +7,7 @@ equivalente EMV (tag 57).
 
 Todo son funciones puras; devuelven dataclasses frozen o None si no parsea.
 """
+
 from __future__ import annotations
 
 import re
@@ -20,7 +21,7 @@ class Track1:
     format_code: str
     pan: str
     name: str
-    expiry: str          # YYMM
+    expiry: str  # YYMM
     service_code: str
     discretionary: str
     raw: str
@@ -29,7 +30,7 @@ class Track1:
 @dataclass(frozen=True)
 class Track2:
     pan: str
-    expiry: str          # YYMM
+    expiry: str  # YYMM
     service_code: str
     discretionary: str
     raw: str
@@ -92,8 +93,9 @@ def parse_track2_emv(data: bytes | str) -> Track2 | None:
     return _split_track2_digits(hexs.upper())
 
 
-def build_track2_emv(pan: str, expiry: str = "", service_code: str = "",
-                     discretionary: str = "") -> str:
+def build_track2_emv(
+    pan: str, expiry: str = "", service_code: str = "", discretionary: str = ""
+) -> str:
     """Construye el valor del Track2 Equivalent (tag 57) en hex: `PAN D YYMM SC
     discrecional`, con relleno 'F' a nibble par. Inverso de `parse_track2_emv`.
     Útil para regenerar el track2 tras editar PAN/caducidad en el editor."""

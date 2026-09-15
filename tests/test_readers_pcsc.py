@@ -5,6 +5,7 @@ puros objetos Python, no requieren lector), pero con un lector/conexión falsos.
 Cubren la reparación de lectores CCID quisquillosos como el Rocketek CR336-C:
 degradación de protocolo `T0|T1 → T1 → T0` + reset limpio entre intentos.
 """
+
 import pytest
 
 pytest.importorskip("smartcard")
@@ -30,7 +31,7 @@ class FakeConnection:
     def __init__(self, ok_protocols, *, no_card=False):
         self.ok_protocols = set(ok_protocols)
         self.no_card = no_card
-        self.attempts = []          # protocolos intentados, en orden
+        self.attempts = []  # protocolos intentados, en orden
         self.connected_with = None
         self.disconnected = 0
 
@@ -83,10 +84,9 @@ def _devinfo(name=READER_NAME):
 def test_connect_order_dedup_and_priority():
     order = pcsc._connect_order("any", CardConnection)
     both = CardConnection.T0_protocol | CardConnection.T1_protocol
-    assert order[0] == both                      # el pedido va primero
-    assert len(order) == len(set(order))         # sin duplicados
-    assert set(order) == {CardConnection.T0_protocol,
-                          CardConnection.T1_protocol, both}
+    assert order[0] == both  # el pedido va primero
+    assert len(order) == len(set(order))  # sin duplicados
+    assert set(order) == {CardConnection.T0_protocol, CardConnection.T1_protocol, both}
 
 
 def test_connect_order_requested_first():
@@ -110,7 +110,7 @@ def test_open_falls_back_when_negotiation_fails(monkeypatch):
         assert r.atr() == b"\x3b\x00"
     # se recreó la conexión para un reset limpio antes de reintentar
     assert len(conns) == 2
-    assert conns[0].disconnected == 1            # la fallida se cerró
+    assert conns[0].disconnected == 1  # la fallida se cerró
     assert conns[1].connected_with == CardConnection.T1_protocol
 
 
@@ -126,7 +126,7 @@ def test_open_healthy_reader_connects_first_try(monkeypatch):
     _install_reader(monkeypatch, factory)
     with pcsc.open(_devinfo(), protocol="any") as r:
         assert r.atr() == b"\x3b\x00"
-    assert len(conns) == 1                        # sin reintentos
+    assert len(conns) == 1  # sin reintentos
     assert conns[0].attempts == [both]
 
 

@@ -1,4 +1,5 @@
 """Panel de búsqueda de flags/patrones sobre la última captura."""
+
 from __future__ import annotations
 
 from textual import on
@@ -12,7 +13,9 @@ class FlagsScreen(Vertical):
     def compose(self):
         yield Label("Búsqueda de flags", classes="title")
         with Horizontal(classes="row"):
-            yield Input(value=r"flag\{[^}]+\}", placeholder="patrón regex", id="flag_pat")
+            yield Input(
+                value=r"flag\{[^}]+\}", placeholder="patrón regex", id="flag_pat"
+            )
             yield Button("Buscar patrón", id="flag_search", variant="success")
             yield Button("Patrones por defecto", id="flag_default", variant="primary")
         yield RichLog(id="flag_log", markup=True, wrap=True)
@@ -21,7 +24,8 @@ class FlagsScreen(Vertical):
         dump = getattr(self.app, "last_dump", None)
         if dump is None:
             self.query_one("#flag_log", RichLog).write(
-                "[yellow]No hay captura. Ve a Explorador → 'Capturar tarjeta' primero.[/]")
+                "[yellow]No hay captura. Ve a Explorador → 'Capturar tarjeta' primero.[/]"
+            )
         return dump
 
     @on(Button.Pressed, "#flag_search")

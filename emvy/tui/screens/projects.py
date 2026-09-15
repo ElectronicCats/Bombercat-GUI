@@ -1,4 +1,5 @@
 """Panel de proyectos: crear, activar y eliminar espacios de trabajo."""
+
 from __future__ import annotations
 
 from textual import on
@@ -12,15 +13,19 @@ from ..widgets.copyable import CopyableDataTable
 class ProjectsScreen(Vertical):
     def compose(self):
         yield Static("Proyectos", classes="title")
-        yield Static("Espacios de trabajo (XDG o en ruta/engagements). Marca ● = activo.",
-                     classes="subtitle")
+        yield Static(
+            "Espacios de trabajo (XDG o en ruta/engagements). Marca ● = activo.",
+            classes="subtitle",
+        )
         yield CopyableDataTable(id="proj_table")
         with Horizontal(classes="row"):
             yield Input(placeholder="nombre del proyecto", id="proj_name")
             yield Input(placeholder="descripción (opcional)", id="proj_desc")
         with Horizontal(classes="row"):
-            yield Input(placeholder="ruta (opcional; vacío = ~/.local/share/emvy/projects)",
-                        id="proj_path")
+            yield Input(
+                placeholder="ruta (opcional; vacío = ~/.local/share/emvy/projects)",
+                id="proj_path",
+            )
             yield Button("Elegir engagements/", id="proj_path_eng")
         with Horizontal(classes="row"):
             yield Button("Crear + activar", id="proj_new", variant="success")
@@ -46,11 +51,11 @@ class ProjectsScreen(Vertical):
 
         for p in store.list_projects():
             t.add_row(_mark(p), p.name, p.created, p.description)
-            self._rows.append((p.name, None))          # XDG: activar por nombre
+            self._rows.append((p.name, None))  # XDG: activar por nombre
         for p in store.list_path_projects():
             desc = f"{p.description}  ·  {p.path}" if p.description else str(p.path)
             t.add_row(_mark(p), p.name, "engagement", desc)
-            self._rows.append((p.name, p.path))         # ruta: activar por path
+            self._rows.append((p.name, p.path))  # ruta: activar por path
 
     def _selected(self):
         t = self.query_one("#proj_table", DataTable)
@@ -64,7 +69,10 @@ class ProjectsScreen(Vertical):
         """Rellena la ruta con engagements/<nombre> (proyecto versionado en el repo)."""
         name = self.query_one("#proj_name", Input).value.strip() or "cliente"
         from ... import config
-        self.query_one("#proj_path", Input).value = str(config.engagements_dirs()[0] / name)
+
+        self.query_one("#proj_path", Input).value = str(
+            config.engagements_dirs()[0] / name
+        )
 
     @on(Button.Pressed, "#proj_new")
     def _new(self):
@@ -75,10 +83,10 @@ class ProjectsScreen(Vertical):
             self.app.notify("Indica un nombre (o una ruta).", severity="warning")
             return
         try:
-            if path:                                   # proyecto en ruta (elige dónde)
+            if path:  # proyecto en ruta (elige dónde)
                 p = store.create_project_at(path, name=name or None, description=desc)
                 store.set_active_path(p.path)
-            else:                                      # proyecto XDG por defecto
+            else:  # proyecto XDG por defecto
                 store.create_project(name, description=desc)
                 store.set_active(name)
         except Exception as e:
@@ -111,8 +119,11 @@ class ProjectsScreen(Vertical):
             return
         name, path = sel
         if path is not None:
-            self.app.notify("Los engagements en ruta no se borran desde aquí "
-                            "(viven en el repo).", severity="warning")
+            self.app.notify(
+                "Los engagements en ruta no se borran desde aquí "
+                "(viven en el repo).",
+                severity="warning",
+            )
             return
         try:
             store.delete_project(name)

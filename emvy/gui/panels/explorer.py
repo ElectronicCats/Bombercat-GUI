@@ -2,15 +2,26 @@
 **copiar / asignar** el valor de un nodo a una variable, y **guardar** la
 captura en un proyecto o archivo. Reutiliza `core.tlv`/`project.env`/`store`.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QComboBox, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem,
-    QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSplitter,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...core import tlv
@@ -34,21 +45,36 @@ def _hexdata(tag, hexstr, suggest=None) -> dict:
         ascii_ = _ascii_of(from_hex(hexstr))
     except ValueError:
         ascii_ = ""
-    return {"tag": tag, "value": hexstr, "ascii": ascii_, "is_hex": True,
-            "suggest": suggest or tag}
+    return {
+        "tag": tag,
+        "value": hexstr,
+        "ascii": ascii_,
+        "is_hex": True,
+        "suggest": suggest or tag,
+    }
 
 
 def _textdata(text, suggest) -> dict:
-    return {"tag": None, "value": str(text), "ascii": str(text), "is_hex": False,
-            "suggest": suggest}
+    return {
+        "tag": None,
+        "value": str(text),
+        "ascii": str(text),
+        "is_hex": False,
+        "suggest": suggest,
+    }
 
 
 def _tlv_item(t: tlv.TLV) -> QTreeWidgetItem:
     name = f"{t.tag}  {t.name}"
     is_leaf = not (t.constructed and t.children)
     raw = t.value if is_leaf else t.to_bytes()
-    data = {"tag": t.tag, "value": to_hex(raw), "ascii": _ascii_of(raw),
-            "is_hex": True, "suggest": t.tag}
+    data = {
+        "tag": t.tag,
+        "value": to_hex(raw),
+        "ascii": _ascii_of(raw),
+        "is_hex": True,
+        "suggest": t.tag,
+    }
     if not is_leaf:
         item = QTreeWidgetItem([name, ""])
         item.setData(0, _DATA, data)
@@ -79,14 +105,21 @@ class ExplorerPanel(QWidget):
         self.win = win
         self._sel: dict | None = None
 
-        sub = QLabel("Captura una tarjeta, inspecciona su árbol TLV y exporta lo que "
-                     "encuentres. «Dump crudo» se adapta al lector (NFC en BomberCat).")
-        sub.setWordWrap(True); sub.setStyleSheet("color:#8b949e")
+        sub = QLabel(
+            "Captura una tarjeta, inspecciona su árbol TLV y exporta lo que "
+            "encuentres. «Dump crudo» se adapta al lector (NFC en BomberCat)."
+        )
+        sub.setWordWrap(True)
+        sub.setStyleSheet("color:#8b949e")
 
-        cap = QPushButton("● Capturar"); cap.clicked.connect(lambda: self.win.capture("auto"))
-        raw = QPushButton("◐ Dump crudo"); raw.clicked.connect(self._dump_raw)
-        ana = QPushButton("🔒 Analizar"); ana.clicked.connect(self._analyze)
-        clr = QPushButton("Limpiar"); clr.clicked.connect(self._clear)
+        cap = QPushButton("● Capturar")
+        cap.clicked.connect(lambda: self.win.capture("auto"))
+        raw = QPushButton("◐ Dump crudo")
+        raw.clicked.connect(self._dump_raw)
+        ana = QPushButton("🔒 Analizar")
+        ana.clicked.connect(self._analyze)
+        clr = QPushButton("Limpiar")
+        clr.clicked.connect(self._clear)
         actions = QHBoxLayout()
         for b in (cap, raw, ana, clr):
             actions.addWidget(b)
@@ -118,13 +151,16 @@ class ExplorerPanel(QWidget):
         nodo = QGroupBox("Nodo seleccionado")
         nv = QVBoxLayout(nodo)
         self._detail = QLabel("Selecciona un nodo del árbol.")
-        self._detail.setWordWrap(True); self._detail.setTextInteractionFlags(
-            Qt.TextSelectableByMouse)
+        self._detail.setWordWrap(True)
+        self._detail.setTextInteractionFlags(Qt.TextSelectableByMouse)
         nv.addWidget(self._detail)
         cprow = QHBoxLayout()
-        chex = QPushButton("Copiar hex"); chex.clicked.connect(lambda: self._copy("value"))
-        casc = QPushButton("Copiar ASCII"); casc.clicked.connect(lambda: self._copy("ascii"))
-        ctv = QPushButton("tag=val"); ctv.clicked.connect(self._copy_tagval)
+        chex = QPushButton("Copiar hex")
+        chex.clicked.connect(lambda: self._copy("value"))
+        casc = QPushButton("Copiar ASCII")
+        casc.clicked.connect(lambda: self._copy("ascii"))
+        ctv = QPushButton("tag=val")
+        ctv.clicked.connect(self._copy_tagval)
         for b in (chex, casc, ctv):
             cprow.addWidget(b)
         nv.addLayout(cprow)
@@ -132,24 +168,31 @@ class ExplorerPanel(QWidget):
 
         asig = QGroupBox("Asignar a variable")
         av = QVBoxLayout(asig)
-        self._varname = QLineEdit(); self._varname.setPlaceholderText(
-            "destino (tag/alias/nombre; vacío = sugerido)")
+        self._varname = QLineEdit()
+        self._varname.setPlaceholderText("destino (tag/alias/nombre; vacío = sugerido)")
         av.addWidget(self._varname)
         crow = QHBoxLayout()
-        self._var_user = QCheckBox("libre"); self._var_ascii = QCheckBox("ASCII")
-        assign = QPushButton("→ Variable"); assign.clicked.connect(self._assign)
-        crow.addWidget(self._var_user); crow.addWidget(self._var_ascii)
-        crow.addWidget(assign); crow.addStretch(1)
+        self._var_user = QCheckBox("libre")
+        self._var_ascii = QCheckBox("ASCII")
+        assign = QPushButton("→ Variable")
+        assign.clicked.connect(self._assign)
+        crow.addWidget(self._var_user)
+        crow.addWidget(self._var_ascii)
+        crow.addWidget(assign)
+        crow.addStretch(1)
         av.addLayout(crow)
         v.addWidget(asig)
 
         guardar = QGroupBox("Guardar captura")
         gv = QVBoxLayout(guardar)
         self._dest = QComboBox()
-        self._savename = QLineEdit(); self._savename.setPlaceholderText(
-            "nombre (o ruta .json si destino=archivo)")
-        save = QPushButton("Guardar"); save.clicked.connect(self._save)
-        gv.addWidget(self._dest); gv.addWidget(self._savename); gv.addWidget(save)
+        self._savename = QLineEdit()
+        self._savename.setPlaceholderText("nombre (o ruta .json si destino=archivo)")
+        save = QPushButton("Guardar")
+        save.clicked.connect(self._save)
+        gv.addWidget(self._dest)
+        gv.addWidget(self._savename)
+        gv.addWidget(save)
         v.addWidget(guardar)
         v.addStretch(1)
         return w
@@ -167,10 +210,15 @@ class ExplorerPanel(QWidget):
     # -- acciones ----------------------------------------------------------
     def _dump_raw(self) -> None:
         backend = getattr(self.win.reader_device, "backend", None)
-        self.win.capture(mode="nfc") if backend == "bombercat" else self.win.capture(raw=True)
+        (
+            self.win.capture(mode="nfc")
+            if backend == "bombercat"
+            else self.win.capture(raw=True)
+        )
 
     def _clear(self) -> None:
-        self._tree.clear(); self._sel = None
+        self._tree.clear()
+        self._sel = None
         self._detail.setText("Árbol limpio.")
 
     def _on_item(self, cur, _prev) -> None:
@@ -198,6 +246,7 @@ class ExplorerPanel(QWidget):
             self.win.notify.emit("Sin valor para copiar.")
             return
         from PySide6.QtWidgets import QApplication
+
         QApplication.clipboard().setText(text)
         self.win.notify.emit(f"Copiado: {text[:48]}")
 
@@ -206,7 +255,10 @@ class ExplorerPanel(QWidget):
             self.win.notify.emit("Selecciona un nodo con valor.")
             return
         from PySide6.QtWidgets import QApplication
-        QApplication.clipboard().setText(f"{self._sel.get('tag') or '?'}={self._sel['value']}")
+
+        QApplication.clipboard().setText(
+            f"{self._sel.get('tag') or '?'}={self._sel['value']}"
+        )
         self.win.notify.emit("Copiado tag=valor.")
 
     def _assign(self) -> None:
@@ -235,7 +287,9 @@ class ExplorerPanel(QWidget):
             else:
                 value_str = value
             kind = "terminal" if tag is not None else "user"
-            variables = envmod.set_var(store.load_project_variables(proj), name, value_str, kind=kind)
+            variables = envmod.set_var(
+                store.load_project_variables(proj), name, value_str, kind=kind
+            )
             store.save_project_variables(proj, variables)
         except Exception as e:  # noqa: BLE001
             self.win.notify.emit(f"No se pudo asignar: {e}")
@@ -264,6 +318,7 @@ class ExplorerPanel(QWidget):
         try:
             if dest == "file":
                 from pathlib import Path
+
                 if not name:
                     self.win.notify.emit("Indica la ruta del archivo .json.")
                     return
@@ -290,6 +345,7 @@ class ExplorerPanel(QWidget):
     def _analyze(self) -> None:
         from ...core import analyze
         from ...session.model import tlvs_from_dump
+
         dump = self.win.last_dump
         if dump is None:
             self.win.notify.emit("No hay captura para analizar.")
@@ -319,36 +375,46 @@ class ExplorerPanel(QWidget):
         blobs = {b["source"]: b["hex"] for b in dump.blobs}
         for app in dump.applications:
             aid = app["aid"]
-            meta = " · ".join(x for x in (app.get("label", ""), app.get("source", "")) if x)
+            meta = " · ".join(
+                x for x in (app.get("label", ""), app.get("source", "")) if x
+            )
             top = QTreeWidgetItem([f"{aid}  {app['scheme']}", meta])
             top.setData(0, _DATA, _hexdata("4F", aid))
             ch = app.get("cardholder") or {}
             if ch:
                 info = QTreeWidgetItem(["Titular", ""])
                 for k, val in ch.items():
-                    it = QTreeWidgetItem([k, str(val)]); it.setData(0, _DATA, _textdata(val, k))
+                    it = QTreeWidgetItem([k, str(val)])
+                    it.setData(0, _DATA, _textdata(val, k))
                     info.addChild(it)
                 top.addChild(info)
             if app.get("aip"):
-                it = QTreeWidgetItem(["AIP", app["aip"]]); it.setData(0, _DATA, _hexdata("82", app["aip"]))
+                it = QTreeWidgetItem(["AIP", app["aip"]])
+                it.setData(0, _DATA, _hexdata("82", app["aip"]))
                 top.addChild(it)
             if app.get("afl"):
-                it = QTreeWidgetItem(["AFL", app["afl"]]); it.setData(0, _DATA, _hexdata("94", app["afl"]))
+                it = QTreeWidgetItem(["AFL", app["afl"]])
+                it.setData(0, _DATA, _hexdata("94", app["afl"]))
                 top.addChild(it)
             for line in app.get("ndef_records") or []:
-                it = QTreeWidgetItem(["★ NDEF", line]); it.setData(0, _DATA, _textdata(line, "ndef"))
+                it = QTreeWidgetItem(["★ NDEF", line])
+                it.setData(0, _DATA, _textdata(line, "ndef"))
                 top.addChild(it)
             fci = blobs.get(f"{aid}:FCI")
             if fci:
-                fnode = QTreeWidgetItem(["FCI", ""]); _add_tlvs(fnode, fci); top.addChild(fnode)
+                fnode = QTreeWidgetItem(["FCI", ""])
+                _add_tlvs(fnode, fci)
+                top.addChild(fnode)
             for rec in app.get("records", []):
                 rnode = QTreeWidgetItem([f"SFI {rec['sfi']} · REC {rec['record']}", ""])
-                _add_tlvs(rnode, rec["hex"]); top.addChild(rnode)
+                _add_tlvs(rnode, rec["hex"])
+                top.addChild(rnode)
             gd = app.get("get_data") or {}
             if gd:
                 gnode = QTreeWidgetItem([f"GET DATA ({len(gd)})", ""])
                 for tg, hx in gd.items():
-                    it = QTreeWidgetItem([tg, hx]); it.setData(0, _DATA, _hexdata(tg, hx))
+                    it = QTreeWidgetItem([tg, hx])
+                    it.setData(0, _DATA, _hexdata(tg, hx))
                     gnode.addChild(it)
                 top.addChild(gnode)
             self._tree.addTopLevelItem(top)

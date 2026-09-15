@@ -4,6 +4,7 @@ Cada campo se describe como una lista de `(byte, bit, nombre)` (bit 8 = MSB) y s
 decodifica a una lista de `Flag(nombre, set)`. Útil para interpretar capacidades
 de la tarjeta/terminal en el Explorador y en el análisis de seguridad.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

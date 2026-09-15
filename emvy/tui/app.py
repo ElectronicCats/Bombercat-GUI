@@ -6,6 +6,7 @@ conectado, última captura) y llama a las funciones del núcleo. Las operaciones
 de hardware (conectar, capturar, enviar APDU) corren en hilos de trabajo para no
 congelar la interfaz.
 """
+
 from __future__ import annotations
 
 from textual import on, work
@@ -18,13 +19,13 @@ from textual.widgets import Footer, Header, TabbedContent, TabPane
 # GUI: emvy/gui/theme.py). Recolorea todos los tokens $primary/$accent/$panel…
 EMVY_THEME = Theme(
     name="emvy",
-    primary="#334155",      # estructura/bordes (slate-700)
+    primary="#334155",  # estructura/bordes (slate-700)
     secondary="#1E293B",
-    accent="#22C55E",       # acción/acento (green-500)
+    accent="#22C55E",  # acción/acento (green-500)
     foreground="#F8FAFC",
-    background="#0B1220",    # fondo profundo
-    surface="#0F172A",       # base de pantallas
-    panel="#1B2336",         # paneles/cabeceras
+    background="#0B1220",  # fondo profundo
+    surface="#0F172A",  # base de pantallas
+    panel="#1B2336",  # paneles/cabeceras
     success="#22C55E",
     warning="#F59E0B",
     error="#EF4444",
@@ -57,7 +58,9 @@ from .widgets.common import StatusBar
 
 class EmvyApp(App):
     TITLE = "EMVy Controller"
-    SUB_TITLE = f"v{__version__} {__release__} · EMV security testing & card exploration"
+    SUB_TITLE = (
+        f"v{__version__} {__release__} · EMV security testing & card exploration"
+    )
 
     # Sistema visual compartido por todas las pantallas (profesional, coherente,
     # y válido en tema claro/oscuro vía tokens de diseño de Textual).
@@ -137,8 +140,9 @@ class EmvyApp(App):
         self.intercept_rules: list = []
         self.intercept_active: bool = False
         import threading
-        self._emu_stop = threading.Event()   # señal para detener la emulación NDEF
-        self.register_theme(EMVY_THEME)      # tema visual profesional (ver EMVY_THEME)
+
+        self._emu_stop = threading.Event()  # señal para detener la emulación NDEF
+        self.register_theme(EMVY_THEME)  # tema visual profesional (ver EMVY_THEME)
 
     # -- interceptor de APDUs (Burp para EMV) ------------------------------
     def active_send(self):
@@ -146,8 +150,10 @@ class EmvyApp(App):
         send = self.reader.transceive
         if self.intercept_active and self.intercept_rules:
             from ..core import intercept
-            return intercept.intercepting(send, self.intercept_rules,
-                                          on_event=self._intercept_event)
+
+            return intercept.intercepting(
+                send, self.intercept_rules, on_event=self._intercept_event
+            )
         return send
 
     def _intercept_event(self, ex) -> None:
@@ -191,7 +197,7 @@ class EmvyApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.theme = "emvy"      # aplica el tema profesional
+        self.theme = "emvy"  # aplica el tema profesional
         self.update_status()
 
     # -- navegación / refresco ---------------------------------------------
@@ -229,8 +235,15 @@ class EmvyApp(App):
                 pass
 
     def refresh_ui(self) -> None:
-        for sid in ("#screen-dashboard", "#screen-projects", "#screen-variables",
-                    "#screen-readers", "#screen-pocs", "#screen-charges", "#screen-explorer"):
+        for sid in (
+            "#screen-dashboard",
+            "#screen-projects",
+            "#screen-variables",
+            "#screen-readers",
+            "#screen-pocs",
+            "#screen-charges",
+            "#screen-explorer",
+        ):
             try:
                 w = self.query_one(sid)
                 if hasattr(w, "reload"):
@@ -264,11 +277,13 @@ class EmvyApp(App):
         self.call_from_thread(self.notify, f"Conectando a {device.name}…")
         # Banner en la consola ANTES de abrir: el handshake del BomberCat (PING/
         # WAIT/READY) ocurre dentro de open() y ya se ve en vivo por `on_wire`.
-        self.call_from_thread(self._console_banner,
-                              f"conectando: {device.name} [{device.backend}]")
+        self.call_from_thread(
+            self._console_banner, f"conectando: {device.name} [{device.backend}]"
+        )
         try:
-            reader = registry.open_device(device, on_event=self._on_reader_trace,
-                                          on_wire=self._on_reader_wire)
+            reader = registry.open_device(
+                device, on_event=self._on_reader_trace, on_wire=self._on_reader_wire
+            )
             atr = reader.atr() if reader.atr else b""
         except Exception as e:
             self.call_from_thread(self.notify, str(e).splitlines()[0], severity="error")
@@ -317,8 +332,10 @@ class EmvyApp(App):
         self.card_atr = to_hex(atr, sep=" ") if atr else None
         self.update_status()
         atr_txt = f" · ATR {self.card_atr}" if self.card_atr else ""
-        self._console_banner(f"conectado: {self.reader_device.name}"
-                             f" [{self.reader_device.backend}]{atr_txt}")
+        self._console_banner(
+            f"conectado: {self.reader_device.name}"
+            f" [{self.reader_device.backend}]{atr_txt}"
+        )
         self.notify("Lector conectado.")
 
     def disconnect_reader(self) -> None:
@@ -339,8 +356,10 @@ class EmvyApp(App):
     def _need_card_reader(self) -> bool:
         if self.reader and self.reader.transceive:
             return True
-        self.notify("Conecta un lector de chip o NFC primero (pestaña Lectores).",
-                    severity="warning")
+        self.notify(
+            "Conecta un lector de chip o NFC primero (pestaña Lectores).",
+            severity="warning",
+        )
         return False
 
     @work(thread=True, exclusive=True, group="card")
@@ -359,7 +378,9 @@ class EmvyApp(App):
                 profile=self.current_profile(),
                 raw=raw,
                 mode=mode,
-                brute=not lean, sweep=not lean, get_data=not lean,
+                brute=not lean,
+                sweep=not lean,
+                get_data=not lean,
             )
         except Exception as e:
             self.call_from_thread(self.notify, f"Captura falló: {e}", severity="error")
@@ -372,15 +393,22 @@ class EmvyApp(App):
             self.query_one("#screen-explorer", ExplorerScreen).show_dump(dump)
         except Exception:
             pass
-        self.update_status()   # refleja la captura en el dashboard
+        self.update_status()  # refleja la captura en el dashboard
         backend = getattr(self.reader_device, "backend", None)
-        empty = not dump.applications and len(dump.blobs) <= 1  # <=1: solo el blob ATR, si acaso
+        empty = (
+            not dump.applications and len(dump.blobs) <= 1
+        )  # <=1: solo el blob ATR, si acaso
         if backend == "bombercat" and empty:
-            self.notify("Sin datos: la tarjeta probablemente se movió durante la lectura "
-                        "(el rango NFC es de milímetros). Sosténla firme y pegada a la "
-                        "antena, y vuelve a intentar.", severity="warning")
+            self.notify(
+                "Sin datos: la tarjeta probablemente se movió durante la lectura "
+                "(el rango NFC es de milímetros). Sosténla firme y pegada a la "
+                "antena, y vuelve a intentar.",
+                severity="warning",
+            )
             return
-        self.notify(f"Captura: {len(dump.applications)} app(s), {len(dump.blobs)} blobs.")
+        self.notify(
+            f"Captura: {len(dump.applications)} app(s), {len(dump.blobs)} blobs."
+        )
 
     # -- APDU crudo (hilo de trabajo) --------------------------------------
     @work(thread=True, exclusive=True, group="card")
@@ -402,21 +430,32 @@ class EmvyApp(App):
 
     # -- PoC: ejecutar un plugin del proyecto (hilo de trabajo) ------------
     @work(thread=True, exclusive=True, group="poc")
-    def run_poc_ui(self, poc_id: str, *, card_source: str = "session",
-                   capture_name: str | None = None, dry_run: bool = True,
-                   allow_write: bool = False) -> None:
+    def run_poc_ui(
+        self,
+        poc_id: str,
+        *,
+        card_source: str = "session",
+        capture_name: str | None = None,
+        dry_run: bool = True,
+        allow_write: bool = False,
+    ) -> None:
         from .. import poc as pocmod
         from ..payments import EmvCard
         from ..session.model import CardDump
+
         proj = store.active_project()
         if not proj:
-            self.call_from_thread(self.notify, "No hay proyecto activo.", severity="warning")
+            self.call_from_thread(
+                self.notify, "No hay proyecto activo.", severity="warning"
+            )
             return
         pocmod.clear()
         pocmod.load_plugins(proj)
         p = pocmod.get(poc_id)
         if not p:
-            self.call_from_thread(self.notify, f"PoC {poc_id!r} no encontrado.", severity="error")
+            self.call_from_thread(
+                self.notify, f"PoC {poc_id!r} no encontrado.", severity="error"
+            )
             return
 
         # Resuelve la tarjeta según la fuente elegida (IO en el hilo de trabajo).
@@ -429,9 +468,11 @@ class EmvyApp(App):
                 dump = CardDump.from_json(path.read_text())
             elif card_source == "live":
                 if not (self.reader and self.reader.transceive):
-                    self.call_from_thread(self.notify,
-                                          "Conecta un lector de chip/NFC para capturar en vivo.",
-                                          severity="warning")
+                    self.call_from_thread(
+                        self.notify,
+                        "Conecta un lector de chip/NFC para capturar en vivo.",
+                        severity="warning",
+                    )
                     return
                 self.call_from_thread(self.notify, "Capturando del lector para el PoC…")
                 dump = capture_card(
@@ -450,8 +491,9 @@ class EmvyApp(App):
         except Exception:  # noqa: BLE001 — una captura rara no debe tumbar el run
             card = None
         run_dir = pocmod.runner.run_dir_for(proj, p.meta.id)
-        ctx = pocmod.make_context(proj, card=card, run_dir=run_dir,
-                                  dry_run=dry_run, allow_write=allow_write)
+        ctx = pocmod.make_context(
+            proj, card=card, run_dir=run_dir, dry_run=dry_run, allow_write=allow_write
+        )
         result = pocmod.run_poc(p, ctx)
         pocmod.save_result(ctx, p.meta, result)
         self.call_from_thread(self._on_poc, p.meta, result, run_dir)
@@ -468,48 +510,71 @@ class EmvyApp(App):
     def _resolve_dump(self, card_source: str, capture_name: str | None):
         """Resuelve un CardDump según la fuente (sesión/guardada/lector en vivo)."""
         from ..session.model import CardDump
+
         if card_source == "session":
             return self.last_dump
         if card_source == "saved" and capture_name:
             proj = store.active_project()
             if proj:
-                return CardDump.from_json((proj.captures_dir / capture_name).read_text())
+                return CardDump.from_json(
+                    (proj.captures_dir / capture_name).read_text()
+                )
         if card_source == "live" and self.reader and self.reader.transceive:
             dump = capture_card(
                 self.active_send(),
                 atr=(self.reader.atr() if self.reader.atr else b""),
                 reader=(self.reader_device.name if self.reader_device else ""),
-                profile=self.current_profile())
+                profile=self.current_profile(),
+            )
             self.last_dump = dump
             return dump
         return None
 
     @work(thread=True, exclusive=True, group="switch")
-    def run_switch_flow_ui(self, kind: str, *, card_source: str = "session",
-                           capture_name: str | None = None, amount: int = 500,
-                           dry_run: bool = True, sign_on: bool = True) -> None:
+    def run_switch_flow_ui(
+        self,
+        kind: str,
+        *,
+        card_source: str = "session",
+        capture_name: str | None = None,
+        amount: int = 500,
+        dry_run: bool = True,
+        sign_on: bool = True,
+    ) -> None:
         from ..payments import EmvCard, SwitchConfig, switch
+
         proj = store.active_project()
-        variables = ({v.name: v.value for v in store.load_project_variables(proj)}
-                     if proj else {})
+        variables = (
+            {v.name: v.value for v in store.load_project_variables(proj)}
+            if proj
+            else {}
+        )
         cfg = SwitchConfig.from_vars(lambda k: variables.get(k))
         try:
             if kind == "signon":
                 res = switch.run_signon(cfg)
             elif kind == "reversal":
-                res = switch.run_reversal(cfg, stan=variables.get("stan", "000001"),
-                                          rrn=variables.get("rrn", ""),
-                                          amount_cents=amount, dry_run=dry_run,
-                                          sign_on=sign_on)
+                res = switch.run_reversal(
+                    cfg,
+                    stan=variables.get("stan", "000001"),
+                    rrn=variables.get("rrn", ""),
+                    amount_cents=amount,
+                    dry_run=dry_run,
+                    sign_on=sign_on,
+                )
             else:
                 dump = self._resolve_dump(card_source, capture_name)
                 card = EmvCard.from_dump(dump) if dump else None
                 if card is None:
-                    self.call_from_thread(self.notify,
-                                          "Necesitas una tarjeta (captura o lector).",
-                                          severity="warning")
+                    self.call_from_thread(
+                        self.notify,
+                        "Necesitas una tarjeta (captura o lector).",
+                        severity="warning",
+                    )
                     return
-                res = switch.run_purchase(cfg, card, amount, dry_run=dry_run, sign_on=sign_on)
+                res = switch.run_purchase(
+                    cfg, card, amount, dry_run=dry_run, sign_on=sign_on
+                )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self.notify, f"Switch: {e}", severity="error")
             return
@@ -517,9 +582,12 @@ class EmvyApp(App):
         if proj:
             try:
                 from datetime import datetime
+
                 tdir = proj.path / "transactions"
                 tdir.mkdir(parents=True, exist_ok=True)
-                (tdir / f"{datetime.now():%Y%m%d-%H%M%S}-{kind}.txt").write_text(res.summary())
+                (tdir / f"{datetime.now():%Y%m%d-%H%M%S}-{kind}.txt").write_text(
+                    res.summary()
+                )
             except Exception:
                 pass
         self.call_from_thread(self._on_switch, kind, res)
@@ -535,17 +603,25 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="card")
     def write_card_ui(self, op: str, params: dict) -> None:
         from ..core import cardwrite
+
         if not (self.reader and self.reader.transceive):
-            self.call_from_thread(self.notify, "Conecta un lector de chip/NFC primero.",
-                                  severity="warning")
+            self.call_from_thread(
+                self.notify,
+                "Conecta un lector de chip/NFC primero.",
+                severity="warning",
+            )
             return
         send = self.active_send()
         try:
             data = params["data"]
             if op == "record":
-                resp = cardwrite.update_record(send, params["sfi"], params["record"], data)
+                resp = cardwrite.update_record(
+                    send, params["sfi"], params["record"], data
+                )
             elif op == "binary":
-                resp = cardwrite.update_binary(send, params["offset"], data, sfi=params.get("sfi"))
+                resp = cardwrite.update_binary(
+                    send, params["offset"], data, sfi=params.get("sfi")
+                )
             elif op == "data":
                 resp = cardwrite.put_data(send, params["tag"], data)
             elif op == "append":
@@ -569,11 +645,14 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="card")
     def fuzz_magspoof_ui(self, track1: str | None, track2: str | None) -> None:
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
-            self.call_from_thread(self.notify,
-                                  "No se detectó BomberCat (¿pyserial? ¿conectado?).",
-                                  severity="warning")
+            self.call_from_thread(
+                self.notify,
+                "No se detectó BomberCat (¿pyserial? ¿conectado?).",
+                severity="warning",
+            )
             return
         try:
             out = bombercat.magspoof_emit(devs[0], track1=track1, track2=track2)
@@ -593,18 +672,26 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="card")
     def fuzz_ndef_ui(self, ndef_hex: str) -> None:
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
-            self.call_from_thread(self.notify,
-                                  "No se detectó BomberCat (¿pyserial? ¿conectado?).",
-                                  severity="warning")
+            self.call_from_thread(
+                self.notify,
+                "No se detectó BomberCat (¿pyserial? ¿conectado?).",
+                severity="warning",
+            )
             return
-        self.call_from_thread(self.notify,
-                              "Emulando tag NDEF… acerca un lector NFC (Detener para parar).")
+        self.call_from_thread(
+            self.notify, "Emulando tag NDEF… acerca un lector NFC (Detener para parar)."
+        )
         try:
             bombercat.ndef_emulate(
-                devs[0], ndef_hex, timeout=None, stop=self._emu_stop.is_set,
-                on_line=lambda l: self.call_from_thread(self._on_fuzz_ndef_line, l))
+                devs[0],
+                ndef_hex,
+                timeout=None,
+                stop=self._emu_stop.is_set,
+                on_line=lambda l: self.call_from_thread(self._on_fuzz_ndef_line, l),
+            )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self.notify, f"NDEF EMU: {e}", severity="error")
 
@@ -612,18 +699,26 @@ class EmvyApp(App):
     def fuzz_emv_ui(self) -> None:
         """Emula una tarjeta EMV para perfilar/fuzzear un terminal de pago."""
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
-            self.call_from_thread(self.notify,
-                                  "No se detectó BomberCat (¿pyserial? ¿conectado?).",
-                                  severity="warning")
+            self.call_from_thread(
+                self.notify,
+                "No se detectó BomberCat (¿pyserial? ¿conectado?).",
+                severity="warning",
+            )
             return
-        self.call_from_thread(self.notify,
-                              "Emulando tarjeta EMV… acerca el terminal/POS (Detener para parar).")
+        self.call_from_thread(
+            self.notify,
+            "Emulando tarjeta EMV… acerca el terminal/POS (Detener para parar).",
+        )
         try:
             bombercat.emv_emulate(
-                devs[0], timeout=None, stop=self._emu_stop.is_set,
-                on_line=lambda l: self.call_from_thread(self._on_fuzz_ndef_line, l))
+                devs[0],
+                timeout=None,
+                stop=self._emu_stop.is_set,
+                on_line=lambda l: self.call_from_thread(self._on_fuzz_ndef_line, l),
+            )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self.notify, f"EMV EMU: {e}", severity="error")
 
@@ -642,12 +737,15 @@ class EmvyApp(App):
         """Reinicia el BomberCat (REBOOT). Detiene antes cualquier emulación para
         soltar el puerto; tras el reset hay que reconectar el lector."""
         from ..readers import bombercat
+
         self._emu_stop.set()
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
-            self.call_from_thread(self.notify,
-                                  "No se detectó BomberCat (¿pyserial? ¿conectado?).",
-                                  severity="warning")
+            self.call_from_thread(
+                self.notify,
+                "No se detectó BomberCat (¿pyserial? ¿conectado?).",
+                severity="warning",
+            )
             return
         try:
             out = bombercat.reboot(devs[0])
@@ -660,7 +758,8 @@ class EmvyApp(App):
             self.call_from_thread(self._disconnect_after_reboot)
         self.call_from_thread(
             self.notify,
-            "BomberCat reiniciado. Reconecta el lector en la pestaña Lectores.")
+            "BomberCat reiniciado. Reconecta el lector en la pestaña Lectores.",
+        )
 
     def _disconnect_after_reboot(self) -> None:
         try:
@@ -691,20 +790,25 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="fw")
     def bombercat_add_source_ui(self, ref: str) -> None:
         from ..integrations import firmware_sources as fs
+
         try:
             src = fs.add_source(ref)
-            paths = fs.download_source(src, progress=lambda m: self.call_from_thread(
-                self._fw_log, f"[dim]{m}[/]"))
+            paths = fs.download_source(
+                src,
+                progress=lambda m: self.call_from_thread(self._fw_log, f"[dim]{m}[/]"),
+            )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self._fw_log, f"[red]Fuente falló: {e}[/]")
             return
-        self.call_from_thread(self._fw_log,
-                              f"[green]{src.name}: {len(paths)} .uf2 descargado(s).[/]")
+        self.call_from_thread(
+            self._fw_log, f"[green]{src.name}: {len(paths)} .uf2 descargado(s).[/]"
+        )
         self._fw_refresh_inline()
 
     @work(thread=True, exclusive=True, group="fw")
     def bombercat_clean_ui(self, target) -> None:
         from ..integrations import firmware_sources as fs
+
         try:
             n = fs.clean_cache(target)
         except Exception as e:  # noqa: BLE001
@@ -714,13 +818,16 @@ class EmvyApp(App):
         self._fw_refresh_inline()
 
     @work(thread=True, exclusive=True, group="fw")
-    def bombercat_compile_ui(self, sketch_dir: str, flash_after: bool,
-                             port: str | None = None) -> None:
+    def bombercat_compile_ui(
+        self, sketch_dir: str, flash_after: bool, port: str | None = None
+    ) -> None:
         from rich.markup import escape
         from ..integrations import arduino as ard
+
         if not ard.arduino_cli_available():
-            self.call_from_thread(self._fw_log,
-                                  "[red]Falta arduino-cli (instálalo para compilar).[/]")
+            self.call_from_thread(
+                self._fw_log, "[red]Falta arduino-cli (instálalo para compilar).[/]"
+            )
             return
         try:
             cp = ard.compile_sketch(sketch_dir)
@@ -728,35 +835,51 @@ class EmvyApp(App):
             self.call_from_thread(self._fw_log, f"[red]Compilación falló: {e}[/]")
             return
         out = (cp.stdout or "") + (("\n" + cp.stderr) if cp.stderr else "")
-        self.call_from_thread(self._fw_log, escape(out.strip()[-1500:]) or "(sin salida)")
+        self.call_from_thread(
+            self._fw_log, escape(out.strip()[-1500:]) or "(sin salida)"
+        )
         if cp.returncode != 0:
-            self.call_from_thread(self._fw_log, f"[red]✗ compilación rc={cp.returncode}[/]")
+            self.call_from_thread(
+                self._fw_log, f"[red]✗ compilación rc={cp.returncode}[/]"
+            )
             return
         uf2 = ard.latest_uf2(sketch_dir)
-        self.call_from_thread(self._fw_log,
-                              f"[green]✔ compilado: {uf2}[/]" if uf2 else "[green]✔ compilado[/]")
+        self.call_from_thread(
+            self._fw_log,
+            f"[green]✔ compilado: {uf2}[/]" if uf2 else "[green]✔ compilado[/]",
+        )
         self._fw_refresh_inline()
         if not flash_after:
             return
         # Tu firmware sube por picotool (arduino-cli upload), NO por .uf2: el
         # flasheo .uf2 de bombercat-tools es solo para las imágenes oficiales.
-        self.call_from_thread(self._fw_log, "[yellow]⚠ subiendo por picotool (arduino-cli)…[/]")
+        self.call_from_thread(
+            self._fw_log, "[yellow]⚠ subiendo por picotool (arduino-cli)…[/]"
+        )
         try:
             up = ard.upload_sketch(sketch_dir, port=port)
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self._fw_log, f"[red]Subida falló: {e}[/]")
             return
         uout = (up.stdout or "") + (("\n" + up.stderr) if up.stderr else "")
-        self.call_from_thread(self._fw_log, escape(uout.strip()[-1500:]) or "(sin salida)")
+        self.call_from_thread(
+            self._fw_log, escape(uout.strip()[-1500:]) or "(sin salida)"
+        )
         ok = up.returncode == 0
-        self.call_from_thread(self._fw_log,
-                              "[green]✔ Subida OK[/]" if ok
-                              else f"[red]✗ Subida falló (rc={up.returncode})[/]")
+        self.call_from_thread(
+            self._fw_log,
+            (
+                "[green]✔ Subida OK[/]"
+                if ok
+                else f"[red]✗ Subida falló (rc={up.returncode})[/]"
+            ),
+        )
 
     def _flash_inline(self, name: str, port: str | None) -> None:
         """Flashea (en el hilo del worker) y registra el resultado."""
         from rich.markup import escape
         from ..integrations import bombercat_tools as bt
+
         try:
             cp = bt.flash_capture(name, port=port)
         except Exception as e:  # noqa: BLE001
@@ -765,29 +888,43 @@ class EmvyApp(App):
         out = (cp.stdout or "") + (("\n" + cp.stderr) if cp.stderr else "")
         self.call_from_thread(self._fw_log, escape(out.strip()) or "(sin salida)")
         ok = cp.returncode == 0
-        self.call_from_thread(self._fw_log,
-                              f"[green]✔ Flasheo de {name} OK[/]" if ok
-                              else f"[red]✗ Flasheo de {name} falló (rc={cp.returncode})[/]")
-        self.call_from_thread(self.notify, f"Firmware {name}: {'OK' if ok else 'error'}",
-                              severity=("information" if ok else "error"))
+        self.call_from_thread(
+            self._fw_log,
+            (
+                f"[green]✔ Flasheo de {name} OK[/]"
+                if ok
+                else f"[red]✗ Flasheo de {name} falló (rc={cp.returncode})[/]"
+            ),
+        )
+        self.call_from_thread(
+            self.notify,
+            f"Firmware {name}: {'OK' if ok else 'error'}",
+            severity=("information" if ok else "error"),
+        )
 
     def _fw_refresh_inline(self) -> None:
         """Recalcula la lista (release + descargados + locales) en el hilo del worker."""
         from ..integrations import bombercat_tools as bt
         from ..integrations import firmware_sources as fs
         from .screens.firmware import discover_local_uf2
+
         try:
             names = bt.fw_list_names()
         except Exception as e:  # noqa: BLE001
             names = []
-            self.call_from_thread(self._fw_log, f"[red]No se pudo listar el release: {e}[/]")
+            self.call_from_thread(
+                self._fw_log, f"[red]No se pudo listar el release: {e}[/]"
+            )
         items = [(f"📦 {n}", n) for n in names]
         for p in fs.cached_firmwares():
             items.append((f"⬇ {p.name}  [dim]{p.parent.name}/ (descargado)[/]", str(p)))
         for p in discover_local_uf2():
             items.append((f"🛠 {p.name}  [dim]{p.parent.name}/ (local)[/]", str(p)))
         self.call_from_thread(
-            lambda: self.query_one("#screen-firmware", BombercatScreen).set_firmwares(items))
+            lambda: self.query_one("#screen-firmware", BombercatScreen).set_firmwares(
+                items
+            )
+        )
 
     @work(thread=True, exclusive=True, group="fw")
     def bombercat_flash_ui(self, name: str, port: str | None = None) -> None:
@@ -797,6 +934,7 @@ class EmvyApp(App):
     def bombercat_devices_ui(self) -> None:
         from rich.markup import escape
         from ..integrations import bombercat_tools as bt
+
         try:
             txt = bt.devices_text()
         except Exception as e:  # noqa: BLE001
@@ -807,11 +945,19 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="fw")
     def bombercat_setup_ui(self) -> None:
         from ..integrations import bombercat_tools as bt
+
         try:
-            bt.ensure_venv(log=lambda m: self.call_from_thread(self._fw_log, f"[dim]{m}[/]"))
-            self.call_from_thread(self._fw_log, "[green]venv de bombercat-tools listo.[/]")
+            bt.ensure_venv(
+                log=lambda m: self.call_from_thread(self._fw_log, f"[dim]{m}[/]")
+            )
             self.call_from_thread(
-                lambda: self.query_one("#screen-firmware", BombercatScreen)._update_status())
+                self._fw_log, "[green]venv de bombercat-tools listo.[/]"
+            )
+            self.call_from_thread(
+                lambda: self.query_one(
+                    "#screen-firmware", BombercatScreen
+                )._update_status()
+            )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self._fw_log, f"[red]setup falló: {e}[/]")
 
@@ -819,9 +965,11 @@ class EmvyApp(App):
     @work(thread=True, exclusive=True, group="iso")
     def send_iso8583_ui(self, host: str, port: str, data: bytes, header: str) -> None:
         from ..payments import iso_host
+
         try:
-            resp = iso_host.send_message(host, int(port), data,
-                                         header=int(header), timeout=8.0)
+            resp = iso_host.send_message(
+                host, int(port), data, header=int(header), timeout=8.0
+            )
         except Exception as e:  # noqa: BLE001
             self.call_from_thread(self.notify, f"ISO host: {e}", severity="error")
             return
@@ -838,4 +986,3 @@ class EmvyApp(App):
 def run() -> int:
     EmvyApp().run()
     return 0
-

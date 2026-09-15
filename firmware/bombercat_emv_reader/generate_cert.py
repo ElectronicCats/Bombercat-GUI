@@ -14,10 +14,12 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 key = ec.generate_private_key(ec.SECP256R1())
 
-subject = issuer = x509.Name([
-    x509.NameAttribute(NameOID.COMMON_NAME, "bombercat.local"),
-    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "BomberCat"),
-])
+subject = issuer = x509.Name(
+    [
+        x509.NameAttribute(NameOID.COMMON_NAME, "bombercat.local"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "BomberCat"),
+    ]
+)
 
 cert = (
     x509.CertificateBuilder()
@@ -27,24 +29,31 @@ cert = (
     .serial_number(x509.random_serial_number())
     .not_valid_before(datetime.datetime.utcnow())
     .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
-    .add_extension(x509.SubjectAlternativeName([
-        x509.IPAddress(ipaddress.ip_address("192.168.4.1")),
-        x509.DNSName("bombercat.local"),
-    ]), critical=False)
+    .add_extension(
+        x509.SubjectAlternativeName(
+            [
+                x509.IPAddress(ipaddress.ip_address("192.168.4.1")),
+                x509.DNSName("bombercat.local"),
+            ]
+        ),
+        critical=False,
+    )
     .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
     .sign(key, hashes.SHA256())
 )
 
 cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode()
-key_pem  = key.private_bytes(
+key_pem = key.private_bytes(
     serialization.Encoding.PEM,
     serialization.PrivateFormat.TraditionalOpenSSL,
-    serialization.NoEncryption()
+    serialization.NoEncryption(),
 ).decode()
 
+
 def to_c(s):
-    lines = s.strip().split('\n')
-    return '\n'.join(f'  "{line}\\n"' for line in lines) + ';'
+    lines = s.strip().split("\n")
+    return "\n".join(f'  "{line}\\n"' for line in lines) + ";"
+
 
 header = f"""// AUTO-GENERADO por generate_cert.py — NO subir a control de versiones
 // Certificado autofirmado EC P-256 para 192.168.4.1 / bombercat.local
@@ -62,7 +71,9 @@ with open("certs.h", "w") as f:
     f.write(header)
 
 print("✓ certs.h generado.")
-print(f"  Cert válido hasta: {datetime.datetime.utcnow() + datetime.timedelta(days=3650):%Y-%m-%d}")
+print(
+    f"  Cert válido hasta: {datetime.datetime.utcnow() + datetime.timedelta(days=3650):%Y-%m-%d}"
+)
 print()
 print("En Chrome/Firefox, al entrar a https://192.168.4.1:")
 print("  'Avanzado' → 'Continuar a 192.168.4.1 (no seguro)'")

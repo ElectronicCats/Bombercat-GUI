@@ -1,6 +1,7 @@
 """Panel ISO 8583: constructor de mensajes (MTI + campos), traducción legible y
 envío por TCP a un host de laboratorio (switch/adquirente). El envío corre en un
 hilo de trabajo; la respuesta se parsea y traduce."""
+
 from __future__ import annotations
 
 from textual import on
@@ -27,8 +28,12 @@ class Iso8583Screen(Vertical):
             yield Button("Construir", id="iso_build", variant="success")
             yield Input(value="127.0.0.1", id="iso_host", placeholder="host")
             yield Input(value="0", id="iso_port", placeholder="puerto")
-            yield Select([("hdr 2B", "2"), ("sin hdr", "0"), ("hdr 4B", "4")],
-                         value="2", allow_blank=False, id="iso_hdr")
+            yield Select(
+                [("hdr 2B", "2"), ("sin hdr", "0"), ("hdr 4B", "4")],
+                value="2",
+                allow_blank=False,
+                id="iso_hdr",
+            )
             yield Button("Enviar", id="iso_send", variant="warning")
         yield RichLog(id="iso_log", markup=True, wrap=True)
 
@@ -58,8 +63,11 @@ class Iso8583Screen(Vertical):
             return
         raw = self.query_one("#iso_val", Input).value.strip()
         try:
-            val = (from_hex(raw) if self.query_one("#iso_hex", Checkbox).value
-                   else raw.encode("latin-1"))
+            val = (
+                from_hex(raw)
+                if self.query_one("#iso_hex", Checkbox).value
+                else raw.encode("latin-1")
+            )
         except ValueError:
             self.app.notify("Valor hex inválido.", severity="error")
             return
@@ -80,7 +88,9 @@ class Iso8583Screen(Vertical):
     @on(Button.Pressed, "#iso_build")
     def _build(self):
         try:
-            msg = iso8583.build(self.query_one("#iso_mti", Input).value.strip(), self._fields)
+            msg = iso8583.build(
+                self.query_one("#iso_mti", Input).value.strip(), self._fields
+            )
         except Exception as e:
             self.app.notify(f"No se pudo construir: {e}", severity="error")
             return
@@ -101,7 +111,8 @@ class Iso8583Screen(Vertical):
             self.app.notify("Indica un puerto válido.", severity="warning")
             return
         self.query_one("#iso_log", RichLog).write(
-            f"[dim]→ enviando a {host}:{port} (header {hdr}B)…[/]")
+            f"[dim]→ enviando a {host}:{port} (header {hdr}B)…[/]"
+        )
         self.app.send_iso8583_ui(host, port, self._built, hdr)
 
     def show_response(self, resp: bytes) -> None:

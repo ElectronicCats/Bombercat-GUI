@@ -7,6 +7,7 @@ Dos modos, ambos opcionales y con degradación elegante:
 
 La cadena cruda se entrega tal cual; `core.track.parse_swipe` la interpreta.
 """
+
 from __future__ import annotations
 
 import time
@@ -22,14 +23,24 @@ MSR_HELP = (
     "Especifica el dispositivo por id, p.ej. 'evdev:/dev/input/event5' o 'serial:/dev/ttyUSB0'."
 )
 
-_MSR_HINTS = ("msr", "magnetic", "magtek", "card reader", "swipe", "mag-stripe",
-              "magstripe", "id tech", "idtech")
+_MSR_HINTS = (
+    "msr",
+    "magnetic",
+    "magtek",
+    "card reader",
+    "swipe",
+    "mag-stripe",
+    "magstripe",
+    "id tech",
+    "idtech",
+)
 
 
 # --- disponibilidad --------------------------------------------------------
 def _have_evdev() -> bool:
     try:
         import evdev  # noqa: F401
+
         return True
     except Exception:
         return False
@@ -38,6 +49,7 @@ def _have_evdev() -> bool:
 def _have_serial() -> bool:
     try:
         import serial  # noqa: F401
+
         return True
     except Exception:
         return False
@@ -61,8 +73,14 @@ def _evdev_devices() -> list[DeviceInfo]:
         except Exception:
             continue
         if any(h in name.lower() for h in _MSR_HINTS):
-            out.append(DeviceInfo(BACKEND, f"evdev:{path}", f"{name} (HID)",
-                                  frozenset({Capability.MAGSTRIPE})))
+            out.append(
+                DeviceInfo(
+                    BACKEND,
+                    f"evdev:{path}",
+                    f"{name} (HID)",
+                    frozenset({Capability.MAGSTRIPE}),
+                )
+            )
     return out
 
 
@@ -73,10 +91,16 @@ def _serial_devices() -> list[DeviceInfo]:
         return []
     out = []
     for p in list_ports.comports():
-        name = (p.description or p.device)
+        name = p.description or p.device
         if any(h in name.lower() for h in _MSR_HINTS):
-            out.append(DeviceInfo(BACKEND, f"serial:{p.device}", f"{name} (serie)",
-                                  frozenset({Capability.MAGSTRIPE})))
+            out.append(
+                DeviceInfo(
+                    BACKEND,
+                    f"serial:{p.device}",
+                    f"{name} (serie)",
+                    frozenset({Capability.MAGSTRIPE}),
+                )
+            )
     return out
 
 
@@ -86,14 +110,33 @@ def list_devices() -> list[DeviceInfo]:
 
 # --- mapa de teclas HID (US) para reconstruir el swipe ---------------------
 _BASE = {
-    "KEY_1": "1", "KEY_2": "2", "KEY_3": "3", "KEY_4": "4", "KEY_5": "5",
-    "KEY_6": "6", "KEY_7": "7", "KEY_8": "8", "KEY_9": "9", "KEY_0": "0",
-    "KEY_MINUS": "-", "KEY_EQUAL": "=", "KEY_SEMICOLON": ";", "KEY_SLASH": "/",
-    "KEY_SPACE": " ", "KEY_DOT": ".", "KEY_COMMA": ",", "KEY_APOSTROPHE": "'",
+    "KEY_1": "1",
+    "KEY_2": "2",
+    "KEY_3": "3",
+    "KEY_4": "4",
+    "KEY_5": "5",
+    "KEY_6": "6",
+    "KEY_7": "7",
+    "KEY_8": "8",
+    "KEY_9": "9",
+    "KEY_0": "0",
+    "KEY_MINUS": "-",
+    "KEY_EQUAL": "=",
+    "KEY_SEMICOLON": ";",
+    "KEY_SLASH": "/",
+    "KEY_SPACE": " ",
+    "KEY_DOT": ".",
+    "KEY_COMMA": ",",
+    "KEY_APOSTROPHE": "'",
 }
 _SHIFT = {
-    "KEY_5": "%", "KEY_6": "^", "KEY_SLASH": "?", "KEY_2": "@",
-    "KEY_EQUAL": "+", "KEY_SEMICOLON": ":", "KEY_1": "!",
+    "KEY_5": "%",
+    "KEY_6": "^",
+    "KEY_SLASH": "?",
+    "KEY_2": "@",
+    "KEY_EQUAL": "+",
+    "KEY_SEMICOLON": ":",
+    "KEY_1": "!",
 }
 
 
@@ -111,8 +154,9 @@ def _open_evdev(path: str) -> OpenReader:
     from evdev import InputDevice, categorize, ecodes
 
     dev = InputDevice(path)
-    device = DeviceInfo(BACKEND, f"evdev:{path}", f"{dev.name} (HID)",
-                        frozenset({Capability.MAGSTRIPE}))
+    device = DeviceInfo(
+        BACKEND, f"evdev:{path}", f"{dev.name} (HID)", frozenset({Capability.MAGSTRIPE})
+    )
 
     def read_swipe(timeout: float = 30.0) -> str:
         buf: list[str] = []
@@ -154,8 +198,9 @@ def _open_serial(port: str, baud: int = 9600) -> OpenReader:
     import serial
 
     ser = serial.Serial(port, baudrate=baud, timeout=1)
-    device = DeviceInfo(BACKEND, f"serial:{port}", f"{port} (serie)",
-                        frozenset({Capability.MAGSTRIPE}))
+    device = DeviceInfo(
+        BACKEND, f"serial:{port}", f"{port} (serie)", frozenset({Capability.MAGSTRIPE})
+    )
 
     def read_swipe(timeout: float = 30.0) -> str:
         deadline = time.monotonic() + timeout

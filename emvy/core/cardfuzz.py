@@ -9,6 +9,7 @@ forzando "sin verificación", AIP débil, campos truncados/sobredimensionados…
 para observar cómo reacciona un terminal real — rechazo local, fallback,
 aceptación silenciosa — sin necesitar una tarjeta real ni emulación de tarjeta.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ from dataclasses import dataclass
 from . import ndef as ndefmod
 from . import tlv
 from .hexutil import from_hex, to_hex
+
 
 # ---------------------------------------------------------------------------
 # Banda magnética: construcción + plantillas
@@ -33,14 +35,16 @@ def luhn_valid(pan: str) -> bool:
     return pan.isdigit() and luhn_check_digit(pan[:-1]) == pan[-1]
 
 
-def build_track1(pan: str, name: str, expiry: str, service_code: str,
-                 discretionary: str = "") -> str:
+def build_track1(
+    pan: str, name: str, expiry: str, service_code: str, discretionary: str = ""
+) -> str:
     """`%B<PAN>^<NOMBRE>^<YYMM><SC><DISC>?` (formato B, ISO/IEC 7813)."""
     return f"%B{pan}^{name}^{expiry}{service_code}{discretionary}?"
 
 
-def build_track2(pan: str, expiry: str, service_code: str,
-                 discretionary: str = "") -> str:
+def build_track2(
+    pan: str, expiry: str, service_code: str, discretionary: str = ""
+) -> str:
     """`;<PAN>=<YYMM><SC><DISC>?`."""
     return f";{pan}={expiry}{service_code}{discretionary}?"
 
@@ -54,72 +58,128 @@ class TrackTemplate:
     track2: str | None
 
 
-def _track_fields(pan="4111111111111111", name="TEST/CARD", expiry="2812",
-                  service_code="201", discretionary="000000"):
-    return dict(pan=pan, name=name, expiry=expiry,
-               service_code=service_code, discretionary=discretionary)
+def _track_fields(
+    pan="4111111111111111",
+    name="TEST/CARD",
+    expiry="2812",
+    service_code="201",
+    discretionary="000000",
+):
+    return dict(
+        pan=pan,
+        name=name,
+        expiry=expiry,
+        service_code=service_code,
+        discretionary=discretionary,
+    )
 
 
-def track_templates(pan="4111111111111111", name="TEST/CARD", expiry="2812",
-                    service_code="201", discretionary="000000"
-                    ) -> tuple[TrackTemplate, ...]:
+def track_templates(
+    pan="4111111111111111",
+    name="TEST/CARD",
+    expiry="2812",
+    service_code="201",
+    discretionary="000000",
+) -> tuple[TrackTemplate, ...]:
     """Plantilla base + mutaciones, parametrizables desde un PAN/fecha propios."""
     f = _track_fields(pan, name, expiry, service_code, discretionary)
 
     def t1(**over):
         d = {**f, **over}
-        return build_track1(d["pan"], d["name"], d["expiry"], d["service_code"],
-                            d["discretionary"])
+        return build_track1(
+            d["pan"], d["name"], d["expiry"], d["service_code"], d["discretionary"]
+        )
 
     def t2(**over):
         d = {**f, **over}
-        return build_track2(d["pan"], d["expiry"], d["service_code"],
-                            d["discretionary"])
+        return build_track2(
+            d["pan"], d["expiry"], d["service_code"], d["discretionary"]
+        )
 
     bad_pan = pan[:-1] + ("0" if luhn_check_digit(pan[:-1]) != "0" else "1")
     return (
-        TrackTemplate("baseline", "Pista válida (referencia)",
-                      "Track1+Track2 bien formadas, para comparar contra las mutaciones.",
-                      t1(), t2()),
-        TrackTemplate("bad-luhn", "PAN con Luhn inválido",
-                      "Dígito verificador incorrecto — ¿el terminal lo valida "
-                      "localmente o lo manda igual al host?",
-                      t1(pan=bad_pan), t2(pan=bad_pan)),
-        TrackTemplate("expired", "Tarjeta vencida",
-                      "Fecha de expiración en el pasado (2001-01) — ¿rechazo "
-                      "local o pasa a autorización online?",
-                      t1(expiry="0101"), t2(expiry="0101")),
-        TrackTemplate("service-code-chip-required", "Código de servicio: exige chip",
-                      "Service code 2xx (chip obligatorio) presentado por swipe — "
-                      "¿el terminal fuerza inserción o hace fallback silencioso?",
-                      t1(service_code="220"), t2(service_code="220")),
-        TrackTemplate("truncated-pan", "PAN truncado",
-                      "PAN cortado a 8 dígitos (por debajo del mínimo ISO/IEC 7812).",
-                      t1(pan=pan[:8]), t2(pan=pan[:8])),
-        TrackTemplate("oversized-pan", "PAN sobredimensionado",
-                      "PAN de 22 dígitos (por encima del máximo de 19) — fuzz de "
-                      "límites del parser del terminal.",
-                      t1(pan=pan + "123456"), t2(pan=pan + "123456")),
-        TrackTemplate("missing-separator", "Sin separador PAN/datos",
-                      "Falta el '=' entre PAN y fecha/servicio — pista mal formada.",
-                      f"%B{pan}{expiry}{service_code}{discretionary}?",
-                      f";{pan}{expiry}{service_code}{discretionary}?"),
-        TrackTemplate("no-end-sentinel", "Sin centinela final",
-                      "Falta el '?' de cierre.",
-                      t1()[:-1], t2()[:-1]),
-        TrackTemplate("non-numeric-pan", "PAN no numérico",
-                      "Letras dentro del PAN — ¿el terminal lo rechaza al leer o "
-                      "lo reenvía tal cual?",
-                      t1(pan="41111111ABCD1111"), t2(pan="41111111ABCD1111")),
-        TrackTemplate("oversized-discretionary", "Campo discrecional excesivo",
-                      "Datos discrecionales muy largos (60 dígitos) — fuzz de "
-                      "buffer del lector.",
-                      t1(discretionary="9" * 60), t2(discretionary="9" * 60)),
+        TrackTemplate(
+            "baseline",
+            "Pista válida (referencia)",
+            "Track1+Track2 bien formadas, para comparar contra las mutaciones.",
+            t1(),
+            t2(),
+        ),
+        TrackTemplate(
+            "bad-luhn",
+            "PAN con Luhn inválido",
+            "Dígito verificador incorrecto — ¿el terminal lo valida "
+            "localmente o lo manda igual al host?",
+            t1(pan=bad_pan),
+            t2(pan=bad_pan),
+        ),
+        TrackTemplate(
+            "expired",
+            "Tarjeta vencida",
+            "Fecha de expiración en el pasado (2001-01) — ¿rechazo "
+            "local o pasa a autorización online?",
+            t1(expiry="0101"),
+            t2(expiry="0101"),
+        ),
+        TrackTemplate(
+            "service-code-chip-required",
+            "Código de servicio: exige chip",
+            "Service code 2xx (chip obligatorio) presentado por swipe — "
+            "¿el terminal fuerza inserción o hace fallback silencioso?",
+            t1(service_code="220"),
+            t2(service_code="220"),
+        ),
+        TrackTemplate(
+            "truncated-pan",
+            "PAN truncado",
+            "PAN cortado a 8 dígitos (por debajo del mínimo ISO/IEC 7812).",
+            t1(pan=pan[:8]),
+            t2(pan=pan[:8]),
+        ),
+        TrackTemplate(
+            "oversized-pan",
+            "PAN sobredimensionado",
+            "PAN de 22 dígitos (por encima del máximo de 19) — fuzz de "
+            "límites del parser del terminal.",
+            t1(pan=pan + "123456"),
+            t2(pan=pan + "123456"),
+        ),
+        TrackTemplate(
+            "missing-separator",
+            "Sin separador PAN/datos",
+            "Falta el '=' entre PAN y fecha/servicio — pista mal formada.",
+            f"%B{pan}{expiry}{service_code}{discretionary}?",
+            f";{pan}{expiry}{service_code}{discretionary}?",
+        ),
+        TrackTemplate(
+            "no-end-sentinel",
+            "Sin centinela final",
+            "Falta el '?' de cierre.",
+            t1()[:-1],
+            t2()[:-1],
+        ),
+        TrackTemplate(
+            "non-numeric-pan",
+            "PAN no numérico",
+            "Letras dentro del PAN — ¿el terminal lo rechaza al leer o "
+            "lo reenvía tal cual?",
+            t1(pan="41111111ABCD1111"),
+            t2(pan="41111111ABCD1111"),
+        ),
+        TrackTemplate(
+            "oversized-discretionary",
+            "Campo discrecional excesivo",
+            "Datos discrecionales muy largos (60 dígitos) — fuzz de "
+            "buffer del lector.",
+            t1(discretionary="9" * 60),
+            t2(discretionary="9" * 60),
+        ),
     )
 
 
-def get_track_template(templates: tuple[TrackTemplate, ...], template_id: str
-                       ) -> TrackTemplate | None:
+def get_track_template(
+    templates: tuple[TrackTemplate, ...], template_id: str
+) -> TrackTemplate | None:
     return next((t for t in templates if t.id == template_id), None)
 
 
@@ -131,17 +191,19 @@ class EmvTemplate:
     id: str
     title: str
     description: str
-    tlvs: tuple[tuple[str, bytes], ...]     # (tag, valor) en orden
+    tlvs: tuple[tuple[str, bytes], ...]  # (tag, valor) en orden
 
     def to_record(self) -> bytes:
         """Codifica como un registro EMV (template '70', igual que la mayoría
         de tarjetas reales) listo para UPDATE RECORD."""
-        return tlv.encode_tlv(tlv.TLV(
-            "70", b"", [tlv.tlv(t, v) for t, v in self.tlvs], constructed=True))
+        return tlv.encode_tlv(
+            tlv.TLV("70", b"", [tlv.tlv(t, v) for t, v in self.tlvs], constructed=True)
+        )
 
 
-def emv_templates(pan="4111111111111111", name="TEST/CARD", expiry="281231"
-                  ) -> tuple[EmvTemplate, ...]:
+def emv_templates(
+    pan="4111111111111111", name="TEST/CARD", expiry="281231"
+) -> tuple[EmvTemplate, ...]:
     """Plantilla base + mutaciones de un registro EMV típico (5A/57/5F24/5F20)."""
     track2_hex = _track2_bcd(pan, expiry)
     base = (
@@ -149,39 +211,64 @@ def emv_templates(pan="4111111111111111", name="TEST/CARD", expiry="281231"
         ("57", from_hex(track2_hex)),
         ("5F24", from_hex(expiry[2:] if len(expiry) == 6 else expiry)),
         ("5F20", name.encode("latin-1")),
-        ("82", from_hex("2000")),                 # AIP: DDA soportado (referencia)
-        ("8E", from_hex("00000000" "00000000" "4103" "1E03")),  # CVM: PIN online, luego firma
+        ("82", from_hex("2000")),  # AIP: DDA soportado (referencia)
+        (
+            "8E",
+            from_hex("00000000" "00000000" "4103" "1E03"),
+        ),  # CVM: PIN online, luego firma
     )
 
     def replace(tag: str, value: bytes, tlvs=base):
         return tuple((t, value) if t == tag else (t, v) for t, v in tlvs)
 
     return (
-        EmvTemplate("baseline", "Registro EMV válido (referencia)",
-                    "PAN/expiry/nombre/AIP/CVM bien formados.", base),
-        EmvTemplate("no-cvm", "CVM: sin verificación de titular",
-                    "Fuerza 'Sin CVM requerido' (0x1F, siempre) — ¿el terminal "
-                    "acepta la transacción sin pedir PIN/firma?",
-                    replace("8E", from_hex("00000000" "00000000" "1F00"))),
-        EmvTemplate("weak-aip", "AIP: solo SDA (sin DDA/CDA)",
-                    "Autenticación offline débil/clonable — ¿el terminal la "
-                    "acepta igual o exige online?",
-                    replace("82", from_hex("4000"))),
-        EmvTemplate("oversized-pan", "PAN sobredimensionado (5A)",
-                    "10 bytes en el PAN (20 dígitos) — fuzz de límites de "
-                    "parseo del terminal.",
-                    replace("5A", from_hex("11" * 10))),
-        EmvTemplate("missing-pan", "Sin PAN (5A ausente)",
-                    "Registro sin el tag obligatorio 5A — ¿el terminal detecta "
-                    "el campo faltante o falla de forma insegura?",
-                    tuple((t, v) for t, v in base if t != "5A")),
-        EmvTemplate("bad-track2", "Track2 equivalente roto (57)",
-                    "Separador ausente en el tag 57 — ¿el terminal usa 5A/5F24 "
-                    "igual, o falla el parseo completo del registro?",
-                    replace("57", from_hex(pan + expiry))),
-        EmvTemplate("expired", "Tarjeta vencida (5F24)",
-                    "Fecha de expiración en el pasado (2001-01-01).",
-                    replace("5F24", from_hex("010101"))),
+        EmvTemplate(
+            "baseline",
+            "Registro EMV válido (referencia)",
+            "PAN/expiry/nombre/AIP/CVM bien formados.",
+            base,
+        ),
+        EmvTemplate(
+            "no-cvm",
+            "CVM: sin verificación de titular",
+            "Fuerza 'Sin CVM requerido' (0x1F, siempre) — ¿el terminal "
+            "acepta la transacción sin pedir PIN/firma?",
+            replace("8E", from_hex("00000000" "00000000" "1F00")),
+        ),
+        EmvTemplate(
+            "weak-aip",
+            "AIP: solo SDA (sin DDA/CDA)",
+            "Autenticación offline débil/clonable — ¿el terminal la "
+            "acepta igual o exige online?",
+            replace("82", from_hex("4000")),
+        ),
+        EmvTemplate(
+            "oversized-pan",
+            "PAN sobredimensionado (5A)",
+            "10 bytes en el PAN (20 dígitos) — fuzz de límites de "
+            "parseo del terminal.",
+            replace("5A", from_hex("11" * 10)),
+        ),
+        EmvTemplate(
+            "missing-pan",
+            "Sin PAN (5A ausente)",
+            "Registro sin el tag obligatorio 5A — ¿el terminal detecta "
+            "el campo faltante o falla de forma insegura?",
+            tuple((t, v) for t, v in base if t != "5A"),
+        ),
+        EmvTemplate(
+            "bad-track2",
+            "Track2 equivalente roto (57)",
+            "Separador ausente en el tag 57 — ¿el terminal usa 5A/5F24 "
+            "igual, o falla el parseo completo del registro?",
+            replace("57", from_hex(pan + expiry)),
+        ),
+        EmvTemplate(
+            "expired",
+            "Tarjeta vencida (5F24)",
+            "Fecha de expiración en el pasado (2001-01-01).",
+            replace("5F24", from_hex("010101")),
+        ),
     )
 
 
@@ -191,8 +278,9 @@ def _track2_bcd(pan: str, expiry: str) -> str:
     return body if len(body) % 2 == 0 else body + "F"
 
 
-def get_emv_template(templates: tuple[EmvTemplate, ...], template_id: str
-                     ) -> EmvTemplate | None:
+def get_emv_template(
+    templates: tuple[EmvTemplate, ...], template_id: str
+) -> EmvTemplate | None:
     return next((t for t in templates if t.id == template_id), None)
 
 
@@ -210,16 +298,17 @@ class NdefTemplate:
     id: str
     title: str
     description: str
-    message: bytes                       # bytes crudos del mensaje NDEF
+    message: bytes  # bytes crudos del mensaje NDEF
 
     def to_hex(self) -> str:
         return to_hex(self.message)
 
 
-def ndef_templates(url: str = "https://emvy.test/def-con",
-                   text: str = "EMVy fuzz") -> tuple[NdefTemplate, ...]:
+def ndef_templates(
+    url: str = "https://emvy.test/def-con", text: str = "EMVy fuzz"
+) -> tuple[NdefTemplate, ...]:
     """Mensaje NDEF válido (referencia) + mutaciones malformadas."""
-    base = ndefmod.uri_record(url)                       # 1 registro URI válido
+    base = ndefmod.uri_record(url)  # 1 registro URI válido
 
     # Registro URI con longitud de payload declarada enorme (0xFF) pero datos
     # cortos: prueba de overread/validación del parser del lector.
@@ -229,39 +318,73 @@ def ndef_templates(url: str = "https://emvy.test/def-con",
     bad_type_len = bytes([0xD1, 0xFF, 0x03]) + b"U\x00ab"
 
     return (
-        NdefTemplate("baseline", "NDEF válido (referencia)",
-                     f"Un registro URI bien formado ({url}); para comparar "
-                     "contra las mutaciones.", base),
-        NdefTemplate("oversized-record", "Longitud de payload enorme",
-                     "SR con payload_len=0xFF pero datos cortos — ¿el lector "
-                     "sobre-lee el buffer o valida la longitud?", oversized),
-        NdefTemplate("bad-type-length", "type_length inválido",
-                     "Cabecera con type_length=0xFF sin tipo real detrás.",
-                     bad_type_len),
-        NdefTemplate("truncated", "Mensaje truncado",
-                     "El mensaje base cortado a la mitad — registro incompleto.",
-                     base[:max(1, len(base) // 2)]),
-        NdefTemplate("invalid-tnf", "TNF reservado (0x07)",
-                     "Type Name Format = 0x07 (reservado/ inválido por spec).",
-                     ndefmod.build_record(0x07, b"U", ndefmod.uri_payload(url))),
-        NdefTemplate("no-me-flag", "Sin flag ME (fin de mensaje)",
-                     "Registro sin Message-End — el lector puede seguir leyendo "
-                     "más allá del mensaje.",
-                     ndefmod.uri_record(url, me=False)),
-        NdefTemplate("huge-uri", "URI gigante",
-                     "URI válida pero de ~1 KB — prueba de límites de buffer.",
-                     ndefmod.uri_record(url + "/" + "A" * 1024)),
-        NdefTemplate("long-format-mismatch", "Longitud de 4 bytes desalineada",
-                     "Registro en formato largo (no-SR) con longitud declarada "
-                     "mayor que el payload real.",
-                     bytes([0xC1, 0x01]) + (999).to_bytes(4, "big") + b"U"
-                     + ndefmod.uri_payload(url)),
-        NdefTemplate("empty", "Mensaje NDEF vacío",
-                     "Cero bytes — ¿el lector lo trata como tag vacío o falla?",
-                     b""),
-        NdefTemplate("multi-record", "Muchos registros",
-                     "16 registros de texto encadenados — estrés del parser.",
-                     _multi_text(text)),
+        NdefTemplate(
+            "baseline",
+            "NDEF válido (referencia)",
+            f"Un registro URI bien formado ({url}); para comparar "
+            "contra las mutaciones.",
+            base,
+        ),
+        NdefTemplate(
+            "oversized-record",
+            "Longitud de payload enorme",
+            "SR con payload_len=0xFF pero datos cortos — ¿el lector "
+            "sobre-lee el buffer o valida la longitud?",
+            oversized,
+        ),
+        NdefTemplate(
+            "bad-type-length",
+            "type_length inválido",
+            "Cabecera con type_length=0xFF sin tipo real detrás.",
+            bad_type_len,
+        ),
+        NdefTemplate(
+            "truncated",
+            "Mensaje truncado",
+            "El mensaje base cortado a la mitad — registro incompleto.",
+            base[: max(1, len(base) // 2)],
+        ),
+        NdefTemplate(
+            "invalid-tnf",
+            "TNF reservado (0x07)",
+            "Type Name Format = 0x07 (reservado/ inválido por spec).",
+            ndefmod.build_record(0x07, b"U", ndefmod.uri_payload(url)),
+        ),
+        NdefTemplate(
+            "no-me-flag",
+            "Sin flag ME (fin de mensaje)",
+            "Registro sin Message-End — el lector puede seguir leyendo "
+            "más allá del mensaje.",
+            ndefmod.uri_record(url, me=False),
+        ),
+        NdefTemplate(
+            "huge-uri",
+            "URI gigante",
+            "URI válida pero de ~1 KB — prueba de límites de buffer.",
+            ndefmod.uri_record(url + "/" + "A" * 1024),
+        ),
+        NdefTemplate(
+            "long-format-mismatch",
+            "Longitud de 4 bytes desalineada",
+            "Registro en formato largo (no-SR) con longitud declarada "
+            "mayor que el payload real.",
+            bytes([0xC1, 0x01])
+            + (999).to_bytes(4, "big")
+            + b"U"
+            + ndefmod.uri_payload(url),
+        ),
+        NdefTemplate(
+            "empty",
+            "Mensaje NDEF vacío",
+            "Cero bytes — ¿el lector lo trata como tag vacío o falla?",
+            b"",
+        ),
+        NdefTemplate(
+            "multi-record",
+            "Muchos registros",
+            "16 registros de texto encadenados — estrés del parser.",
+            _multi_text(text),
+        ),
     )
 
 
@@ -273,14 +396,16 @@ def _multi_text(text: str, n: int = 16) -> bytes:
     return bytes(out)
 
 
-def get_ndef_template(templates: tuple[NdefTemplate, ...], template_id: str
-                      ) -> NdefTemplate | None:
+def get_ndef_template(
+    templates: tuple[NdefTemplate, ...], template_id: str
+) -> NdefTemplate | None:
     return next((t for t in templates if t.id == template_id), None)
 
 
 # Tarjeta de prueba canónica (para "emular una tarjeta" por NFC sin captura).
-TEST_CARD = dict(pan="4111111111111111", expiry="2812",
-                 aid="A0000000031010", label="TEST VISA")
+TEST_CARD = dict(
+    pan="4111111111111111", expiry="2812", aid="A0000000031010", label="TEST VISA"
+)
 
 
 def test_card_ndef() -> bytes:
@@ -290,5 +415,6 @@ def test_card_ndef() -> bytes:
 
 def card_ndef_from_fields(pan="", expiry="", track2="", aid="", label="") -> bytes:
     """NDEF a partir de campos de una tarjeta (p.ej. de `EmvCard.from_dump`)."""
-    return ndefmod.card_record(pan=pan, expiry=expiry, track2=track2,
-                               aid=aid, label=label)
+    return ndefmod.card_record(
+        pan=pan, expiry=expiry, track2=track2, aid=aid, label=label
+    )

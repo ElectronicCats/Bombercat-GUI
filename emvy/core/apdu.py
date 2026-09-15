@@ -5,6 +5,7 @@ nivel (la aporta cada backend de lector) en un `Transceiver` de alto nivel que
 maneja automáticamente GET RESPONSE (61xx) y el reintento con Le exacto (6Cxx).
 Esa composición vive aquí para que PC/SC y NFC la compartan sin duplicar lógica.
 """
+
 from __future__ import annotations
 
 import time
@@ -49,7 +50,9 @@ class APDU:
     le: int | None = None  # None = sin Le; 0 = Le máximo (256)
 
     def to_bytes(self) -> bytes:
-        out = bytearray([self.cla & 0xFF, self.ins & 0xFF, self.p1 & 0xFF, self.p2 & 0xFF])
+        out = bytearray(
+            [self.cla & 0xFF, self.ins & 0xFF, self.p1 & 0xFF, self.p2 & 0xFF]
+        )
         if self.data:
             if len(self.data) > 255:
                 raise ValueError("APDU extendida no soportada (Lc > 255)")
@@ -95,8 +98,8 @@ class Response:
 class TraceEvent:
     """Un intercambio de bajo nivel comando/respuesta (para trazas)."""
 
-    command: str            # hex del comando enviado
-    response: str           # hex de los datos recibidos
+    command: str  # hex del comando enviado
+    response: str  # hex de los datos recibidos
     sw1: int
     sw2: int
     t_ms: float = 0.0
@@ -268,8 +271,11 @@ def make_transceiver(
         dt = (time.perf_counter() - t0) * 1000
         data = bytes(data)
         if on_event is not None:
-            on_event(TraceEvent(to_hex(apdu_bytes, sep=" "),
-                                to_hex(data, sep=" "), sw1, sw2, dt))
+            on_event(
+                TraceEvent(
+                    to_hex(apdu_bytes, sep=" "), to_hex(data, sep=" "), sw1, sw2, dt
+                )
+            )
         return data, sw1, sw2
 
     def send(apdu: APDU | bytes) -> Response:

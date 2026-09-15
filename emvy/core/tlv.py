@@ -4,6 +4,7 @@ multi-byte, templates constructivos anidados) + utilidades de DOL.
 Todo es puro. `parse` y `encode` son inversos estructurales:
 `parse(encode(t))` preserva tags, valores y anidamiento.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,8 +15,8 @@ from .tags import is_constructed, tag_fmt, tag_name
 
 @dataclass
 class TLV:
-    tag: str                      # hex en mayúsculas, p.ej. "9F36"
-    value: bytes                  # valor crudo (para constructivos, los bytes hijos)
+    tag: str  # hex en mayúsculas, p.ej. "9F36"
+    value: bytes  # valor crudo (para constructivos, los bytes hijos)
     children: list["TLV"] = field(default_factory=list)
     constructed: bool = False
 
@@ -184,8 +185,10 @@ def interpret_value(tag: str, value: bytes) -> str:
 def _dump(t: TLV, indent: int, color) -> str:
     pad = "  " * indent
     if color is None:
+
         def color(s, *a):  # noqa: E306
             return s
+
     head = f"{pad}{color(t.tag, 'cyan', 'bold')} {color(t.name, 'grey')}"
     if t.constructed and t.children:
         lines = [head]

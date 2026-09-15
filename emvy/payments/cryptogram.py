@@ -12,6 +12,7 @@ Number (UN) entre capturas de la misma tarjeta:
 
 Todo es puro y testeable con los `mock_card_ATC*.json` reales.
 """
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict
@@ -25,7 +26,7 @@ SEVERITY_ORDER = {"info": 0, "low": 1, "medium": 2, "high": 3}
 @dataclass(frozen=True)
 class Observation:
     kind: str
-    severity: str        # info | low | medium | high
+    severity: str  # info | low | medium | high
     message: str
     detail: str = ""
 
@@ -41,18 +42,24 @@ class CryptogramReport:
     def max_severity(self) -> str:
         if not self.observations:
             return "info"
-        return max((o.severity for o in self.observations), key=lambda s: SEVERITY_ORDER[s])
+        return max(
+            (o.severity for o in self.observations), key=lambda s: SEVERITY_ORDER[s]
+        )
 
     @property
     def replay_risk(self) -> bool:
         return any(o.severity in ("medium", "high") for o in self.observations)
 
     def summary(self) -> str:
-        lines = [f"PAN {self.pan or '?'} — {self.count} captura(s), "
-                 f"ATC {self._atc_range()}"]
+        lines = [
+            f"PAN {self.pan or '?'} — {self.count} captura(s), "
+            f"ATC {self._atc_range()}"
+        ]
         for o in self.observations:
-            lines.append(f"  [{o.severity.upper()}] {o.message}"
-                         + (f" — {o.detail}" if o.detail else ""))
+            lines.append(
+                f"  [{o.severity.upper()}] {o.message}"
+                + (f" — {o.detail}" if o.detail else "")
+            )
         if not self.observations:
             lines.append("  (sin anomalías: ATC creciente, ARQC y UN únicos)")
         return "\n".join(lines)
@@ -86,14 +93,21 @@ def _atc_int(card: EmvCard) -> int | None:
 def analyze(cards: list[EmvCard]) -> CryptogramReport:
     """Analiza un conjunto de capturas de (idealmente) la misma tarjeta."""
     pans = {c.pan_digits for c in cards if c.pan_digits}
-    pan = next(iter(pans)) if len(pans) == 1 else (",".join(sorted(pans)) if pans else "")
+    pan = (
+        next(iter(pans)) if len(pans) == 1 else (",".join(sorted(pans)) if pans else "")
+    )
     rep = CryptogramReport(pan=pan, count=len(cards))
     obs = rep.observations
 
     if len(pans) > 1:
-        obs.append(Observation("mixed_pan", "info",
-                               "El conjunto mezcla varias tarjetas",
-                               f"PANs: {', '.join(sorted(pans))}"))
+        obs.append(
+            Observation(
+                "mixed_pan",
+                "info",
+                "El conjunto mezcla varias tarjetas",
+                f"PANs: {', '.join(sorted(pans))}",
+            )
+        )
 
     atcs = [a for a in (_atc_int(c) for c in cards) if a is not None]
     rep.atc_values = sorted(atcs)
@@ -101,9 +115,14 @@ def analyze(cards: list[EmvCard]) -> CryptogramReport:
     # ATC duplicado
     for atc, n in Counter(atcs).items():
         if n > 1:
-            obs.append(Observation("atc_dup", "high",
-                                   f"ATC {atc:04X} aparece {n} veces",
-                                   "misma cuenta reutilizada — riesgo de replay/captura repetida"))
+            obs.append(
+                Observation(
+                    "atc_dup",
+                    "high",
+                    f"ATC {atc:04X} aparece {n} veces",
+                    "misma cuenta reutilizada — riesgo de replay/captura repetida",
+                )
+            )
 
     # ARQC repetido (entre ATC distintos)
     arqc_to_atc = defaultdict(set)
@@ -112,31 +131,51 @@ def analyze(cards: list[EmvCard]) -> CryptogramReport:
             arqc_to_atc[c.arqc].add(_atc_int(c))
     for arqc, atc_set in arqc_to_atc.items():
         if len(atc_set) > 1:
-            obs.append(Observation("arqc_reuse", "high",
-                                   f"ARQC {arqc} compartido por varios ATC",
-                                   f"ATC: {', '.join(f'{a:04X}' for a in sorted(atc_set))}"))
+            obs.append(
+                Observation(
+                    "arqc_reuse",
+                    "high",
+                    f"ARQC {arqc} compartido por varios ATC",
+                    f"ATC: {', '.join(f'{a:04X}' for a in sorted(atc_set))}",
+                )
+            )
     dup_arqc = [a for a, n in Counter(c.arqc for c in cards if c.arqc).items() if n > 1]
     for a in dup_arqc:
         if a not in arqc_to_atc or len(arqc_to_atc[a]) == 1:
-            obs.append(Observation("arqc_dup", "high",
-                                   f"ARQC {a} idéntico en múltiples capturas",
-                                   "criptograma reutilizado — replay directo"))
+            obs.append(
+                Observation(
+                    "arqc_dup",
+                    "high",
+                    f"ARQC {a} idéntico en múltiples capturas",
+                    "criptograma reutilizado — replay directo",
+                )
+            )
 
     # UN reutilizado
     for un, n in Counter(c.un for c in cards if c.un).items():
         if n > 1:
-            obs.append(Observation("un_reuse", "medium",
-                                   f"UN {un} reutilizado en {n} capturas",
-                                   "RNG de terminal débil o replay del mismo desafío"))
+            obs.append(
+                Observation(
+                    "un_reuse",
+                    "medium",
+                    f"UN {un} reutilizado en {n} capturas",
+                    "RNG de terminal débil o replay del mismo desafío",
+                )
+            )
 
     # secuencia de ATC: huecos
     uniq = sorted(set(atcs))
     for prev, nxt in zip(uniq, uniq[1:]):
         gap = nxt - prev
         if gap > 1:
-            obs.append(Observation("atc_gap", "info",
-                                   f"Hueco de ATC {prev:04X}→{nxt:04X} (+{gap})",
-                                   "transacciones intermedias no capturadas"))
+            obs.append(
+                Observation(
+                    "atc_gap",
+                    "info",
+                    f"Hueco de ATC {prev:04X}→{nxt:04X} (+{gap})",
+                    "transacciones intermedias no capturadas",
+                )
+            )
 
     return rep
 

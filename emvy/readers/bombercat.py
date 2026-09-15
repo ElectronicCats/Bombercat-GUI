@@ -15,6 +15,7 @@ Cuatro modos, según el firmware flasheado en la placa:
 Degradación elegante: si falta `pyserial` o no hay dispositivo, `available()` es
 False / `list_devices()` devuelve [] y `open()` lanza ReaderError con ayuda.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,8 +28,8 @@ from .types import Capability, DeviceInfo, OpenReader, ReaderError, WireEvent
 
 BACKEND = "bombercat"
 
-BAUD_EMV = 115200   # firmware EMV reader / passthrough
-BAUD_MAG = 9600     # firmware oficial magspoof / relay
+BAUD_EMV = 115200  # firmware EMV reader / passthrough
+BAUD_MAG = 9600  # firmware oficial magspoof / relay
 
 # RP2040 (Raspberry Pi) es el MCU del BomberCat.
 _RP2040_VID = 0x2E8A
@@ -49,6 +50,7 @@ BOMBERCAT_HELP = (
 def available() -> bool:
     try:
         import serial  # noqa: F401
+
         return True
     except Exception:
         return False
@@ -61,12 +63,20 @@ def list_devices() -> list[DeviceInfo]:
         return []
     out = []
     for p in list_ports.comports():
-        blob = " ".join(str(x) for x in (p.description, p.manufacturer, p.product)).lower()
+        blob = " ".join(
+            str(x) for x in (p.description, p.manufacturer, p.product)
+        ).lower()
         is_bc = (p.vid == _RP2040_VID) or any(h in blob for h in _HINTS)
         if is_bc:
             name = p.product or p.description or p.device
-            out.append(DeviceInfo(BACKEND, f"serial:{p.device}", f"BomberCat ({name})",
-                                  frozenset({Capability.CONTACTLESS, Capability.MAGSTRIPE})))
+            out.append(
+                DeviceInfo(
+                    BACKEND,
+                    f"serial:{p.device}",
+                    f"BomberCat ({name})",
+                    frozenset({Capability.CONTACTLESS, Capability.MAGSTRIPE}),
+                )
+            )
     return out
 
 
@@ -84,11 +94,11 @@ def _resolve_port(device: DeviceInfo | str) -> str:
     `_open_serial` falle con su mensaje de ayuda."""
     port = _port_of(device)
     if not port.startswith("/") or os.path.exists(port):
-        return port                      # no-POSIX (COMx) o existe: tal cual
+        return port  # no-POSIX (COMx) o existe: tal cual
     present = list_devices()
     if len(present) == 1:
         return _port_of(present[0])
-    for d in present:                    # varios: el primero que exista de verdad
+    for d in present:  # varios: el primero que exista de verdad
         p = _port_of(d)
         if os.path.exists(p):
             return p
@@ -102,10 +112,13 @@ def _open_serial(port: str, baud: int):
     if not available():
         raise ReaderError(BOMBERCAT_HELP)
     import serial
+
     try:
         ser = serial.Serial(port, baud, timeout=1, dsrdtr=False, rtscts=False)
     except Exception as e:
-        raise ReaderError(f"No se pudo abrir {port} @ {baud}: {e}\n\n{BOMBERCAT_HELP}") from e
+        raise ReaderError(
+            f"No se pudo abrir {port} @ {baud}: {e}\n\n{BOMBERCAT_HELP}"
+        ) from e
     # DTR debe quedar asertado: el firmware (USB CDC nativo, mbed core RP2040)
     # gatea la entrega de bytes al `Serial` de Arduino según el estado de DTR.
     # Con dtr=False el BomberCat real nunca responde a PING (confirmado en
@@ -162,8 +175,9 @@ def _writeline(ser, text: str) -> None:
 # ---------------------------------------------------------------------------
 # modo EMV reader (JSON)
 # ---------------------------------------------------------------------------
-def read_emv(device, amount_cents: int = 500, timeout: float = 40.0,
-             on_debug=None) -> dict:
+def read_emv(
+    device, amount_cents: int = 500, timeout: float = 40.0, on_debug=None
+) -> dict:
     """Pide una lectura EMV al firmware BomberCat y devuelve el dict JSON.
 
     Envía `SCAN <centavos>` y acumula entre `JSON_START` y `JSON_END`. Las líneas
@@ -191,8 +205,10 @@ def read_emv(device, amount_cents: int = 500, timeout: float = 40.0,
                 buf.append(line)
             elif on_debug and line.startswith("#"):
                 on_debug(line)
-        raise ReaderError("Timeout esperando la lectura EMV del BomberCat "
-                          "(¿tarjeta acercada? ¿firmware EMV reader?).")
+        raise ReaderError(
+            "Timeout esperando la lectura EMV del BomberCat "
+            "(¿tarjeta acercada? ¿firmware EMV reader?)."
+        )
     finally:
         ser.close()
 
@@ -213,8 +229,13 @@ def monitor(device, on_line, stop=None) -> None:
 # ---------------------------------------------------------------------------
 # modo passthrough APDU  -> OpenReader.transceive
 # ---------------------------------------------------------------------------
-def open(device: DeviceInfo, mode: str = "passthrough", on_event=None,
-         on_wire=None, timeout: float = 30.0) -> OpenReader:
+def open(
+    device: DeviceInfo,
+    mode: str = "passthrough",
+    on_event=None,
+    on_wire=None,
+    timeout: float = 30.0,
+) -> OpenReader:
     """Abre el BomberCat en modo passthrough y lo expone como lector `transceive`.
 
     Requiere el firmware con el parche de passthrough (comandos `PING`, `WAIT`,
@@ -226,8 +247,10 @@ def open(device: DeviceInfo, mode: str = "passthrough", on_event=None,
     consola. Es la capa de transporte, por debajo del `TraceEvent` de APDU.
     """
     if mode != "passthrough":
-        raise ReaderError(f"Modo BomberCat no soportado por open(): {mode!r} "
-                          "(usa read_emv/magspoof_emit para otros modos).")
+        raise ReaderError(
+            f"Modo BomberCat no soportado por open(): {mode!r} "
+            "(usa read_emv/magspoof_emit para otros modos)."
+        )
     ser = _open_serial(_resolve_port(device), BAUD_EMV)
 
     # Envoltorios de I/O serie que además reportan cada línea a `on_wire`. Todo
@@ -278,8 +301,10 @@ def open(device: DeviceInfo, mode: str = "passthrough", on_event=None,
 
     def transmit(apdu_bytes: bytes) -> tuple[bytes, int, int]:
         if not state["activated"] and not _activate():
-            raise ReaderError("BomberCat: no hay tarjeta contactless. Acerca una "
-                              "tarjeta NFC/EMV a la antena y reintenta.")
+            raise ReaderError(
+                "BomberCat: no hay tarjeta contactless. Acerca una "
+                "tarjeta NFC/EMV a la antena y reintenta."
+            )
         wl("APDU:" + to_hex(apdu_bytes))
         dl2 = time.monotonic() + 8
         while time.monotonic() < dl2:
@@ -292,7 +317,7 @@ def open(device: DeviceInfo, mode: str = "passthrough", on_event=None,
                     return data, 0x6F, 0x00
                 return data[:-2], data[-2], data[-1]
             if line.startswith("ERR"):
-                state["activated"] = False   # tarjeta retirada: re-detectar la próxima
+                state["activated"] = False  # tarjeta retirada: re-detectar la próxima
                 raise ReaderError(f"BomberCat APDU: {line}")
             # ignora líneas de depuración '#'
         raise ReaderError("Timeout esperando RESP del BomberCat.")
@@ -313,8 +338,13 @@ def open(device: DeviceInfo, mode: str = "passthrough", on_event=None,
             pass
 
     send = make_transceiver(transmit, on_event=emit)
-    return OpenReader(device=device, close=close, transceive=send,
-                      atr=(lambda: state["ats"]), trace=trace)
+    return OpenReader(
+        device=device,
+        close=close,
+        transceive=send,
+        atr=(lambda: state["ats"]),
+        trace=trace,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -330,8 +360,9 @@ def send_command(device, cmd: str, baud: int = BAUD_MAG, timeout: float = 3.0) -
         ser.close()
 
 
-def magspoof_emit(device, track1: str | None = None, track2: str | None = None,
-                  baud: int = BAUD_MAG) -> str:
+def magspoof_emit(
+    device, track1: str | None = None, track2: str | None = None, baud: int = BAUD_MAG
+) -> str:
     """Emula un swipe de banda magnética con el firmware magspoof.
 
     Selecciona modo banda (`mode_ms`) y envía las pistas. El firmware oficial
@@ -355,8 +386,9 @@ def magspoof_emit(device, track1: str | None = None, track2: str | None = None,
 # ---------------------------------------------------------------------------
 # emulación (firmware EMVyBomberCat @115200): tag NDEF (EMU:) o tarjeta EMV (EMUEMV)
 # ---------------------------------------------------------------------------
-def _run_emulation(device, start_line: str, timeout: float | None,
-                   on_line, stop) -> list[str]:
+def _run_emulation(
+    device, start_line: str, timeout: float | None, on_line, stop
+) -> list[str]:
     """Motor común de las emulaciones observables/cancelables. Manda `start_line`
     (`EMU:<hex>` para NDEF, `EMUEMV` para tarjeta EMV) y transmite las líneas de
     estado del firmware hasta `EMU:DONE`/`ERR`, `stop()` o `timeout` (manda
@@ -372,8 +404,9 @@ def _run_emulation(device, start_line: str, timeout: float | None,
     try:
         _writeline(ser, "PING")
         if _readline(ser, time.monotonic() + 3) is None:
-            raise ReaderError("El BomberCat no respondió a PING "
-                              "(¿firmware EMVyBomberCat?).")
+            raise ReaderError(
+                "El BomberCat no respondió a PING " "(¿firmware EMVyBomberCat?)."
+            )
         _writeline(ser, start_line)
         deadline = None if timeout is None else time.monotonic() + timeout
         requested_stop = False
@@ -394,7 +427,7 @@ def _run_emulation(device, start_line: str, timeout: float | None,
                 return lines
         if requested_stop:
             _writeline(ser, "STOP")
-            end = time.monotonic() + 2          # consumir el EMU:DONE de confirmación
+            end = time.monotonic() + 2  # consumir el EMU:DONE de confirmación
             while time.monotonic() < end:
                 line = _readline(ser, end)
                 if line is None:
@@ -411,8 +444,9 @@ def _run_emulation(device, start_line: str, timeout: float | None,
         ser.close()
 
 
-def ndef_emulate(device, ndef_hex: str, timeout: float | None = 200.0,
-                 on_line=None, stop=None) -> list[str]:
+def ndef_emulate(
+    device, ndef_hex: str, timeout: float | None = 200.0, on_line=None, stop=None
+) -> list[str]:
     """Emula un tag NFC Forum Type 4 sirviendo `ndef_hex` como mensaje NDEF.
 
     Equivalente NFC de `magspoof_emit`, pero **observable** y **cancelable**:
@@ -432,11 +466,11 @@ def _emv_card_params(card) -> str:
       * exp  = valor del tag 5F24 (YYMMDD): del `expiry` (YYMM→+"31") a 3 bytes.
       * t2   = valor del tag 57 (Track2 equivalent), ya en hex en la captura."""
     aid = (getattr(card, "aid", "") or "").replace(" ", "")
-    pan = (card.pan_digits or "")
+    pan = card.pan_digits or ""
     pan_hex = pan + ("F" if len(pan) % 2 else "")
     exp = (getattr(card, "expiry", "") or "").strip()
     if len(exp) == 4:
-        exp += "31"                      # YYMM → YYMMDD (día 31 por convención)
+        exp += "31"  # YYMM → YYMMDD (día 31 por convención)
     exp_hex = exp[:6]
     t2 = (getattr(card, "track2", "") or "").replace(" ", "")
     return f"{aid}|{pan_hex}|{exp_hex}|{t2}"
@@ -453,7 +487,9 @@ def card_scan_to_ram(device, timeout: float = 25.0, on_line=None) -> dict:
     try:
         _writeline(ser, "PING")
         if _readline(ser, time.monotonic() + 3) is None:
-            raise ReaderError("El BomberCat no respondió a PING (¿firmware EMVyBomberCat?).")
+            raise ReaderError(
+                "El BomberCat no respondió a PING (¿firmware EMVyBomberCat?)."
+            )
         _writeline(ser, "CARDSCAN")
         dl = time.monotonic() + timeout
         while time.monotonic() < dl:
@@ -464,7 +500,7 @@ def card_scan_to_ram(device, timeout: float = 25.0, on_line=None) -> dict:
                 on_line(line)
             if line.startswith("EMU:SCANNED"):
                 out = {"raw": line}
-                for tok in line[len("EMU:SCANNED"):].split():
+                for tok in line[len("EMU:SCANNED") :].split():
                     if "=" in tok:
                         k, v = tok.split("=", 1)
                         out[k] = v
@@ -476,8 +512,14 @@ def card_scan_to_ram(device, timeout: float = 25.0, on_line=None) -> dict:
         ser.close()
 
 
-def emv_emulate(device, card=None, from_ram: bool = False,
-                timeout: float | None = None, on_line=None, stop=None) -> list[str]:
+def emv_emulate(
+    device,
+    card=None,
+    from_ram: bool = False,
+    timeout: float | None = None,
+    on_line=None,
+    stop=None,
+) -> list[str]:
     """Emula una **tarjeta EMV** para perfilar/fuzzear un TERMINAL de pago.
 
     En vez de un tag NDEF, el firmware responde al flujo EMV contactless

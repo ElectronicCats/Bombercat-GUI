@@ -2,6 +2,7 @@
 los APDUs (comando/respuesta) que pasan por el interceptor, con las
 modificaciones aplicadas. Al activarse, TODO el tráfico de la sesión (Consola,
 Explorador, PoC en vivo) pasa por estas reglas."""
+
 from __future__ import annotations
 
 from textual import on
@@ -57,8 +58,10 @@ class InterceptScreen(Vertical):
     @on(Checkbox.Changed, "#ic_active")
     def _toggle(self, event):
         self.app.intercept_active = bool(event.value)
-        self.app.notify("Interceptor " + ("ACTIVO" if event.value else "inactivo"),
-                        severity=("warning" if event.value else "information"))
+        self.app.notify(
+            "Interceptor " + ("ACTIVO" if event.value else "inactivo"),
+            severity=("warning" if event.value else "information"),
+        )
 
     @on(Button.Pressed, "#ic_clear")
     def _clear(self):

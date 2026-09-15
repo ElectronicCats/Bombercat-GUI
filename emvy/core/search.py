@@ -4,6 +4,7 @@ Puro: opera sobre `Blob`s (fragmentos etiquetados) y devuelve `Hit`s. Busca cada
 patrón como ASCII directo, decodificando el hex a ASCII (saltando bytes no
 imprimibles) y en la representación hex textual.
 """
+
 from __future__ import annotations
 
 import re
@@ -23,7 +24,8 @@ DEFAULT_FLAG_PATTERNS = [
 @dataclass(frozen=True)
 class Blob:
     """Un fragmento de datos etiquetado, para búsqueda de flags."""
-    source: str      # p.ej. "ATR", "A000...:SFI2/REC1", "GETDATA 9F4F"
+
+    source: str  # p.ej. "ATR", "A000...:SFI2/REC1", "GETDATA 9F4F"
     hex: str
 
     @property
@@ -35,11 +37,13 @@ class Blob:
 class Hit:
     source: str
     match: str
-    where: str   # "ascii" | "hex-decoded" | "hex"
+    where: str  # "ascii" | "hex-decoded" | "hex"
     context: str
 
 
-def search(blobs: list[Blob], patterns=None, case_insensitive: bool = True) -> list[Hit]:
+def search(
+    blobs: list[Blob], patterns=None, case_insensitive: bool = True
+) -> list[Hit]:
     """Busca `patterns` en cada blob (ascii / hex-decoded / hex). Deduplica."""
     pats = patterns or DEFAULT_FLAG_PATTERNS
     flags = re.IGNORECASE if case_insensitive else 0
@@ -71,10 +75,14 @@ def search(blobs: list[Blob], patterns=None, case_insensitive: bool = True) -> l
 
 
 # Alias históricos / de conveniencia
-def search_flags(blobs: list[Blob], patterns=None, case_insensitive: bool = True) -> list[Hit]:
+def search_flags(
+    blobs: list[Blob], patterns=None, case_insensitive: bool = True
+) -> list[Hit]:
     return search(blobs, patterns, case_insensitive)
 
 
-def search_regex(blobs: list[Blob], pattern: str, case_insensitive: bool = True) -> list[Hit]:
+def search_regex(
+    blobs: list[Blob], pattern: str, case_insensitive: bool = True
+) -> list[Hit]:
     """Búsqueda con un patrón arbitrario suministrado por el usuario."""
     return search(blobs, [pattern], case_insensitive)

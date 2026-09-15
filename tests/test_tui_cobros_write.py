@@ -1,4 +1,5 @@
 """Pruebas headless de las pestañas Cobros (flujo de switch, dry-run) y Escritura."""
+
 import pytest
 
 pytest.importorskip("textual")
@@ -12,10 +13,15 @@ def xdg(tmp_path, monkeypatch):
 
 
 _BC = {
-    "ok": True, "pan": "4189143370041827",
-    "track2": "4189143370041827D29092211000002600000F", "expiry": "2909",
-    "aip": "2000", "atc": "002F", "arqc": "D6F5B2E0E50B0F9C",
-    "iad": "06011203A02000", "un": "ED999B69",
+    "ok": True,
+    "pan": "4189143370041827",
+    "track2": "4189143370041827D29092211000002600000F",
+    "expiry": "2909",
+    "aip": "2000",
+    "atc": "002F",
+    "arqc": "D6F5B2E0E50B0F9C",
+    "iad": "06011203A02000",
+    "un": "ED999B69",
 }
 
 
@@ -40,9 +46,12 @@ def test_cobros_purchase_dry_run(xdg):
             app.query_one("#screen-charges")._purchase()
             await app.workers.wait_for_complete()
             await pilot.pause()
-            text = "".join(seg.text for line in app.query_one("#ch_log", RichLog).lines
-                            for seg in line._segments)
-            assert "0200" in text                      # construyó el 0200
+            text = "".join(
+                seg.text
+                for line in app.query_one("#ch_log", RichLog).lines
+                for seg in line._segments
+            )
+            assert "0200" in text  # construyó el 0200
 
     asyncio.run(scenario())
 
@@ -64,6 +73,7 @@ def test_write_tab_sends(xdg):
             class FakeReader:
                 transceive = staticmethod(lambda a: Response(b"", 0x69, 0x82))  # 6982
                 atr = None
+
             app.reader = FakeReader()
 
             scr = app.query_one("#screen-write")
@@ -72,6 +82,6 @@ def test_write_tab_sends(xdg):
             app.query_one("#w_data", Input).value = "0001"
             scr._write()
             await app.workers.wait_for_complete()
-            await pilot.pause()   # no revienta; muestra el SW 6982
+            await pilot.pause()  # no revienta; muestra el SW 6982
 
     asyncio.run(scenario())

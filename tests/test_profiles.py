@@ -1,4 +1,5 @@
 """Tests de perfiles de terminal preconfigurados (project.profiles)."""
+
 import pytest
 
 from emvy.core import emvbits
@@ -8,7 +9,12 @@ from emvy.project import env, profiles
 
 def test_list_and_get():
     ids = {p.id for p in profiles.list_profiles()}
-    assert {"contactless-kiosk", "contactless-attended", "contact-attended", "atm"} <= ids
+    assert {
+        "contactless-kiosk",
+        "contactless-attended",
+        "contact-attended",
+        "atm",
+    } <= ids
     assert profiles.get("atm").title.lower().startswith("cajero")
     assert profiles.get("no-existe") is None
 
@@ -19,9 +25,9 @@ def test_apply_unknown_raises():
 
 
 def test_apply_only_touches_its_own_aliases():
-    base = env.set_var([], "amount", "000000001500")   # variable ajena al perfil
+    base = env.set_var([], "amount", "000000001500")  # variable ajena al perfil
     out = profiles.apply_profile(base, "contactless-kiosk")
-    assert env.get_var(out, "amount").value == "000000001500"   # intacta
+    assert env.get_var(out, "amount").value == "000000001500"  # intacta
     assert env.get_var(out, "terminal_type").value == "24"
     assert env.get_var(out, "ttq").value == "20000000"
     assert all(v.kind == "terminal" for v in out if v.name in ("terminal_type", "ttq"))

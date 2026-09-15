@@ -1,6 +1,7 @@
 """Tests de plantillas de fuzzing de terminales (core.cardfuzz): banda
 magnética, registros EMV y NDEF (emulación NFC). Cada mutación se verifica
 contra los propios decodificadores del proyecto, no a ciegas."""
+
 from emvy.core import cardfuzz, cvm, emvbits, ndef, tlv
 
 
@@ -42,7 +43,7 @@ def test_track_bad_luhn_breaks_checksum_only():
 def test_track_expired_is_in_the_past():
     t = cardfuzz.get_track_template(cardfuzz.track_templates(), "expired")
     yymm = t.track2.split("=")[1][:4]
-    assert yymm == "0101"          # enero de 2001: claramente vencida
+    assert yymm == "0101"  # enero de 2001: claramente vencida
 
 
 def test_track_missing_separator_and_no_end_sentinel():
@@ -67,7 +68,7 @@ def test_track_overrides_change_baseline():
     templates = cardfuzz.track_templates(pan="5555555555554444", service_code="121")
     base = cardfuzz.get_track_template(templates, "baseline")
     assert "5555555555554444" in base.track2
-    assert base.track2.split("=")[1].startswith("2812121")   # sc propagado
+    assert base.track2.split("=")[1].startswith("2812121")  # sc propagado
 
 
 def test_unknown_track_template_returns_none():
@@ -107,7 +108,7 @@ def test_emv_missing_pan_has_no_5a_tag():
 def test_emv_oversized_pan_exceeds_normal_length():
     t = cardfuzz.get_emv_template(cardfuzz.emv_templates(), "oversized-pan")
     parsed = tlv.parse(t.to_record())
-    assert len(parsed.find("5A").value) == 10   # 20 dígitos empaquetados
+    assert len(parsed.find("5A").value) == 10  # 20 dígitos empaquetados
 
 
 def test_emv_expired_date_is_in_the_past():
@@ -117,7 +118,9 @@ def test_emv_expired_date_is_in_the_past():
 
 
 def test_emv_overrides_propagate_to_pan():
-    t = cardfuzz.get_emv_template(cardfuzz.emv_templates(pan="5555555555554444"), "baseline")
+    t = cardfuzz.get_emv_template(
+        cardfuzz.emv_templates(pan="5555555555554444"), "baseline"
+    )
     parsed = tlv.parse(t.to_record())
     assert parsed.find("5A").value.hex().upper().rstrip("F") == "5555555555554444"
 
@@ -129,7 +132,7 @@ def test_unknown_emv_template_returns_none():
 def test_all_emv_templates_produce_valid_tlv():
     for t in cardfuzz.emv_templates():
         rec = t.to_record()
-        parsed = tlv.parse(rec)     # no debe lanzar
+        parsed = tlv.parse(rec)  # no debe lanzar
         assert parsed is not None
 
 
@@ -178,7 +181,7 @@ def test_ndef_overrides_and_unknown():
 
 def test_all_ndef_templates_have_hex():
     for t in cardfuzz.ndef_templates():
-        assert isinstance(t.to_hex(), str)   # incluido el vacío ("")
+        assert isinstance(t.to_hex(), str)  # incluido el vacío ("")
 
 
 def test_test_card_ndef_carries_card_fields():
@@ -188,8 +191,9 @@ def test_test_card_ndef_carries_card_fields():
 
 
 def test_card_ndef_from_fields():
-    msg = cardfuzz.card_ndef_from_fields(pan="5555444433332222", expiry="2704",
-                                         aid="A0000000041010", label="LAB MC")
+    msg = cardfuzz.card_ndef_from_fields(
+        pan="5555444433332222", expiry="2704", aid="A0000000041010", label="LAB MC"
+    )
     dec = ndef.parse_records(msg)[0].decoded()
     assert "PAN=5555444433332222" in dec and "EXP=2704" in dec and "LAB MC" in dec
 

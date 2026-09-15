@@ -8,6 +8,7 @@ Cada sub-panel sigue siendo su propio widget autónomo (mismos ids que antes:
 `#screen-flags`, `#screen-iso8583`), así que la app los sigue encontrando
 igual; aquí solo se agrupan bajo un `TabbedContent` interno.
 """
+
 from __future__ import annotations
 
 from textual.containers import Vertical

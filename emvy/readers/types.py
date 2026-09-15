@@ -6,6 +6,7 @@ composición de funciones en lugar de herencia. Cada backend (PC/SC, NFC, MSR) e
 un módulo que produce estos registros; nada más del proyecto sabe de pyscard,
 nfcpy o evdev.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -30,15 +31,16 @@ class WireEvent:
 
     `direction`: `"tx"` (enviado al lector) · `"rx"` (recibido) · `"info"` (nota).
     """
+
     direction: str
     text: str
-    transport: str = ""   # "serial", "pcsc", …
+    transport: str = ""  # "serial", "pcsc", …
 
 
 class Capability(str, Enum):
-    CONTACT = "contact"          # chip EMV de contacto (ISO 7816)
+    CONTACT = "contact"  # chip EMV de contacto (ISO 7816)
     CONTACTLESS = "contactless"  # NFC / ISO 14443 (EMV contactless)
-    MAGSTRIPE = "magstripe"      # banda magnética (ISO 7813)
+    MAGSTRIPE = "magstripe"  # banda magnética (ISO 7813)
 
     def __str__(self) -> str:
         return self.value
@@ -47,9 +49,10 @@ class Capability(str, Enum):
 @dataclass(frozen=True)
 class DeviceInfo:
     """Descripción de un dispositivo detectado (dato puro, sin conexión abierta)."""
-    backend: str                       # "pcsc" | "nfc" | "msr"
-    id: str                            # identificador estable dentro del backend
-    name: str                          # nombre legible
+
+    backend: str  # "pcsc" | "nfc" | "msr"
+    id: str  # identificador estable dentro del backend
+    name: str  # nombre legible
     capabilities: frozenset[Capability] = frozenset()
 
     def has(self, cap: Capability) -> bool:
@@ -68,6 +71,7 @@ class OpenReader:
     """Un lector conectado: registro de callables. Los campos no aplicables al
     tipo de lector quedan en None (p.ej. `read_swipe` en un lector de chip, o
     `transceive`/`atr` en uno de banda magnética)."""
+
     device: DeviceInfo
     close: Callable[[], None]
     transceive: Transceiver | None = None
@@ -98,7 +102,5 @@ class OpenReader:
     def swipe(self, timeout: float = 30.0) -> str:
         """Lee un swipe de banda magnética (requiere `read_swipe`)."""
         if self.read_swipe is None:
-            raise ReaderError(
-                f"El lector {self.device.name!r} no lee banda magnética."
-            )
+            raise ReaderError(f"El lector {self.device.name!r} no lee banda magnética.")
         return self.read_swipe(timeout)

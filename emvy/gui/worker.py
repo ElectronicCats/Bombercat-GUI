@@ -5,6 +5,7 @@ corren en un `QThreadPool`; el resultado y el progreso vuelven al hilo de la GUI
 por señales Qt (conexión en cola, thread-safe). Nunca tocar widgets desde el
 hilo de trabajo — solo emitir señales.
 """
+
 from __future__ import annotations
 
 from typing import Callable
@@ -13,9 +14,9 @@ from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 
 
 class WorkerSignals(QObject):
-    result = Signal(object)     # valor de retorno de la función
-    error = Signal(str)         # mensaje de excepción
-    line = Signal(str)          # progreso/streaming (una línea)
+    result = Signal(object)  # valor de retorno de la función
+    error = Signal(str)  # mensaje de excepción
+    line = Signal(str)  # progreso/streaming (una línea)
     finished = Signal()
 
 
@@ -34,7 +35,7 @@ class Worker(QRunnable):
 
     def __init__(self, fn: Callable, *args, want_progress: bool = False, **kwargs):
         super().__init__()
-        self.setAutoDelete(False)   # la vida la gestiona Python (_ACTIVE), no el pool
+        self.setAutoDelete(False)  # la vida la gestiona Python (_ACTIVE), no el pool
         self._fn = fn
         self._args = args
         self._kwargs = kwargs
@@ -70,10 +71,19 @@ class Worker(QRunnable):
         self._emit(self.signals.line, line)
 
 
-def submit(pool, fn, *args, on_result=None, on_error=None, on_line=None,
-           on_finished=None, want_progress=False, **kwargs) -> Worker:
+def submit(
+    pool,
+    fn,
+    *args,
+    on_result=None,
+    on_error=None,
+    on_line=None,
+    on_finished=None,
+    want_progress=False,
+    **kwargs,
+) -> Worker:
     w = Worker(fn, *args, want_progress=want_progress, **kwargs)
-    _ACTIVE.add(w)                              # lo mantiene vivo hasta 'finished'
+    _ACTIVE.add(w)  # lo mantiene vivo hasta 'finished'
     if on_result:
         w.signals.result.connect(on_result)
     if on_error:

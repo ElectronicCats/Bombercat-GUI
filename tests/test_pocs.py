@@ -1,5 +1,6 @@
 """Tests del panel PoC: IDE integrado (crear/editar/eliminar) y ejecución con
 opciones (fuente de tarjeta, dry-run). Headless con Textual Pilot."""
+
 import pytest
 
 pytest.importorskip("textual")
@@ -37,7 +38,7 @@ def test_poc_ide_lifecycle(xdg):
             await pilot.pause()
             assert (proj.pocs_dir / "demo1.py").exists()
             assert scr._open_file == "demo1.py"
-            assert scr._run_target == "demo1"                    # PoC objetivo mapeado
+            assert scr._run_target == "demo1"  # PoC objetivo mapeado
             assert "demo1.py" in scr._files
             assert "demo1" in app.query_one("#poc_editor", TextArea).text
 
@@ -73,7 +74,7 @@ def test_poc_run_dry_run_creates_run(xdg):
     async def scenario():
         proj = store.create_project("lab")
         store.set_active("lab")
-        scaffold_poc(proj.pocs_dir, "demo-poc")                 # PoC ejecutable (INFO)
+        scaffold_poc(proj.pocs_dir, "demo-poc")  # PoC ejecutable (INFO)
         store.save_capture(proj, "cap1", '{"atr":"3B00","applications":[],"blobs":[]}')
         app = EmvyApp()
         async with app.run_test() as pilot:
@@ -87,8 +88,9 @@ def test_poc_run_dry_run_creates_run(xdg):
             assert (runs[0] / "result.json").exists()
 
             # ejecutar con captura guardada (resuelve el archivo sin reventar)
-            app.run_poc_ui("demo-poc", card_source="saved", capture_name="cap1.json",
-                           dry_run=True)
+            app.run_poc_ui(
+                "demo-poc", card_source="saved", capture_name="cap1.json", dry_run=True
+            )
             await app.workers.wait_for_complete()
             await pilot.pause()
             assert len(store.list_poc_runs(store.active_project())) >= 2

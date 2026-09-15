@@ -7,6 +7,7 @@ Estructura en <XDG_DATA_HOME>/emvy/projects/<nombre>/:
 
 El "proyecto activo" se guarda en <XDG_CONFIG_HOME>/emvy/state.json.
 """
+
 from __future__ import annotations
 
 import json
@@ -95,8 +96,13 @@ def create_project(name: str, description: str = "", reader: str = "") -> Projec
     if project_exists(name):
         raise ProjectError(f"El proyecto {name!r} ya existe.")
     path = config.ensure_dir(config.projects_dir() / name)
-    project = Project(name=name, path=path, description=description,
-                      created=date.today().isoformat(), reader=reader)
+    project = Project(
+        name=name,
+        path=path,
+        description=description,
+        created=date.today().isoformat(),
+        reader=reader,
+    )
     save_project(project)
     config.ensure_dir(project.captures_dir)
     config.ensure_dir(project.pocs_dir)
@@ -121,15 +127,21 @@ def open_project_path(path) -> Project:
     return _project_from_dir(path)
 
 
-def create_project_at(path, name: str | None = None, description: str = "",
-                      reader: str = "") -> Project:
+def create_project_at(
+    path, name: str | None = None, description: str = "", reader: str = ""
+) -> Project:
     """Crea (scaffold) un proyecto en una ruta arbitraria."""
     path = Path(path).expanduser().resolve()
     if (path / "project.json").exists():
         raise ProjectError(f"Ya existe un proyecto en {path}.")
     config.ensure_dir(path)
-    project = Project(name=name or path.name, path=path, description=description,
-                      created=date.today().isoformat(), reader=reader)
+    project = Project(
+        name=name or path.name,
+        path=path,
+        description=description,
+        created=date.today().isoformat(),
+        reader=reader,
+    )
     save_project(project)
     config.ensure_dir(project.captures_dir)
     config.ensure_dir(project.pocs_dir)
@@ -208,6 +220,7 @@ def import_capture(project: Project, src: Path, name: str | None = None) -> Path
 # Un proyecto se empaqueta como .zip con project.json en la raíz del archivo
 # (rutas relativas a la raíz del proyecto). Portátil entre máquinas/engagements.
 
+
 def export_project(project: Project, dest, *, include_runs: bool = True) -> Path:
     """Empaqueta el proyecto completo en un .zip y devuelve la ruta creada.
 
@@ -248,12 +261,15 @@ def peek_archive_name(archive) -> str:
     """Nombre del proyecto dentro del .zip (del manifest), sin extraer."""
     with zipfile.ZipFile(Path(archive).expanduser()) as zf:
         if "project.json" not in zf.namelist():
-            raise ProjectError("El archivo no es un proyecto EMVy (falta project.json en la raíz).")
+            raise ProjectError(
+                "El archivo no es un proyecto EMVy (falta project.json en la raíz)."
+            )
         return json.loads(zf.read("project.json")).get("name") or Path(archive).stem
 
 
-def import_project(archive, name: str | None = None, *, overwrite: bool = False,
-                   dest_path=None) -> Project:
+def import_project(
+    archive, name: str | None = None, *, overwrite: bool = False, dest_path=None
+) -> Project:
     """Importa un .zip de proyecto. Sin `dest_path`, crea el proyecto XDG con
     `name` (o el del manifest). Con `dest_path`, lo extrae en una ruta arbitraria
     (p.ej. engagements/). Protege contra path traversal."""
@@ -262,14 +278,18 @@ def import_project(archive, name: str | None = None, *, overwrite: bool = False,
         raise ProjectError(f"No existe el archivo: {archive}")
     with zipfile.ZipFile(archive) as zf:
         if "project.json" not in zf.namelist():
-            raise ProjectError("El archivo no es un proyecto EMVy (falta project.json en la raíz).")
+            raise ProjectError(
+                "El archivo no es un proyecto EMVy (falta project.json en la raíz)."
+            )
         manifest = json.loads(zf.read("project.json"))
         target_name = name or manifest.get("name") or archive.stem
 
         if dest_path is not None:
             target = Path(dest_path).expanduser().resolve()
             if (target / "project.json").exists() and not overwrite:
-                raise ProjectError(f"Ya existe un proyecto en {target} (usa overwrite).")
+                raise ProjectError(
+                    f"Ya existe un proyecto en {target} (usa overwrite)."
+                )
         else:
             _check_name(target_name)
             target = config.projects_dir() / target_name
@@ -297,8 +317,9 @@ def import_project(archive, name: str | None = None, *, overwrite: bool = False,
 def list_poc_runs(project: Project) -> list[Path]:
     if not project.poc_runs_dir.exists():
         return []
-    return sorted((d for d in project.poc_runs_dir.iterdir() if d.is_dir()),
-                  reverse=True)
+    return sorted(
+        (d for d in project.poc_runs_dir.iterdir() if d.is_dir()), reverse=True
+    )
 
 
 # --- proyecto activo -------------------------------------------------------

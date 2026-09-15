@@ -1,6 +1,7 @@
 """Tests del dashboard (página de inicio): el modelo puro `build_model` (máquina
 de estados de 'siguiente acción' + paneles) y una prueba de humo headless de la
 TUI con Textual Pilot."""
+
 import pytest
 
 pytest.importorskip("textual")
@@ -10,9 +11,17 @@ from emvy.tui.screens.dashboard import OK, OFF, build_model  # noqa: E402
 
 
 def _model(**kw):
-    base = dict(project_name=None, var_count=0, capture_count=0,
-                reader_name=None, reader_backend=None, reader_caps=None,
-                card_atr=None, capture_apps=None, capture_blobs=None)
+    base = dict(
+        project_name=None,
+        var_count=0,
+        capture_count=0,
+        reader_name=None,
+        reader_backend=None,
+        reader_caps=None,
+        card_atr=None,
+        capture_apps=None,
+        capture_blobs=None,
+    )
     base.update(kw)
     return build_model(**base)
 
@@ -30,31 +39,52 @@ def test_next_action_project_but_no_reader():
 
 
 def test_next_action_reader_but_no_card():
-    m = _model(project_name="lab", reader_name="Alcor AU9540",
-               reader_backend="pcsc", reader_caps="contact")
+    m = _model(
+        project_name="lab",
+        reader_name="Alcor AU9540",
+        reader_backend="pcsc",
+        reader_caps="contact",
+    )
     assert "tarjeta" in m.next_text.lower() and m.next_keys == "L"
     assert m.reader.symbol == OK and m.card.symbol == OFF
 
 
 def test_next_action_card_but_no_capture():
-    m = _model(project_name="lab", reader_name="Alcor", reader_backend="pcsc",
-               reader_caps="contact", card_atr="3B00")
+    m = _model(
+        project_name="lab",
+        reader_name="Alcor",
+        reader_backend="pcsc",
+        reader_caps="contact",
+        card_atr="3B00",
+    )
     assert "captura" in m.next_text.lower() and m.next_keys == "E"
     assert m.card.symbol == OK and m.capture.symbol == OFF
 
 
 def test_next_action_capture_available():
-    m = _model(project_name="lab", reader_name="Alcor", reader_backend="pcsc",
-               reader_caps="contact", card_atr="3B00",
-               capture_apps=2, capture_blobs=5)
+    m = _model(
+        project_name="lab",
+        reader_name="Alcor",
+        reader_backend="pcsc",
+        reader_caps="contact",
+        card_atr="3B00",
+        capture_apps=2,
+        capture_blobs=5,
+    )
     assert m.next_keys == "E / F"
     assert m.capture.symbol == OK
     assert "2 app(s)" in " ".join(m.capture.lines)
 
 
 def test_project_counts_surface():
-    m = _model(project_name="lab-visa", var_count=18, capture_count=4,
-               reader_name="Alcor", reader_backend="pcsc", reader_caps="contact")
+    m = _model(
+        project_name="lab-visa",
+        var_count=18,
+        capture_count=4,
+        reader_name="Alcor",
+        reader_backend="pcsc",
+        reader_caps="contact",
+    )
     assert m.var_count == 18 and m.capture_count == 4
 
 
@@ -87,14 +117,16 @@ def test_dashboard_headless_reacts_to_state(xdg):
             assert "proyecto" in text_of(app, "dash-next")
 
             # con proyecto activo pero sin lector -> pide conectar lector
-            store.create_project("lab"); store.set_active("lab")
+            store.create_project("lab")
+            store.set_active("lab")
             app.update_status()
             await pilot.pause()
             assert "lector" in text_of(app, "dash-next")
 
             # simula un lector conectado con tarjeta
-            app.reader_device = DeviceInfo("pcsc", "Alcor AU9540", "Alcor AU9540",
-                                           frozenset({Capability.CONTACT}))
+            app.reader_device = DeviceInfo(
+                "pcsc", "Alcor AU9540", "Alcor AU9540", frozenset({Capability.CONTACT})
+            )
             app.card_atr = "3B 00"
             app.update_status()
             await pilot.pause()
@@ -141,14 +173,18 @@ def test_dashboard_actions_headless(xdg):
 
             # crear un proyecto ELIGIENDO la ruta (proyecto en ruta)
             import tempfile
+
             loc = tempfile.mkdtemp()
             app.query_one("#dash-new-name", Input).value = "eng1"
             app.query_one("#dash-new-path", Input).value = loc + "/eng1"
             dash._new_project()
             await pilot.pause()
             from pathlib import Path
+
             assert (Path(loc) / "eng1" / "project.json").exists()
-            assert store.active_project().path.resolve() == (Path(loc) / "eng1").resolve()
+            assert (
+                store.active_project().path.resolve() == (Path(loc) / "eng1").resolve()
+            )
 
             # acción rápida: navega a la consola APDU, embebida en Explorador
             dash._qa_console()

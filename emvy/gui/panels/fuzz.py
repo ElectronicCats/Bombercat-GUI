@@ -8,11 +8,21 @@
 
 Cada valor es editable antes de disparar.
 """
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTabWidget, QVBoxLayout, QWidget,
+    QCheckBox,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...core import cardfuzz
@@ -28,9 +38,12 @@ class FuzzPanel(QWidget):
         super().__init__()
         self.win = win
         lay = QVBoxLayout(self)
-        warn = QLabel("⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
-                      "reacciona un lector real. Solo hardware propio o autorizado.")
-        warn.setWordWrap(True); warn.setStyleSheet("color:#e3b341")
+        warn = QLabel(
+            "⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
+            "reacciona un lector real. Solo hardware propio o autorizado."
+        )
+        warn.setWordWrap(True)
+        warn.setStyleSheet("color:#e3b341")
         lay.addWidget(warn)
         # Sub-pestañas: una herramienta enfocada a la vez (menos ruido que apilar
         # los cuatro paneles). Los widgets/IDs no cambian.
@@ -40,7 +53,9 @@ class FuzzPanel(QWidget):
         sub.addTab(self._emv_lane(), "Registro EMV")
         sub.addTab(self._track_lane(), "Banda magnética")
         lay.addWidget(sub, 1)
-        self._gen_track(); self._gen_emv(); self._gen_ndef()
+        self._gen_track()
+        self._gen_emv()
+        self._gen_ndef()
 
     # -- banda magnética ---------------------------------------------------
     def _track_lane(self) -> QGroupBox:
@@ -49,23 +64,35 @@ class FuzzPanel(QWidget):
         for t in cardfuzz.track_templates():
             self._track_tpl.addItem(t.title, t.id)
         self._track_tpl.currentIndexChanged.connect(self._gen_track)
-        gen = QPushButton("Generar"); gen.clicked.connect(self._gen_track)
-        send = QPushButton("Enviar"); send.clicked.connect(self._send_track)
-        self._track1 = QLineEdit(); self._track1.setPlaceholderText("track1 (editable)")
-        self._track2 = QLineEdit(); self._track2.setPlaceholderText("track2 (editable)")
+        gen = QPushButton("Generar")
+        gen.clicked.connect(self._gen_track)
+        send = QPushButton("Enviar")
+        send.clicked.connect(self._send_track)
+        self._track1 = QLineEdit()
+        self._track1.setPlaceholderText("track1 (editable)")
+        self._track2 = QLineEdit()
+        self._track2.setPlaceholderText("track2 (editable)")
         self._track_desc = _desc()
-        top = QHBoxLayout(); top.addWidget(self._track_tpl, 1); top.addWidget(gen); top.addWidget(send)
-        v = QVBoxLayout(box); v.addLayout(top); v.addWidget(self._track_desc)
-        v.addWidget(self._track1); v.addWidget(self._track2)
+        top = QHBoxLayout()
+        top.addWidget(self._track_tpl, 1)
+        top.addWidget(gen)
+        top.addWidget(send)
+        v = QVBoxLayout(box)
+        v.addLayout(top)
+        v.addWidget(self._track_desc)
+        v.addWidget(self._track1)
+        v.addWidget(self._track2)
         return box
 
     def _gen_track(self) -> None:
-        t = cardfuzz.get_track_template(cardfuzz.track_templates(),
-                                        self._track_tpl.currentData())
+        t = cardfuzz.get_track_template(
+            cardfuzz.track_templates(), self._track_tpl.currentData()
+        )
         if not t:
             return
         self._track_desc.setText(t.description)
-        self._track1.setText(t.track1 or ""); self._track2.setText(t.track2 or "")
+        self._track1.setText(t.track1 or "")
+        self._track2.setText(t.track2 or "")
 
     def _send_track(self) -> None:
         t1 = self._track1.text().strip() or None
@@ -82,23 +109,38 @@ class FuzzPanel(QWidget):
         for t in cardfuzz.emv_templates():
             self._emv_tpl.addItem(t.title, t.id)
         self._emv_tpl.currentIndexChanged.connect(self._gen_emv)
-        gen = QPushButton("Generar"); gen.clicked.connect(self._gen_emv)
-        self._emv_hex = QLineEdit(); self._emv_hex.setPlaceholderText("registro en hex (editable)")
-        self._emv_sfi = QLineEdit("1"); self._emv_sfi.setFixedWidth(56)
-        self._emv_rec = QLineEdit("1"); self._emv_rec.setFixedWidth(56)
-        write = QPushButton("Escribir"); write.clicked.connect(self._write_emv)
+        gen = QPushButton("Generar")
+        gen.clicked.connect(self._gen_emv)
+        self._emv_hex = QLineEdit()
+        self._emv_hex.setPlaceholderText("registro en hex (editable)")
+        self._emv_sfi = QLineEdit("1")
+        self._emv_sfi.setFixedWidth(56)
+        self._emv_rec = QLineEdit("1")
+        self._emv_rec.setFixedWidth(56)
+        write = QPushButton("Escribir")
+        write.clicked.connect(self._write_emv)
         self._emv_desc = _desc()
-        top = QHBoxLayout(); top.addWidget(self._emv_tpl, 1); top.addWidget(gen)
+        top = QHBoxLayout()
+        top.addWidget(self._emv_tpl, 1)
+        top.addWidget(gen)
         bottom = QHBoxLayout()
-        bottom.addWidget(QLabel("SFI")); bottom.addWidget(self._emv_sfi)
-        bottom.addWidget(QLabel("REC")); bottom.addWidget(self._emv_rec)
-        bottom.addWidget(write); bottom.addStretch(1)
-        v = QVBoxLayout(box); v.addLayout(top); v.addWidget(self._emv_desc)
-        v.addWidget(self._emv_hex); v.addLayout(bottom)
+        bottom.addWidget(QLabel("SFI"))
+        bottom.addWidget(self._emv_sfi)
+        bottom.addWidget(QLabel("REC"))
+        bottom.addWidget(self._emv_rec)
+        bottom.addWidget(write)
+        bottom.addStretch(1)
+        v = QVBoxLayout(box)
+        v.addLayout(top)
+        v.addWidget(self._emv_desc)
+        v.addWidget(self._emv_hex)
+        v.addLayout(bottom)
         return box
 
     def _gen_emv(self) -> None:
-        t = cardfuzz.get_emv_template(cardfuzz.emv_templates(), self._emv_tpl.currentData())
+        t = cardfuzz.get_emv_template(
+            cardfuzz.emv_templates(), self._emv_tpl.currentData()
+        )
         if not t:
             return
         self._emv_desc.setText(t.description)
@@ -106,9 +148,11 @@ class FuzzPanel(QWidget):
 
     def _write_emv(self) -> None:
         from ...core.hexutil import from_hex
+
         try:
             data = from_hex(self._emv_hex.text().strip())
-            sfi = int(self._emv_sfi.text()); rec = int(self._emv_rec.text())
+            sfi = int(self._emv_sfi.text())
+            rec = int(self._emv_rec.text())
         except ValueError:
             self.win.notify.emit("Hex/SFI/registro inválido.")
             return
@@ -134,40 +178,60 @@ class FuzzPanel(QWidget):
         self._ndef_cap.currentIndexChanged.connect(self._gen_ndef)
         self._ndef_cap.hide()
 
-        self._ndef_gen = QPushButton("Generar"); self._ndef_gen.clicked.connect(self._gen_ndef)
-        emit = QPushButton("Emular"); emit.clicked.connect(self._emit)
-        emit.setProperty("accent", True)          # CTA principal del carril
+        self._ndef_gen = QPushButton("Generar")
+        self._ndef_gen.clicked.connect(self._gen_ndef)
+        emit = QPushButton("Emular")
+        emit.clicked.connect(self._emit)
+        emit.setProperty("accent", True)  # CTA principal del carril
         emit.setIcon(icon("play", color=ACCENT_FG))
-        stop = QPushButton("Detener"); stop.clicked.connect(self._stop_ndef)
+        stop = QPushButton("Detener")
+        stop.clicked.connect(self._stop_ndef)
         stop.setIcon(icon("square"))
-        reboot = QPushButton("Reboot"); reboot.clicked.connect(self._reboot)
+        reboot = QPushButton("Reboot")
+        reboot.clicked.connect(self._reboot)
         reboot.setIcon(icon("cpu"))
-        self._ndef_hex = QLineEdit(); self._ndef_hex.setPlaceholderText("mensaje NDEF en hex (editable)")
+        self._ndef_hex = QLineEdit()
+        self._ndef_hex.setPlaceholderText("mensaje NDEF en hex (editable)")
         self._ndef_desc = _desc()
 
         # Fila de escaneo-a-RAM (solo visible en modo EMV): leer una tarjeta y
         # guardarla en memoria (app) o en la RAM del BomberCat para reemularla.
-        scan_mem = QPushButton("Escanear→memoria"); scan_mem.clicked.connect(self._scan_mem)
-        scan_ram = QPushButton("Escanear→RAM (BomberCat)"); scan_ram.clicked.connect(self._scan_ram)
+        scan_mem = QPushButton("Escanear→memoria")
+        scan_mem.clicked.connect(self._scan_mem)
+        scan_ram = QPushButton("Escanear→RAM (BomberCat)")
+        scan_ram.clicked.connect(self._scan_ram)
         self._emv_scan = QWidget()
-        sr = QHBoxLayout(self._emv_scan); sr.setContentsMargins(0, 0, 0, 0)
-        sr.addWidget(QLabel("Escanear tarjeta:")); sr.addWidget(scan_mem)
-        sr.addWidget(scan_ram); sr.addStretch(1)
+        sr = QHBoxLayout(self._emv_scan)
+        sr.setContentsMargins(0, 0, 0, 0)
+        sr.addWidget(QLabel("Escanear tarjeta:"))
+        sr.addWidget(scan_mem)
+        sr.addWidget(scan_ram)
+        sr.addStretch(1)
         self._emv_scan.hide()
 
         top = QHBoxLayout()
-        top.addWidget(QLabel("Fuente")); top.addWidget(self._ndef_src)
-        top.addWidget(self._ndef_tpl, 1); top.addWidget(self._ndef_cap, 1)
-        top.addWidget(self._ndef_gen); top.addWidget(emit)
-        top.addWidget(stop); top.addWidget(reboot)
+        top.addWidget(QLabel("Fuente"))
+        top.addWidget(self._ndef_src)
+        top.addWidget(self._ndef_tpl, 1)
+        top.addWidget(self._ndef_cap, 1)
+        top.addWidget(self._ndef_gen)
+        top.addWidget(emit)
+        top.addWidget(stop)
+        top.addWidget(reboot)
         hint = _desc()
-        hint.setText("La consola cruda (dock inferior) muestra qué pide el lector. "
-                     "NFC/NDEF: SELECT app/CC/NDEF y READ off/len. EMV (terminal de pago): "
-                     "SELECT-PPSE/AID y el GPO con TTQ/monto/país/divisa/UN decodificados. "
-                     "Escanea una tarjeta a memoria/RAM y elígela como fuente para reemularla. "
-                     "Detener para la emulación; Reboot reinicia la placa.")
-        v = QVBoxLayout(box); v.addLayout(top); v.addWidget(self._emv_scan)
-        v.addWidget(self._ndef_desc); v.addWidget(self._ndef_hex); v.addWidget(hint)
+        hint.setText(
+            "La consola cruda (dock inferior) muestra qué pide el lector. "
+            "NFC/NDEF: SELECT app/CC/NDEF y READ off/len. EMV (terminal de pago): "
+            "SELECT-PPSE/AID y el GPO con TTQ/monto/país/divisa/UN decodificados. "
+            "Escanea una tarjeta a memoria/RAM y elígela como fuente para reemularla. "
+            "Detener para la emulación; Reboot reinicia la placa."
+        )
+        v = QVBoxLayout(box)
+        v.addLayout(top)
+        v.addWidget(self._emv_scan)
+        v.addWidget(self._ndef_desc)
+        v.addWidget(self._ndef_hex)
+        v.addWidget(hint)
         return box
 
     def _ndef_src_changed(self) -> None:
@@ -182,24 +246,29 @@ class FuzzPanel(QWidget):
         self._emv_scan.setVisible(is_emv)
         if is_emv:
             self._reload_captures(include_canned=True, include_ram=True)
-            self._ndef_desc.setText("Emula una tarjeta de pago para que el TERMINAL avance y "
-                                    "revele su config (TTQ/monto/país/divisa/UN). Elige la "
-                                    "fuente: tarjeta de prueba fija, una captura guardada, la "
-                                    "tarjeta escaneada en memoria de la app, o la guardada en "
-                                    "la RAM del BomberCat (botones Escanear→…).")
+            self._ndef_desc.setText(
+                "Emula una tarjeta de pago para que el TERMINAL avance y "
+                "revele su config (TTQ/monto/país/divisa/UN). Elige la "
+                "fuente: tarjeta de prueba fija, una captura guardada, la "
+                "tarjeta escaneada en memoria de la app, o la guardada en "
+                "la RAM del BomberCat (botones Escanear→…)."
+            )
             return
         if src == "capture":
             self._reload_captures()
         self._gen_ndef()
 
-    def _reload_captures(self, include_canned: bool = False,
-                         include_ram: bool = False) -> None:
+    def _reload_captures(
+        self, include_canned: bool = False, include_ram: bool = False
+    ) -> None:
         self._ndef_cap.blockSignals(True)
         self._ndef_cap.clear()
         if include_canned:
-            self._ndef_cap.addItem("(tarjeta de prueba fija)", "")   # data "" = canned
-        if include_ram:                                              # fuentes en RAM (EMV)
-            self._ndef_cap.addItem("(tarjeta escaneada en memoria de la app)", "__mem__")
+            self._ndef_cap.addItem("(tarjeta de prueba fija)", "")  # data "" = canned
+        if include_ram:  # fuentes en RAM (EMV)
+            self._ndef_cap.addItem(
+                "(tarjeta escaneada en memoria de la app)", "__mem__"
+            )
             self._ndef_cap.addItem("(tarjeta en RAM del BomberCat)", "__ram__")
         proj = store.active_project()
         if proj:
@@ -217,63 +286,81 @@ class FuzzPanel(QWidget):
         from pathlib import Path
         from ...payments import EmvCard
         from ...session.model import CardDump
+
         return EmvCard.from_dump(CardDump.from_json(Path(path).read_text()))
 
     def _gen_ndef(self) -> None:
         src = self._ndef_src.currentData()
         if src == "emv":
-            return                       # EMV no usa mensaje NDEF
+            return  # EMV no usa mensaje NDEF
         try:
             if src == "test":
                 msg = cardfuzz.test_card_ndef()
-                self._ndef_desc.setText("Datos de una tarjeta de prueba canónica como NDEF.")
+                self._ndef_desc.setText(
+                    "Datos de una tarjeta de prueba canónica como NDEF."
+                )
             elif src == "capture":
                 path = self._ndef_cap.currentData()
                 if not path:
-                    self._ndef_hex.setText(""); self._ndef_desc.setText(
-                        "No hay capturas guardadas en el proyecto activo."); return
+                    self._ndef_hex.setText("")
+                    self._ndef_desc.setText(
+                        "No hay capturas guardadas en el proyecto activo."
+                    )
+                    return
                 from pathlib import Path
                 from ...payments import EmvCard
                 from ...session.model import CardDump
+
                 dump = CardDump.from_json(Path(path).read_text())
                 card = EmvCard.from_dump(dump)
                 msg = cardfuzz.card_ndef_from_fields(
-                    pan=card.pan_digits, expiry=card.expiry, track2=card.track2,
-                    aid=card.aid, label=card.label)
-                self._ndef_desc.setText(f"Datos de la captura «{self._ndef_cap.currentText()}» "
-                                        "presentados como NDEF (no es emulación EMV).")
+                    pan=card.pan_digits,
+                    expiry=card.expiry,
+                    track2=card.track2,
+                    aid=card.aid,
+                    label=card.label,
+                )
+                self._ndef_desc.setText(
+                    f"Datos de la captura «{self._ndef_cap.currentText()}» "
+                    "presentados como NDEF (no es emulación EMV)."
+                )
             else:
-                t = cardfuzz.get_ndef_template(cardfuzz.ndef_templates(),
-                                               self._ndef_tpl.currentData())
+                t = cardfuzz.get_ndef_template(
+                    cardfuzz.ndef_templates(), self._ndef_tpl.currentData()
+                )
                 if not t:
                     return
                 msg = t.message
                 self._ndef_desc.setText(t.description)
         except Exception as e:  # noqa: BLE001
-            self.win.notify.emit(f"NDEF: {e}"); return
+            self.win.notify.emit(f"NDEF: {e}")
+            return
         self._ndef_hex.setText(to_hex(msg))
 
     def _emit(self) -> None:
         """Un solo botón: emula según el MODO de la Fuente (EMV o NFC/NDEF)."""
         if self._ndef_src.currentData() == "emv":
             sel = self._ndef_cap.currentData()
-            if sel == "__ram__":                       # RAM del firmware (BomberCat)
+            if sel == "__ram__":  # RAM del firmware (BomberCat)
                 self.win.emit_emv(from_ram=True)
                 return
-            if sel == "__mem__":                       # RAM de la app
+            if sel == "__mem__":  # RAM de la app
                 if getattr(self.win, "_scanned_card", None) is None:
-                    self.win.notify.emit("No hay tarjeta en memoria. Usa Escanear→memoria.")
+                    self.win.notify.emit(
+                        "No hay tarjeta en memoria. Usa Escanear→memoria."
+                    )
                     return
                 self.win.emit_emv(card=self.win._scanned_card)
                 return
             try:
-                card = self._load_capture_card()      # None = tarjeta de prueba fija
+                card = self._load_capture_card()  # None = tarjeta de prueba fija
             except Exception as e:  # noqa: BLE001
                 self.win.notify.emit(f"Captura EMV: {e}")
                 return
             self.win.emit_emv(card)
             return
         from ...core.hexutil import from_hex
+
         hexval = self._ndef_hex.text().strip()
         try:
             from_hex(hexval)
@@ -297,7 +384,7 @@ class FuzzPanel(QWidget):
     # -- Editor de tarjeta EMV (escanear → editar → emular) ----------------
     def _card_editor(self) -> QGroupBox:
         box = QGroupBox("Editor de tarjeta EMV · escanear, editar y emular")
-        self._ed_disc = ""          # discrecional del track2 original (se preserva)
+        self._ed_disc = ""  # discrecional del track2 original (se preserva)
 
         # fila de carga: de dónde traer la tarjeta al editor
         self._ed_src = QComboBox()
@@ -305,21 +392,33 @@ class FuzzPanel(QWidget):
         self._ed_src.addItem("Escanear→RAM (BomberCat NFC)", "ram")
         self._ed_src.addItem("Captura guardada", "capture")
         self._ed_src.currentIndexChanged.connect(self._ed_src_changed)
-        self._ed_cap = QComboBox(); self._ed_cap.hide()
-        self._ed_cap.currentIndexChanged.connect(self._ed_load_capture)   # auto-carga al seleccionar
-        load = QPushButton("Cargar / escanear"); load.clicked.connect(self._ed_load)
+        self._ed_cap = QComboBox()
+        self._ed_cap.hide()
+        self._ed_cap.currentIndexChanged.connect(
+            self._ed_load_capture
+        )  # auto-carga al seleccionar
+        load = QPushButton("Cargar / escanear")
+        load.clicked.connect(self._ed_load)
         top = QHBoxLayout()
-        top.addWidget(QLabel("Cargar desde")); top.addWidget(self._ed_src)
-        top.addWidget(self._ed_cap, 1); top.addWidget(load)
+        top.addWidget(QLabel("Cargar desde"))
+        top.addWidget(self._ed_src)
+        top.addWidget(self._ed_cap, 1)
+        top.addWidget(load)
 
         # campos editables (amistoso): PAN, caducidad, código de servicio, AID,
         # titular, y el track2 (hex) que se puede regenerar desde los anteriores.
-        self._ed_pan = QLineEdit(); self._ed_pan.setPlaceholderText("dígitos, p.ej. 4189143370041827")
-        self._ed_exp = QLineEdit(); self._ed_exp.setPlaceholderText("YYMM, p.ej. 2909")
-        self._ed_svc = QLineEdit(); self._ed_svc.setPlaceholderText("3 dígitos, p.ej. 201")
-        self._ed_aid = QLineEdit(); self._ed_aid.setPlaceholderText("hex, p.ej. A0000000031010")
-        self._ed_name = QLineEdit(); self._ed_name.setPlaceholderText("titular / etiqueta")
-        self._ed_t2 = QLineEdit(); self._ed_t2.setPlaceholderText("Track2 (tag 57) hex")
+        self._ed_pan = QLineEdit()
+        self._ed_pan.setPlaceholderText("dígitos, p.ej. 4189143370041827")
+        self._ed_exp = QLineEdit()
+        self._ed_exp.setPlaceholderText("YYMM, p.ej. 2909")
+        self._ed_svc = QLineEdit()
+        self._ed_svc.setPlaceholderText("3 dígitos, p.ej. 201")
+        self._ed_aid = QLineEdit()
+        self._ed_aid.setPlaceholderText("hex, p.ej. A0000000031010")
+        self._ed_name = QLineEdit()
+        self._ed_name.setPlaceholderText("titular / etiqueta")
+        self._ed_t2 = QLineEdit()
+        self._ed_t2.setPlaceholderText("Track2 (tag 57) hex")
         for w in (self._ed_pan, self._ed_exp, self._ed_svc):
             w.editingFinished.connect(self._ed_autotrack2)
         form = QFormLayout()
@@ -330,27 +429,40 @@ class FuzzPanel(QWidget):
         form.addRow("Titular", self._ed_name)
         form.addRow("Track2 (hex)", self._ed_t2)
 
-        self._ed_auto = QCheckBox("Regenerar Track2 automáticamente al editar PAN/caducidad")
+        self._ed_auto = QCheckBox(
+            "Regenerar Track2 automáticamente al editar PAN/caducidad"
+        )
         self._ed_auto.setChecked(True)
-        regen = QPushButton("↻ Track2 desde campos"); regen.clicked.connect(self._ed_regen_track2)
-        emit = QPushButton("Emular tarjeta editada"); emit.clicked.connect(self._ed_emit)
-        emit.setProperty("accent", True)          # CTA principal del editor
+        regen = QPushButton("↻ Track2 desde campos")
+        regen.clicked.connect(self._ed_regen_track2)
+        emit = QPushButton("Emular tarjeta editada")
+        emit.clicked.connect(self._ed_emit)
+        emit.setProperty("accent", True)  # CTA principal del editor
         emit.setIcon(icon("play", color=ACCENT_FG))
-        btns = QHBoxLayout(); btns.addWidget(self._ed_auto); btns.addStretch(1)
-        btns.addWidget(regen); btns.addWidget(emit)
+        btns = QHBoxLayout()
+        btns.addWidget(self._ed_auto)
+        btns.addStretch(1)
+        btns.addWidget(regen)
+        btns.addWidget(emit)
 
         hint = _desc()
-        hint.setText("Escanea (memoria o RAM del BomberCat) o carga una captura; edita los campos y "
-                     "pulsa «Emular tarjeta editada». El Track2 se regenera desde PAN/caducidad/servicio "
-                     "(o edítalo a mano). Emula inyectando los datos editados al firmware (EMUEMV:).")
-        v = QVBoxLayout(box); v.addLayout(top); v.addLayout(form); v.addLayout(btns); v.addWidget(hint)
+        hint.setText(
+            "Escanea (memoria o RAM del BomberCat) o carga una captura; edita los campos y "
+            "pulsa «Emular tarjeta editada». El Track2 se regenera desde PAN/caducidad/servicio "
+            "(o edítalo a mano). Emula inyectando los datos editados al firmware (EMUEMV:)."
+        )
+        v = QVBoxLayout(box)
+        v.addLayout(top)
+        v.addLayout(form)
+        v.addLayout(btns)
+        v.addWidget(hint)
         return box
 
     def _ed_src_changed(self) -> None:
         is_cap = self._ed_src.currentData() == "capture"
         self._ed_cap.setVisible(is_cap)
         if is_cap:
-            self._ed_cap.blockSignals(True)      # no disparar la auto-carga al repoblar
+            self._ed_cap.blockSignals(True)  # no disparar la auto-carga al repoblar
             self._ed_cap.clear()
             proj = store.active_project()
             if proj:
@@ -359,7 +471,7 @@ class FuzzPanel(QWidget):
             if self._ed_cap.count() == 0:
                 self._ed_cap.addItem("(sin capturas en el proyecto)", "")
             self._ed_cap.blockSignals(False)
-            self._ed_load_capture()              # auto-carga la primera al elegir 'captura'
+            self._ed_load_capture()  # auto-carga la primera al elegir 'captura'
 
     def _ed_load_capture(self) -> None:
         """Carga la captura seleccionada al editor (auto: al cambiar la selección)."""
@@ -370,7 +482,10 @@ class FuzzPanel(QWidget):
             from pathlib import Path
             from ...payments import EmvCard
             from ...session.model import CardDump
-            self._ed_populate(EmvCard.from_dump(CardDump.from_json(Path(path).read_text())))
+
+            self._ed_populate(
+                EmvCard.from_dump(CardDump.from_json(Path(path).read_text()))
+            )
         except Exception as e:  # noqa: BLE001
             self.win.notify.emit(f"Cargar captura: {e}")
 
@@ -400,11 +515,17 @@ class FuzzPanel(QWidget):
                 disc = t2.discretionary or ""
         self._ed_svc.setText(svc)
         self._ed_disc = disc
-        self.win.notify.emit(f"Editor cargado: PAN {card.pan_digits or '?'} AID {card.aid or '?'}.")
+        self.win.notify.emit(
+            f"Editor cargado: PAN {card.pan_digits or '?'} AID {card.aid or '?'}."
+        )
 
     def _ed_regen_track2(self) -> None:
-        t2 = tracklib.build_track2_emv(self._ed_pan.text().strip(), self._ed_exp.text().strip(),
-                                       self._ed_svc.text().strip(), self._ed_disc)
+        t2 = tracklib.build_track2_emv(
+            self._ed_pan.text().strip(),
+            self._ed_exp.text().strip(),
+            self._ed_svc.text().strip(),
+            self._ed_disc,
+        )
         self._ed_t2.setText(t2)
 
     def _ed_autotrack2(self) -> None:
@@ -413,15 +534,22 @@ class FuzzPanel(QWidget):
 
     def _ed_emit(self) -> None:
         from ...payments import EmvCard
+
         if self._ed_auto.isChecked():
             self._ed_regen_track2()
         pan = self._ed_pan.text().strip()
         if not pan and not self._ed_t2.text().strip():
-            self.win.notify.emit("Nada que emular: escanea o edita el PAN/Track2 primero.")
+            self.win.notify.emit(
+                "Nada que emular: escanea o edita el PAN/Track2 primero."
+            )
             return
-        card = EmvCard(pan=pan, expiry=self._ed_exp.text().strip(),
-                       aid=self._ed_aid.text().strip(), label=self._ed_name.text().strip(),
-                       track2=self._ed_t2.text().strip())
+        card = EmvCard(
+            pan=pan,
+            expiry=self._ed_exp.text().strip(),
+            aid=self._ed_aid.text().strip(),
+            label=self._ed_name.text().strip(),
+            track2=self._ed_t2.text().strip(),
+        )
         self.win.emit_emv(card=card)
 
 

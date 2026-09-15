@@ -1,8 +1,9 @@
 """Registro de AIDs / RIDs conocidos y nombres PSE, para descubrimiento."""
+
 from __future__ import annotations
 
 # Nombres del Payment System Environment (se seleccionan como DF name)
-PSE = b"1PAY.SYS.DDF01"   # contacto
+PSE = b"1PAY.SYS.DDF01"  # contacto
 PPSE = b"2PAY.SYS.DDF01"  # contactless
 
 # RID (5 bytes) -> esquema

@@ -1,4 +1,5 @@
 """Panel de lectores: descubre backends/dispositivos y conecta uno."""
+
 from __future__ import annotations
 
 from textual import on
@@ -12,8 +13,11 @@ from ..widgets.copyable import CopyableDataTable
 class ReadersScreen(Vertical):
     def compose(self):
         yield Static("Lectores", classes="title")
-        yield Static("Descubre los lectores de todos los backends y conecta uno "
-                     "(selecciona una fila y pulsa Conectar).", classes="subtitle")
+        yield Static(
+            "Descubre los lectores de todos los backends y conecta uno "
+            "(selecciona una fila y pulsa Conectar).",
+            classes="subtitle",
+        )
         with Horizontal(classes="actions"):
             yield Button("Refrescar", id="rdr_refresh")
             yield Button("Conectar", id="rdr_connect", variant="success")
@@ -44,6 +48,7 @@ class ReadersScreen(Vertical):
         has_pcsc = any(d.backend == "pcsc" for d in self._devices)
         if not backends.get("pcsc"):
             import sys
+
             msgs.append(
                 "[yellow]⚠ pcsc no disponible: falta [b]pyscard[/] en este Python "
                 f"({sys.executable}). El lector de chip (contacto) no aparecerá.\n"
@@ -74,7 +79,9 @@ class ReadersScreen(Vertical):
     def _connect(self):
         dev = self._selected()
         if not dev:
-            self.app.notify("Selecciona un lector (o no hay ninguno).", severity="warning")
+            self.app.notify(
+                "Selecciona un lector (o no hay ninguno).", severity="warning"
+            )
             return
         self.app.connect_reader(dev)
 

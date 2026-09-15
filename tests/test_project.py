@@ -1,4 +1,5 @@
 """Tests de variables de entorno (CRUD/encoders) y persistencia de proyectos."""
+
 import pytest
 
 from emvy.project import env, store
@@ -24,8 +25,8 @@ def test_crud_and_profile():
     vs = env.default_variables()
     assert any(v.tag == "9F02" for v in vs)
     vs = env.set_var(vs, "amount", "000000001500")
-    vs = env.set_var(vs, "merchant_name", "ACME REDTEAM")   # an/ans
-    vs = env.set_var(vs, "target", "BancoX")                 # user
+    vs = env.set_var(vs, "merchant_name", "ACME REDTEAM")  # an/ans
+    vs = env.set_var(vs, "target", "BancoX")  # user
     prof = env.to_terminal_profile(vs)
     assert prof["9F02"] == bytes.fromhex("000000001500")
     assert prof["9F4E"] == b"ACME REDTEAM"
@@ -65,7 +66,9 @@ def test_project_lifecycle(xdg):
     assert any(v.tag == "9F02" for v in vs)
     vs = env.set_var(vs, "amount", "000000002500")
     store.save_project_variables(p, vs)
-    assert env.get_var(store.load_project_variables(p), "amount").value == "000000002500"
+    assert (
+        env.get_var(store.load_project_variables(p), "amount").value == "000000002500"
+    )
 
     # capturas
     store.save_capture(p, "card1", '{"atr":"3B00"}')
@@ -109,7 +112,7 @@ def test_export_import_roundtrip(xdg, tmp_path):
     store.delete_project("lab-visa")
     assert not store.project_exists("lab-visa")
 
-    p = store.import_project(zip_path)                 # nombre = el del manifest
+    p = store.import_project(zip_path)  # nombre = el del manifest
     assert p.name == "lab-visa" and store.project_exists("lab-visa")
     vs = store.load_project_variables(p)
     assert env.get_var(vs, "amount").value == "000000001500"
@@ -122,17 +125,18 @@ def test_import_rename_and_overwrite(xdg, tmp_path):
     zip_path = store.export_project(store.open_project("lab-visa"), tmp_path / "out")
 
     p = store.import_project(zip_path, name="lab-copy")
-    assert p.name == "lab-copy"                        # manifest normalizado
+    assert p.name == "lab-copy"  # manifest normalizado
     assert store.open_project("lab-copy").name == "lab-copy"
 
     with pytest.raises(store.ProjectError):
-        store.import_project(zip_path, name="lab-copy")   # ya existe
+        store.import_project(zip_path, name="lab-copy")  # ya existe
     p2 = store.import_project(zip_path, name="lab-copy", overwrite=True)
     assert p2.name == "lab-copy"
 
 
 def test_export_excludes_runs(xdg, tmp_path):
     import zipfile
+
     p = _seed_project()
     (p.poc_runs_dir / "20260101-run").mkdir(parents=True)
     (p.poc_runs_dir / "20260101-run" / "result.json").write_text("{}")
@@ -146,6 +150,7 @@ def test_export_excludes_runs(xdg, tmp_path):
 
 def test_import_rejects_non_project(tmp_path, xdg):
     import zipfile
+
     bad = tmp_path / "notproj.zip"
     with zipfile.ZipFile(bad, "w") as zf:
         zf.writestr("readme.txt", "hola")
@@ -158,8 +163,10 @@ def test_engagements_dirs_env(monkeypatch, tmp_path):
     import os
 
     from emvy import config
-    monkeypatch.setenv("EMVY_ENGAGEMENTS",
-                       str(tmp_path / "a") + os.pathsep + str(tmp_path / "b"))
+
+    monkeypatch.setenv(
+        "EMVY_ENGAGEMENTS", str(tmp_path / "a") + os.pathsep + str(tmp_path / "b")
+    )
     resolved = {str(d.resolve()) for d in config.engagements_dirs()}
     assert str((tmp_path / "a").resolve()) in resolved
     assert str((tmp_path / "b").resolve()) in resolved
@@ -167,21 +174,24 @@ def test_engagements_dirs_env(monkeypatch, tmp_path):
 
 def test_list_path_projects_discovers_and_activates(xdg, tmp_path, monkeypatch):
     import json
+
     root = tmp_path / "eng"
     d = root / "acme-under-test"
     d.mkdir(parents=True)
-    (d / "project.json").write_text(json.dumps(
-        {"name": "acme-under-test", "description": "engagement de prueba"}))
+    (d / "project.json").write_text(
+        json.dumps({"name": "acme-under-test", "description": "engagement de prueba"})
+    )
     monkeypatch.setenv("EMVY_ENGAGEMENTS", str(root))
 
     found = {p.name: p for p in store.list_path_projects()}
-    assert "acme-under-test" in found                 # se descubre sin estar activo
+    assert "acme-under-test" in found  # se descubre sin estar activo
     store.set_active_path(found["acme-under-test"].path)
     assert store.active_project().name == "acme-under-test"
 
 
 def test_import_rejects_zip_slip(tmp_path, xdg):
     import zipfile
+
     evil = tmp_path / "evil.zip"
     with zipfile.ZipFile(evil, "w") as zf:
         zf.writestr("project.json", '{"name":"x"}')

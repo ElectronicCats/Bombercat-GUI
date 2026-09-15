@@ -10,6 +10,7 @@ llaman (`connect_reader`, `capture`, `send_apdu`, `emit_ndef`…). La traza de
 cada intercambio (APDU + transporte, en crudo) fluye a la **consola cruda** del
 dock inferior por las señales `apdu_event`/`wire_event`.
 """
+
 from __future__ import annotations
 
 import sys
@@ -17,8 +18,16 @@ import sys
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QApplication, QDockWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QMainWindow, QStatusBar, QTabWidget, QWidget,
+    QApplication,
+    QDockWidget,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QStatusBar,
+    QTabWidget,
+    QWidget,
 )
 
 from .. import __release__, __version__
@@ -45,12 +54,12 @@ from .worker import submit
 
 class MainWindow(QMainWindow):
     # Señales de sesión / traza (emitidas desde hilos de trabajo → GUI).
-    apdu_event = Signal(object)      # core.apdu.TraceEvent
-    wire_event = Signal(object)      # readers.types.WireEvent
+    apdu_event = Signal(object)  # core.apdu.TraceEvent
+    wire_event = Signal(object)  # readers.types.WireEvent
     reader_changed = Signal()
-    dump_ready = Signal(object)      # session.CardDump
-    notify = Signal(str)             # mensaje breve a la barra de estado
-    intercept_event = Signal(object) # core.intercept.Exchange (MITM en vivo)
+    dump_ready = Signal(object)  # session.CardDump
+    notify = Signal(str)  # mensaje breve a la barra de estado
+    intercept_event = Signal(object)  # core.intercept.Exchange (MITM en vivo)
 
     def __init__(self) -> None:
         super().__init__()
@@ -65,12 +74,14 @@ class MainWindow(QMainWindow):
         self.intercept_rules: list = []
         self.intercept_active: bool = False
         import threading
-        self._emu_stop = threading.Event()   # señal para detener la emulación NDEF
-        self._scanned_card = None            # tarjeta escaneada a memoria (RAM app), EmvCard
+
+        self._emu_stop = threading.Event()  # señal para detener la emulación NDEF
+        self._scanned_card = None  # tarjeta escaneada a memoria (RAM app), EmvCard
 
         from PySide6.QtCore import QThreadPool
+
         self.pool = QThreadPool(self)
-        self.pool.setMaxThreadCount(1)   # serializa las operaciones de hardware
+        self.pool.setMaxThreadCount(1)  # serializa las operaciones de hardware
 
         # -- consola cruda (dock inferior) ---------------------------------
         self.console = RawConsole()
@@ -113,8 +124,11 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().hide()
         self.nav = self._build_sidebar()
         central = QWidget()
-        h = QHBoxLayout(central); h.setContentsMargins(0, 0, 0, 0); h.setSpacing(0)
-        h.addWidget(self.nav); h.addWidget(self.tabs, 1)
+        h = QHBoxLayout(central)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
+        h.addWidget(self.nav)
+        h.addWidget(self.tabs, 1)
         self.setCentralWidget(central)
         # La consola cruda solo es útil donde hay tráfico con el hardware; se
         # oculta en Inicio/Proyectos/Variables para una vista más limpia.
@@ -133,33 +147,61 @@ class MainWindow(QMainWindow):
         self.notify.connect(lambda m: self.statusBar().showMessage(m, 6000))
 
         self._update_status()
-        self._on_tab_changed(self.tabs.currentIndex())   # estado inicial de la consola
+        self._on_tab_changed(self.tabs.currentIndex())  # estado inicial de la consola
 
     # Pestañas donde la consola cruda (APDU/transporte) aporta; en el resto se
     # oculta para reducir ruido visual.
-    _CONSOLE_TABS = frozenset({"Lectores", "Explorador", "Herramientas", "Cobros",
-                               "PoC", "Intercept", "BomberCat", "Fuzzing"})
+    _CONSOLE_TABS = frozenset(
+        {
+            "Lectores",
+            "Explorador",
+            "Herramientas",
+            "Cobros",
+            "PoC",
+            "Intercept",
+            "BomberCat",
+            "Fuzzing",
+        }
+    )
 
     # Navegación agrupada de la barra lateral: (grupo, [(etiqueta, icono)…]).
     _NAV_GROUPS = (
-        ("SESIÓN", (("Inicio", "home"), ("Proyectos", "folder"),
-                    ("Variables", "sliders"), ("Lectores", "plug"))),
+        (
+            "SESIÓN",
+            (
+                ("Inicio", "home"),
+                ("Proyectos", "folder"),
+                ("Variables", "sliders"),
+                ("Lectores", "plug"),
+            ),
+        ),
         ("TARJETA", (("Explorador", "search"), ("Herramientas", "wrench"))),
-        ("OPERACIONES", (("Cobros", "credit-card"), ("PoC", "flask"),
-                         ("Intercept", "shield"), ("Fuzzing", "zap"))),
+        (
+            "OPERACIONES",
+            (
+                ("Cobros", "credit-card"),
+                ("PoC", "flask"),
+                ("Intercept", "shield"),
+                ("Fuzzing", "zap"),
+            ),
+        ),
         ("HARDWARE", (("BomberCat", "cpu"),)),
     )
 
     def _build_sidebar(self) -> QListWidget:
         from .icons import icon
-        nav = QListWidget(); nav.setObjectName("nav")
-        nav.setFixedWidth(198); nav.setIconSize(QSize(18, 18))
+
+        nav = QListWidget()
+        nav.setObjectName("nav")
+        nav.setFixedWidth(198)
+        nav.setIconSize(QSize(18, 18))
         nav.setUniformItemSizes(False)
         tab_index = {self.tabs.tabText(i): i for i in range(self.tabs.count())}
         self._nav_to_tab: dict[int, int] = {}
         first_row = None
         for gname, items in self._NAV_GROUPS:
-            hdr = QListWidgetItem(gname); hdr.setFlags(Qt.NoItemFlags)
+            hdr = QListWidgetItem(gname)
+            hdr.setFlags(Qt.NoItemFlags)
             nav.addItem(hdr)
             for label, ic in items:
                 if label not in tab_index:
@@ -186,7 +228,8 @@ class MainWindow(QMainWindow):
         # mantener la selección de la barra lateral en sincronía
         for row, ti in getattr(self, "_nav_to_tab", {}).items():
             if ti == index and self.nav.currentRow() != row:
-                self.nav.blockSignals(True); self.nav.setCurrentRow(row)
+                self.nav.blockSignals(True)
+                self.nav.setCurrentRow(row)
                 self.nav.blockSignals(False)
                 break
 
@@ -203,9 +246,12 @@ class MainWindow(QMainWindow):
         send = self.reader.transceive
         if self.intercept_active and self.intercept_rules:
             from ..core import intercept
+
             return intercept.intercepting(
-                send, self.intercept_rules,
-                on_event=lambda ex: self.intercept_event.emit(ex))
+                send,
+                self.intercept_rules,
+                on_event=lambda ex: self.intercept_event.emit(ex),
+            )
         return send
 
     # -- traza en vivo → consola cruda -------------------------------------
@@ -222,7 +268,9 @@ class MainWindow(QMainWindow):
             proj = p.name if p else "—"
         rdr = self.reader_device.name if self.reader_device else "—"
         crd = self.card_atr or "—"
-        self._status.setText(f"  proyecto: {proj}    │    lector: {rdr}    │    tarjeta: {crd}")
+        self._status.setText(
+            f"  proyecto: {proj}    │    lector: {rdr}    │    tarjeta: {crd}"
+        )
         try:
             self.dashboard_panel.reload()
         except Exception:
@@ -231,8 +279,14 @@ class MainWindow(QMainWindow):
     def refresh_all(self) -> None:
         """Recarga los paneles dependientes de proyecto/estado (tras crear/
         activar un proyecto, guardar variables, etc.) — como refresh_ui de la TUI."""
-        for panel in (self.dashboard_panel, self.projects_panel, self.variables_panel,
-                      self.readers_panel, self.explorer_panel, self.poc_panel):
+        for panel in (
+            self.dashboard_panel,
+            self.projects_panel,
+            self.variables_panel,
+            self.readers_panel,
+            self.explorer_panel,
+            self.poc_panel,
+        ):
             try:
                 panel.reload()
             except Exception:
@@ -255,7 +309,8 @@ class MainWindow(QMainWindow):
             r = registry.open_device(
                 device,
                 on_event=lambda e: self.apdu_event.emit(e),
-                on_wire=lambda e: self.wire_event.emit(e))
+                on_wire=lambda e: self.wire_event.emit(e),
+            )
             atr = r.atr() if r.atr else b""
             return r, atr
 
@@ -263,13 +318,19 @@ class MainWindow(QMainWindow):
             self.reader, atr = res
             self.reader_device = device
             self.card_atr = to_hex(atr, sep=" ") if atr else None
-            self.console.banner(f"conectado: {device.name}"
-                                + (f" · ATR {self.card_atr}" if self.card_atr else ""))
+            self.console.banner(
+                f"conectado: {device.name}"
+                + (f" · ATR {self.card_atr}" if self.card_atr else "")
+            )
             self.reader_changed.emit()
             self.notify.emit("Lector conectado.")
 
-        submit(self.pool, _open, on_result=_ok,
-               on_error=lambda m: self.notify.emit(f"Conexión: {m}"))
+        submit(
+            self.pool,
+            _open,
+            on_result=_ok,
+            on_error=lambda m: self.notify.emit(f"Conexión: {m}"),
+        )
 
     def disconnect_reader(self) -> None:
         name = self.reader_device.name if self.reader_device else "lector"
@@ -311,13 +372,23 @@ class MainWindow(QMainWindow):
                 send,
                 atr=(self.reader.atr() if self.reader.atr else b""),
                 reader=(self.reader_device.name if self.reader_device else ""),
-                profile=self.current_profile(), raw=raw, mode=mode,
-                brute=not lean, sweep=not lean, get_data=not lean, progress=progress)
+                profile=self.current_profile(),
+                raw=raw,
+                mode=mode,
+                brute=not lean,
+                sweep=not lean,
+                get_data=not lean,
+                progress=progress,
+            )
 
-        submit(self.pool, _cap, want_progress=True,
-               on_line=lambda m: self.console.info(m),
-               on_result=lambda d: self.dump_ready.emit(d),
-               on_error=lambda m: self.notify.emit(f"Captura: {m}"))
+        submit(
+            self.pool,
+            _cap,
+            want_progress=True,
+            on_line=lambda m: self.console.info(m),
+            on_result=lambda d: self.dump_ready.emit(d),
+            on_error=lambda m: self.notify.emit(f"Captura: {m}"),
+        )
 
     def _on_dump(self, dump) -> None:
         self.last_dump = dump
@@ -326,8 +397,10 @@ class MainWindow(QMainWindow):
         n_apps, n_blobs = len(dump.applications), len(dump.blobs)
         backend = getattr(self.reader_device, "backend", None)
         if backend == "bombercat" and not dump.applications and n_blobs <= 1:
-            self.notify.emit("Sin datos: la tarjeta pudo moverse (rango NFC de mm). "
-                             "Sosténla firme y reintenta.")
+            self.notify.emit(
+                "Sin datos: la tarjeta pudo moverse (rango NFC de mm). "
+                "Sosténla firme y reintenta."
+            )
         else:
             self.notify.emit(f"Captura: {n_apps} app(s), {n_blobs} blobs.")
 
@@ -341,57 +414,89 @@ class MainWindow(QMainWindow):
             self.notify.emit("APDU hex inválido.")
             return
         send = self.active_send()
-        submit(self.pool, lambda: send(data),
-               on_error=lambda m: self.notify.emit(f"APDU: {m}"))
+        submit(
+            self.pool,
+            lambda: send(data),
+            on_error=lambda m: self.notify.emit(f"APDU: {m}"),
+        )
 
     # -- fuzzing: magspoof / NDEF ------------------------------------------
     def emit_magspoof(self, track1, track2) -> None:
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
             self.notify.emit("No se detectó BomberCat.")
             return
         self.console.banner("magspoof")
-        submit(self.pool, lambda: bombercat.magspoof_emit(devs[0], track1, track2),
-               on_result=lambda out: self.console.info(f"magspoof: {out}"),
-               on_error=lambda m: self.notify.emit(f"magspoof: {m}"))
+        submit(
+            self.pool,
+            lambda: bombercat.magspoof_emit(devs[0], track1, track2),
+            on_result=lambda out: self.console.info(f"magspoof: {out}"),
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
 
     def emit_ndef(self, ndef_hex: str) -> None:
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
             self.notify.emit("No se detectó BomberCat.")
             return
         self._emu_stop.clear()
-        self.console.banner(f"emulación NDEF ({len(ndef_hex)//2} bytes) — acerca un "
-                            "lector (Detener para parar)")
-        submit(self.pool,
-               lambda progress=None: bombercat.ndef_emulate(
-                   devs[0], ndef_hex, timeout=None, stop=self._emu_stop.is_set,
-                   on_line=progress),
-               want_progress=True,
-               on_line=lambda l: self.console.wire("rx", l, "emu"),
-               on_error=lambda m: self.notify.emit(f"NDEF EMU: {m}"))
+        self.console.banner(
+            f"emulación NDEF ({len(ndef_hex)//2} bytes) — acerca un "
+            "lector (Detener para parar)"
+        )
+        submit(
+            self.pool,
+            lambda progress=None: bombercat.ndef_emulate(
+                devs[0],
+                ndef_hex,
+                timeout=None,
+                stop=self._emu_stop.is_set,
+                on_line=progress,
+            ),
+            want_progress=True,
+            on_line=lambda l: self.console.wire("rx", l, "emu"),
+            on_error=lambda m: self.notify.emit(f"NDEF EMU: {m}"),
+        )
 
     def emit_emv(self, card=None, from_ram: bool = False) -> None:
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
             self.notify.emit("No se detectó BomberCat.")
             return
         self._emu_stop.clear()
-        who = ("RAM del BomberCat" if from_ram else
-               "tarjeta de prueba" if card is None else
-               f"captura (PAN {card.pan_digits or '?'})")
-        self.console.banner(f"emulación de tarjeta EMV [{who}] — acerca el "
-                            "terminal/POS (Detener para parar)")
-        submit(self.pool,
-               lambda progress=None: bombercat.emv_emulate(
-                   devs[0], card=card, from_ram=from_ram, timeout=None,
-                   stop=self._emu_stop.is_set, on_line=progress),
-               want_progress=True,
-               on_line=lambda l: self.console.wire("rx", l, "emu"),
-               on_error=lambda m: self.notify.emit(f"EMV EMU: {m}"))
+        who = (
+            "RAM del BomberCat"
+            if from_ram
+            else (
+                "tarjeta de prueba"
+                if card is None
+                else f"captura (PAN {card.pan_digits or '?'})"
+            )
+        )
+        self.console.banner(
+            f"emulación de tarjeta EMV [{who}] — acerca el "
+            "terminal/POS (Detener para parar)"
+        )
+        submit(
+            self.pool,
+            lambda progress=None: bombercat.emv_emulate(
+                devs[0],
+                card=card,
+                from_ram=from_ram,
+                timeout=None,
+                stop=self._emu_stop.is_set,
+                on_line=progress,
+            ),
+            want_progress=True,
+            on_line=lambda l: self.console.wire("rx", l, "emu"),
+            on_error=lambda m: self.notify.emit(f"EMV EMU: {m}"),
+        )
 
     def scan_to_memory(self, then=None) -> None:
         """Escanea (captura) la tarjeta con el lector conectado y la guarda en la
@@ -401,16 +506,24 @@ class MainWindow(QMainWindow):
         if not self._need_reader():
             return
         from ..payments import EmvCard
+
         self.notify.emit("Escaneando a memoria…")
         send = self.active_send()
         lean = getattr(self.reader_device, "backend", None) == "bombercat"
 
         def _cap(progress=None):
             return capture_card(
-                send, atr=(self.reader.atr() if self.reader.atr else b""),
+                send,
+                atr=(self.reader.atr() if self.reader.atr else b""),
                 reader=(self.reader_device.name if self.reader_device else ""),
-                profile=self.current_profile(), raw=False, mode="auto",
-                brute=not lean, sweep=not lean, get_data=not lean, progress=progress)
+                profile=self.current_profile(),
+                raw=False,
+                mode="auto",
+                brute=not lean,
+                sweep=not lean,
+                get_data=not lean,
+                progress=progress,
+            )
 
         def _ok(dump):
             self.last_dump = dump
@@ -418,16 +531,22 @@ class MainWindow(QMainWindow):
             self._scanned_card = card
             self.explorer_panel.show_dump(dump)
             self.dashboard_panel.reload()
-            self.notify.emit(f"Tarjeta en memoria: PAN {card.pan_digits or '?'} "
-                             f"AID {card.aid or '?'}.")
-            self._fill_card_editor(card)      # el editor se llena solo al escanear
+            self.notify.emit(
+                f"Tarjeta en memoria: PAN {card.pan_digits or '?'} "
+                f"AID {card.aid or '?'}."
+            )
+            self._fill_card_editor(card)  # el editor se llena solo al escanear
             if then:
                 then(card)
 
-        submit(self.pool, _cap, want_progress=True,
-               on_line=lambda m: self.console.info(m),
-               on_result=_ok,
-               on_error=lambda m: self.notify.emit(f"Escaneo: {m}"))
+        submit(
+            self.pool,
+            _cap,
+            want_progress=True,
+            on_line=lambda m: self.console.info(m),
+            on_result=_ok,
+            on_error=lambda m: self.notify.emit(f"Escaneo: {m}"),
+        )
 
     def scan_to_bombercat_ram(self, then=None) -> None:
         """Lee una tarjeta por NFC y la guarda en la RAM del firmware (CARDSCAN),
@@ -435,26 +554,37 @@ class MainWindow(QMainWindow):
         `then` se aporta, se llama con un `EmvCard` de los campos escaneados."""
         from ..payments import EmvCard
         from ..readers import bombercat
+
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
             self.notify.emit("No se detectó BomberCat.")
             return
-        self.console.banner("CARDSCAN — acerca la tarjeta a leer (se guarda en la RAM del BomberCat)")
+        self.console.banner(
+            "CARDSCAN — acerca la tarjeta a leer (se guarda en la RAM del BomberCat)"
+        )
 
         def _ok(d):
-            self._scanned_card = EmvCard(pan=d.get("pan", ""), expiry=d.get("exp", ""),
-                                         aid=d.get("aid", ""), track2=d.get("t2", ""))
-            self.notify.emit(f"Escaneada a RAM: PAN {d.get('pan', '?')} AID {d.get('aid', '?')}.")
-            self._fill_card_editor(self._scanned_card)   # el editor se llena solo
+            self._scanned_card = EmvCard(
+                pan=d.get("pan", ""),
+                expiry=d.get("exp", ""),
+                aid=d.get("aid", ""),
+                track2=d.get("t2", ""),
+            )
+            self.notify.emit(
+                f"Escaneada a RAM: PAN {d.get('pan', '?')} AID {d.get('aid', '?')}."
+            )
+            self._fill_card_editor(self._scanned_card)  # el editor se llena solo
             if then:
                 then(self._scanned_card)
 
-        submit(self.pool,
-               lambda progress=None: bombercat.card_scan_to_ram(devs[0], on_line=progress),
-               want_progress=True,
-               on_line=lambda l: self.console.wire("rx", l, "emu"),
-               on_result=_ok,
-               on_error=lambda m: self.notify.emit(f"CARDSCAN: {m}"))
+        submit(
+            self.pool,
+            lambda progress=None: bombercat.card_scan_to_ram(devs[0], on_line=progress),
+            want_progress=True,
+            on_line=lambda l: self.console.wire("rx", l, "emu"),
+            on_result=_ok,
+            on_error=lambda m: self.notify.emit(f"CARDSCAN: {m}"),
+        )
 
     def _fill_card_editor(self, card) -> None:
         """Vuelca la tarjeta al Editor de tarjeta EMV de la pestaña Fuzzing (para
@@ -479,6 +609,7 @@ class MainWindow(QMainWindow):
             self.notify.emit("La consola está vacía.")
             return
         from datetime import datetime
+
         name = f"consola-{datetime.now():%Y%m%d-%H%M%S}"
         dest = store.save_log(proj, name, text)
         self.notify.emit(f"Consola guardada en {dest}")
@@ -487,6 +618,7 @@ class MainWindow(QMainWindow):
         """Reinicia el BomberCat (REBOOT). Detiene antes cualquier emulación para
         soltar el puerto; tras el reset hay que reconectar el lector."""
         from ..readers import bombercat
+
         self._emu_stop.set()
         devs = [d for d in registry.list_all_devices() if d.backend == "bombercat"]
         if not devs:
@@ -498,11 +630,16 @@ class MainWindow(QMainWindow):
             self.console.wire("rx", f"# REBOOT → {out}", "emu")
             if self.reader_device and self.reader_device.backend == "bombercat":
                 self._disconnect_after_reboot()
-            self.notify.emit("BomberCat reiniciado. Reconecta el lector (pestaña Lectores).")
+            self.notify.emit(
+                "BomberCat reiniciado. Reconecta el lector (pestaña Lectores)."
+            )
 
-        submit(self.pool, lambda: bombercat.reboot(devs[0]),
-               on_result=_done,
-               on_error=lambda m: self.notify.emit(f"REBOOT: {m}"))
+        submit(
+            self.pool,
+            lambda: bombercat.reboot(devs[0]),
+            on_result=_done,
+            on_error=lambda m: self.notify.emit(f"REBOOT: {m}"),
+        )
 
     def _disconnect_after_reboot(self) -> None:
         try:
@@ -523,15 +660,20 @@ class MainWindow(QMainWindow):
         if not self._need_reader():
             return
         from ..core import cardwrite
+
         send = self.active_send()
         self.console.banner(f"{op.upper()} {to_hex(params['data'])}")
 
         def _do():
             data = params["data"]
             if op == "record":
-                return cardwrite.update_record(send, params["sfi"], params["record"], data)
+                return cardwrite.update_record(
+                    send, params["sfi"], params["record"], data
+                )
             if op == "binary":
-                return cardwrite.update_binary(send, params["offset"], data, sfi=params.get("sfi"))
+                return cardwrite.update_binary(
+                    send, params["offset"], data, sfi=params.get("sfi")
+                )
             if op == "data":
                 return cardwrite.put_data(send, params["tag"], data)
             if op == "append":
@@ -540,106 +682,171 @@ class MainWindow(QMainWindow):
 
         def _ok(r):
             self.tools_panel.log_write(op, r)
-            self.notify.emit(f"{op.upper()} → SW {r.sw_hex} {cardwrite.write_status(r.sw)}")
+            self.notify.emit(
+                f"{op.upper()} → SW {r.sw_hex} {cardwrite.write_status(r.sw)}"
+            )
 
-        submit(self.pool, _do, on_result=_ok,
-               on_error=lambda m: self.notify.emit(f"Escritura: {m}"))
+        submit(
+            self.pool,
+            _do,
+            on_result=_ok,
+            on_error=lambda m: self.notify.emit(f"Escritura: {m}"),
+        )
 
     # -- ISO 8583: enviar a un host ----------------------------------------
     def send_iso8583(self, host: str, port: int, data: bytes, header: int) -> None:
         from ..payments import iso_host
-        submit(self.pool,
-               lambda: iso_host.send_message(host, port, data, header=header),
-               on_result=lambda r: self.tools_panel.iso_response(r),
-               on_error=lambda m: self.notify.emit(f"ISO 8583: {m}"))
+
+        submit(
+            self.pool,
+            lambda: iso_host.send_message(host, port, data, header=header),
+            on_result=lambda r: self.tools_panel.iso_response(r),
+            on_error=lambda m: self.notify.emit(f"ISO 8583: {m}"),
+        )
 
     # -- Cobros: flujo de switch ISO 8583 ----------------------------------
-    def run_switch_flow(self, kind: str, *, amount: int = 500, dry_run: bool = True,
-                        sign_on: bool = True) -> None:
+    def run_switch_flow(
+        self,
+        kind: str,
+        *,
+        amount: int = 500,
+        dry_run: bool = True,
+        sign_on: bool = True,
+    ) -> None:
         from ..payments import EmvCard, SwitchConfig, switch
+
         proj = store.active_project()
-        variables = ({v.name: v.value for v in store.load_project_variables(proj)}
-                     if proj else {})
+        variables = (
+            {v.name: v.value for v in store.load_project_variables(proj)}
+            if proj
+            else {}
+        )
         cfg = SwitchConfig.from_vars(lambda k: variables.get(k))
 
         def _do():
             if kind == "signon":
                 return switch.run_signon(cfg)
             if kind == "reversal":
-                return switch.run_reversal(cfg, stan=variables.get("stan", "000001"),
-                                           rrn=variables.get("rrn", ""),
-                                           amount_cents=amount, dry_run=dry_run, sign_on=sign_on)
+                return switch.run_reversal(
+                    cfg,
+                    stan=variables.get("stan", "000001"),
+                    rrn=variables.get("rrn", ""),
+                    amount_cents=amount,
+                    dry_run=dry_run,
+                    sign_on=sign_on,
+                )
             card = EmvCard.from_dump(self.last_dump) if self.last_dump else None
             if card is None:
-                raise RuntimeError("Necesitas una tarjeta (captura una en el Explorador).")
-            return switch.run_purchase(cfg, card, amount, dry_run=dry_run, sign_on=sign_on)
+                raise RuntimeError(
+                    "Necesitas una tarjeta (captura una en el Explorador)."
+                )
+            return switch.run_purchase(
+                cfg, card, amount, dry_run=dry_run, sign_on=sign_on
+            )
 
         def _ok(res):
             if proj:
                 try:
                     from datetime import datetime
-                    tdir = proj.path / "transactions"; tdir.mkdir(parents=True, exist_ok=True)
-                    (tdir / f"{datetime.now():%Y%m%d-%H%M%S}-{kind}.txt").write_text(res.summary())
+
+                    tdir = proj.path / "transactions"
+                    tdir.mkdir(parents=True, exist_ok=True)
+                    (tdir / f"{datetime.now():%Y%m%d-%H%M%S}-{kind}.txt").write_text(
+                        res.summary()
+                    )
                 except Exception:
                     pass
             self.charges_panel.log_flow(kind, res)
 
-        submit(self.pool, _do, on_result=_ok,
-               on_error=lambda m: self.notify.emit(f"Switch: {m}"))
+        submit(
+            self.pool,
+            _do,
+            on_result=_ok,
+            on_error=lambda m: self.notify.emit(f"Switch: {m}"),
+        )
 
     # -- PoC: ejecutar un plugin del proyecto ------------------------------
-    def run_poc(self, poc_id: str, *, dry_run: bool = True, allow_write: bool = False,
-                capture_name: str | None = None) -> None:
+    def run_poc(
+        self,
+        poc_id: str,
+        *,
+        dry_run: bool = True,
+        allow_write: bool = False,
+        capture_name: str | None = None,
+    ) -> None:
         from .. import poc as pocmod
         from ..payments import EmvCard
+
         proj = store.active_project()
         if not proj:
             self.notify.emit("No hay proyecto activo.")
             return
 
         def _do():
-            pocmod.clear(); pocmod.load_plugins(proj)
+            pocmod.clear()
+            pocmod.load_plugins(proj)
             p = pocmod.get(poc_id)
             if not p:
                 raise RuntimeError(f"PoC {poc_id!r} no encontrado.")
-            if capture_name:                     # tarjeta desde una captura guardada
+            if capture_name:  # tarjeta desde una captura guardada
                 from ..session.model import CardDump
-                path = proj.captures_dir / (capture_name if capture_name.endswith(".json")
-                                            else capture_name + ".json")
+
+                path = proj.captures_dir / (
+                    capture_name
+                    if capture_name.endswith(".json")
+                    else capture_name + ".json"
+                )
                 card = EmvCard.from_dump(CardDump.from_json(path.read_text()))
             else:
                 card = EmvCard.from_dump(self.last_dump) if self.last_dump else None
             run_dir = pocmod.runner.run_dir_for(proj, p.meta.id)
-            ctx = pocmod.make_context(proj, card=card, run_dir=run_dir,
-                                      dry_run=dry_run, allow_write=allow_write)
+            ctx = pocmod.make_context(
+                proj,
+                card=card,
+                run_dir=run_dir,
+                dry_run=dry_run,
+                allow_write=allow_write,
+            )
             result = pocmod.run_poc(p, ctx)
             pocmod.save_result(ctx, p.meta, result)
             return p.meta, result, run_dir
 
-        submit(self.pool, _do,
-               on_result=lambda r: self.poc_panel.show_result(*r),
-               on_error=lambda m: self.notify.emit(f"PoC: {m}"))
+        submit(
+            self.pool,
+            _do,
+            on_result=lambda r: self.poc_panel.show_result(*r),
+            on_error=lambda m: self.notify.emit(f"PoC: {m}"),
+        )
 
     # -- Intercept: aplicar reglas / activar -------------------------------
     def apply_intercept(self, text: str):
         from ..core import intercept
+
         rules, errors = intercept.parse_rules(text)
         self.intercept_rules = rules
         return rules, errors
 
     # -- BomberCat: compilar / subir firmware ------------------------------
-    def compile_firmware(self, sketch_dir: str, *, upload: bool = False, port: str | None = None) -> None:
+    def compile_firmware(
+        self, sketch_dir: str, *, upload: bool = False, port: str | None = None
+    ) -> None:
         from ..integrations import arduino as ard
-        self.firmware_panel.log(f"→ {'compilar y subir' if upload else 'compilar'}: {sketch_dir}")
+
+        self.firmware_panel.log(
+            f"→ {'compilar y subir' if upload else 'compilar'}: {sketch_dir}"
+        )
 
         def _do():
             if upload:
                 return ard.upload_sketch(sketch_dir, port=port)
             return ard.compile_sketch(sketch_dir)
 
-        submit(self.pool, _do,
-               on_result=lambda r: self.firmware_panel.log_result(r),
-               on_error=lambda m: self.notify.emit(f"Firmware: {m}"))
+        submit(
+            self.pool,
+            _do,
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"Firmware: {m}"),
+        )
 
     # -- BomberCat: permisos USB (udev) — bombercat-tools >= v1.3.0 ---------
     def setup_udev(self) -> None:
@@ -647,12 +854,18 @@ class MainWindow(QMainWindow):
         comando `setup-env` de bombercat-tools (v1.3.0), con elevación gráfica
         (pkexec). Arregla el fallo de permisos del upload por picotool (§12)."""
         from ..integrations import bombercat_tools as bt
-        self.firmware_panel.log("→ Configurando permisos USB (udev + grupos, vía pkexec)…")
-        submit(self.pool, bt.setup_env_gui,
-               want_progress=True,
-               on_line=lambda m: self.firmware_panel.log(f"  · {m}"),
-               on_result=lambda r: self.firmware_panel.log_result(r),
-               on_error=lambda m: self.notify.emit(f"udev: {m}"))
+
+        self.firmware_panel.log(
+            "→ Configurando permisos USB (udev + grupos, vía pkexec)…"
+        )
+        submit(
+            self.pool,
+            bt.setup_env_gui,
+            want_progress=True,
+            on_line=lambda m: self.firmware_panel.log(f"  · {m}"),
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"udev: {m}"),
+        )
 
 
 def _harden_qt_env() -> None:
@@ -663,10 +876,11 @@ def _harden_qt_env() -> None:
     Opt-out con `EMVY_GUI_KEEP_QT_ENV=1` (si tu Qt del sistema coincide).
     """
     import os
+
     if not sys.platform.startswith("linux") or os.environ.get("EMVY_GUI_KEEP_QT_ENV"):
         return
-    os.environ["QT_QPA_PLATFORMTHEME"] = ""        # no cargar tema del sistema (KDE/gtk3…)
-    os.environ.pop("QT_STYLE_OVERRIDE", None)       # ni un estilo del sistema
+    os.environ["QT_QPA_PLATFORMTHEME"] = ""  # no cargar tema del sistema (KDE/gtk3…)
+    os.environ.pop("QT_STYLE_OVERRIDE", None)  # ni un estilo del sistema
     # Deja que Qt elija plataforma (wayland;xcb ya trae fallback a xcb); se puede
     # forzar con QT_QPA_PLATFORM=xcb si el compositor Wayland da problemas.
 
@@ -679,12 +893,14 @@ def run_gui(argv=None) -> int:
     # arranca su socket. `ensure_started` nunca lanza; devuelve True solo si lo
     # activó este proceso, para pararlo al salir.
     from ..integrations import pcscd
+
     started_pcscd = pcscd.ensure_started()
 
     app = QApplication.instance() or QApplication(argv or sys.argv)
     app.setApplicationName("EMVy Controller")
-    app.setStyle("Fusion")     # base estable; encima va nuestro QSS (tema oscuro pro)
+    app.setStyle("Fusion")  # base estable; encima va nuestro QSS (tema oscuro pro)
     from .theme import apply_theme
+
     apply_theme(app)
     win = MainWindow()
     win.show()

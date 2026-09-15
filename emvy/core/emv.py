@@ -7,6 +7,7 @@ inmutables: las operaciones devuelven copias (`dataclasses.replace`) en lugar de
 mutar. Los valores de "terminal" que alimentan los DOL llegan como un
 `TerminalProfile` (dict tag->bytes), típicamente desde el proyecto activo.
 """
+
 from __future__ import annotations
 
 import os
@@ -32,23 +33,23 @@ def default_terminal_profile() -> dict[str, bytes]:
     return {
         "9F02": bytes.fromhex("000000000100"),  # Amount authorised = 1.00
         "9F03": bytes.fromhex("000000000000"),  # Amount other
-        "9F1A": bytes.fromhex("0484"),          # Terminal country (484 = MX)
-        "5F2A": bytes.fromhex("0484"),          # Transaction currency (MXN)
-        "95":   bytes.fromhex("0000000000"),    # TVR
-        "9A":   bytes.fromhex("260101"),        # Transaction date YYMMDD
-        "9C":   bytes.fromhex("00"),            # Transaction type = compra
-        "9F37": os.urandom(4),                  # Unpredictable Number
-        "9F35": bytes.fromhex("22"),            # Terminal type = online/offline att.
-        "9F33": bytes.fromhex("E0F8C8"),        # Terminal capabilities
-        "9F40": bytes.fromhex("F000F0A001"),    # Additional terminal caps
-        "9F1E": b"EMVyCTRL",                     # IFD serial (8 an)
-        "9F66": bytes.fromhex("36000000"),      # TTQ (contactless)
-        "9F4E": b"EMVy CTF Terminal",            # Merchant name
-        "9F15": bytes.fromhex("0000"),          # MCC
-        "9F16": b"EMVyCTFMERCHANT ",             # Merchant identifier (15 an)
-        "9F1C": b"EMVy0001",                     # Terminal id (8 an)
-        "9F21": bytes.fromhex("120000"),        # Transaction time
-        "9F41": bytes.fromhex("00000001"),      # Transaction sequence counter
+        "9F1A": bytes.fromhex("0484"),  # Terminal country (484 = MX)
+        "5F2A": bytes.fromhex("0484"),  # Transaction currency (MXN)
+        "95": bytes.fromhex("0000000000"),  # TVR
+        "9A": bytes.fromhex("260101"),  # Transaction date YYMMDD
+        "9C": bytes.fromhex("00"),  # Transaction type = compra
+        "9F37": os.urandom(4),  # Unpredictable Number
+        "9F35": bytes.fromhex("22"),  # Terminal type = online/offline att.
+        "9F33": bytes.fromhex("E0F8C8"),  # Terminal capabilities
+        "9F40": bytes.fromhex("F000F0A001"),  # Additional terminal caps
+        "9F1E": b"EMVyCTRL",  # IFD serial (8 an)
+        "9F66": bytes.fromhex("36000000"),  # TTQ (contactless)
+        "9F4E": b"EMVy CTF Terminal",  # Merchant name
+        "9F15": bytes.fromhex("0000"),  # MCC
+        "9F16": b"EMVyCTFMERCHANT ",  # Merchant identifier (15 an)
+        "9F1C": b"EMVy0001",  # Terminal id (8 an)
+        "9F21": bytes.fromhex("120000"),  # Transaction time
+        "9F41": bytes.fromhex("00000001"),  # Transaction sequence counter
     }
 
 
@@ -65,20 +66,20 @@ class Application:
     aid: str
     label: str = ""
     scheme: str = ""
-    source: str = ""              # "PSE" | "PPSE" | "bruteforce" | "select"
+    source: str = ""  # "PSE" | "PPSE" | "bruteforce" | "select"
     priority: int | None = None
     fci: tlv.TLVList | None = None
     aip: bytes | None = None
     afl: bytes | None = None
     records: tuple[Record, ...] = ()
     data_objects: Mapping[str, bytes] = field(default_factory=dict)
-    gpo_tlvs: tlv.TLVList | None = None   # TLVs del GPO (qVSDC: 57/5A/5F24/… van aquí)
+    gpo_tlvs: tlv.TLVList | None = None  # TLVs del GPO (qVSDC: 57/5A/5F24/… van aquí)
 
     def all_tlvs(self) -> tlv.TLVList:
         out = tlv.TLVList()
         if self.fci:
             out.extend(self.fci)
-        if self.gpo_tlvs:                 # qVSDC: datos de tarjeta dentro del GPO
+        if self.gpo_tlvs:  # qVSDC: datos de tarjeta dentro del GPO
             out.extend(self.gpo_tlvs)
         for r in self.records:
             out.extend(r.tlvs)
@@ -115,7 +116,9 @@ def _app_from_template(tmpl: tlv.TLV, source: str) -> Application | None:
     )
 
 
-def read_pse_directory(send: Transceiver, name: bytes, source: str) -> list[Application]:
+def read_pse_directory(
+    send: Transceiver, name: bytes, source: str
+) -> list[Application]:
     """Selecciona el PSE/PPSE y extrae la lista de aplicaciones."""
     apps: list[Application] = []
     resp, fci = select_name(send, name)
@@ -146,7 +149,7 @@ def read_pse_directory(send: Transceiver, name: bytes, source: str) -> list[Appl
 def bruteforce_aids(send: Transceiver, aid_list=None) -> list[Application]:
     """Prueba SELECT con una lista de AIDs conocidos."""
     apps: list[Application] = []
-    for aid_hex in (aid_list or KNOWN_AIDS.keys()):
+    for aid_hex in aid_list or KNOWN_AIDS.keys():
         try:
             resp, fci = select_name(send, bytes.fromhex(aid_hex))
         except Exception:
@@ -155,13 +158,15 @@ def bruteforce_aids(send: Transceiver, aid_list=None) -> list[Application]:
             label = fci.find("50") if fci else None
             df = fci.find("84") if fci else None  # AID real puede venir en 84
             real_aid = to_hex(df.value) if df else aid_hex.upper()
-            apps.append(Application(
-                aid=real_aid,
-                label=(label.interpret().strip('"') if label else ""),
-                scheme=rid_scheme(real_aid),
-                source="bruteforce",
-                fci=fci,
-            ))
+            apps.append(
+                Application(
+                    aid=real_aid,
+                    label=(label.interpret().strip('"') if label else ""),
+                    scheme=rid_scheme(real_aid),
+                    source="bruteforce",
+                    fci=fci,
+                )
+            )
     return apps
 
 
@@ -231,8 +236,12 @@ def _parse_gpo(data: bytes, app: Application) -> Application:
     inner = tlv.TLVList(tmpl.children) if (tmpl and tmpl.children) else parsed
     aip = inner.find("82")
     afl = inner.find("94")
-    return replace(app, aip=(aip.value if aip else None),
-                   afl=(afl.value if afl else None), gpo_tlvs=inner)
+    return replace(
+        app,
+        aip=(aip.value if aip else None),
+        afl=(afl.value if afl else None),
+        gpo_tlvs=inner,
+    )
 
 
 def parse_afl(afl: bytes) -> list[tuple[int, int, int, int]]:
@@ -257,7 +266,9 @@ def read_afl_records(send: Transceiver, app: Application) -> Application:
     return app.with_records(records)
 
 
-def sweep_records(send: Transceiver, max_sfi: int = 31, max_rec: int = 16) -> list[Record]:
+def sweep_records(
+    send: Transceiver, max_sfi: int = 31, max_rec: int = 16
+) -> list[Record]:
     """Barrido bruto: intenta READ RECORD para cada SFI/registro. Útil en CTF
     para encontrar registros fuera del AFL 'oficial'."""
     found: list[Record] = []
@@ -297,7 +308,8 @@ COMMON_GET_DATA_TAGS = [
     0x9F52,  # Application default action
     0x9F5C,  # Cumulative total
     0x9F6E,  # Form factor / third party
-    0x0101, 0x0102,  # propietarios (algunos CTF esconden aquí)
+    0x0101,
+    0x0102,  # propietarios (algunos CTF esconden aquí)
     0xBF0C,
 ]
 
@@ -309,7 +321,7 @@ def get_data(send: Transceiver, tag: int) -> Response:
 def get_data_sweep(send: Transceiver, tags=None) -> dict[str, bytes]:
     """GET DATA sobre una lista de tags; devuelve los que respondan OK."""
     out: dict[str, bytes] = {}
-    for tag in (tags or COMMON_GET_DATA_TAGS):
+    for tag in tags or COMMON_GET_DATA_TAGS:
         r = get_data(send, tag)
         if r.ok and r.data:
             out[f"{tag:04X}"] = r.data

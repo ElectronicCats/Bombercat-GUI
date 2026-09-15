@@ -1,4 +1,5 @@
 """Interpretación pura del ATR (Answer To Reset)."""
+
 from __future__ import annotations
 
 from .hexutil import ascii_printable, to_hex
@@ -12,8 +13,10 @@ def describe_atr(atr: bytes) -> dict:
         return info
 
     ts = atr[0]
-    info["convention"] = "directa (TS=3B)" if ts == 0x3B else (
-        "inversa (TS=3F)" if ts == 0x3F else f"desconocida (TS={ts:02X})"
+    info["convention"] = (
+        "directa (TS=3B)"
+        if ts == 0x3B
+        else ("inversa (TS=3F)" if ts == 0x3F else f"desconocida (TS={ts:02X})")
     )
     t0 = atr[1]
     num_hist = t0 & 0x0F

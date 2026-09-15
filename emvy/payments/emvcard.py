@@ -5,6 +5,7 @@ consumidores (análisis de criptograma, ISO 8583, PoCs). Guarda los campos tal
 como llegan (hex en mayúsculas para binarios; dígitos para PAN/fechas) y ofrece
 accesores en bytes.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
@@ -13,8 +14,18 @@ from typing import Mapping
 from ..core.hexutil import from_hex, to_hex
 from ..core.track import parse_track2_emv
 
-_HEX_FIELDS = ("track2", "aid", "aip", "atc", "arqc", "iad", "un", "cdol1",
-               "ttq", "cvm_results")
+_HEX_FIELDS = (
+    "track2",
+    "aid",
+    "aip",
+    "atc",
+    "arqc",
+    "iad",
+    "un",
+    "cdol1",
+    "ttq",
+    "cvm_results",
+)
 
 
 def _norm_hex(v: str | None) -> str:
@@ -24,19 +35,19 @@ def _norm_hex(v: str | None) -> str:
 @dataclass(frozen=True)
 class EmvCard:
     pan: str = ""
-    track2: str = ""            # hex del Track2 equivalent (con separador D y padding F)
-    expiry: str = ""            # YYMM o YYMMDD
+    track2: str = ""  # hex del Track2 equivalent (con separador D y padding F)
+    expiry: str = ""  # YYMM o YYMMDD
     aid: str = ""
     label: str = ""
     aip: str = ""
-    atc: str = ""               # hex (2 bytes)
-    arqc: str = ""              # hex (8 bytes)
-    iad: str = ""               # hex
-    un: str = ""                # hex (4 bytes)
-    cdol1: str = ""             # hex
-    ttq: str = ""               # hex (4 bytes)
-    cvm_results: str = ""       # hex (3 bytes)
-    txn_date: str = ""          # YYMMDD
+    atc: str = ""  # hex (2 bytes)
+    arqc: str = ""  # hex (8 bytes)
+    iad: str = ""  # hex
+    un: str = ""  # hex (4 bytes)
+    cdol1: str = ""  # hex
+    ttq: str = ""  # hex (4 bytes)
+    cvm_results: str = ""  # hex (3 bytes)
+    txn_date: str = ""  # YYMMDD
     amount_cents: int = 0
     extra: Mapping[str, str] = field(default_factory=dict)
 
@@ -74,8 +85,7 @@ class EmvCard:
             cvm_results=_norm_hex(get("cvmResults") or get("cvm_results")),
             txn_date=str(get("txn_date", "")),
             amount_cents=int(get("amount_cents", 0) or 0),
-            extra={k: str(v) for k, v in d.items()
-                   if k not in _BOMBERCAT_KEYS},
+            extra={k: str(v) for k, v in d.items() if k not in _BOMBERCAT_KEYS},
         )
 
     @classmethod
@@ -104,16 +114,48 @@ class EmvCard:
         return replace(self, **{k: v for k, v in changes.items() if v is not None})
 
     def to_dict(self) -> dict:
-        out = {k: getattr(self, k) for k in (
-            "pan", "track2", "expiry", "aid", "label", "aip", "atc", "arqc",
-            "iad", "un", "cdol1", "ttq", "cvm_results", "txn_date", "amount_cents")}
+        out = {
+            k: getattr(self, k)
+            for k in (
+                "pan",
+                "track2",
+                "expiry",
+                "aid",
+                "label",
+                "aip",
+                "atc",
+                "arqc",
+                "iad",
+                "un",
+                "cdol1",
+                "ttq",
+                "cvm_results",
+                "txn_date",
+                "amount_cents",
+            )
+        }
         if self.extra:
             out["extra"] = dict(self.extra)
         return out
 
 
 _BOMBERCAT_KEYS = {
-    "ok", "pan", "track2", "expiry", "aid", "aidName", "label", "aip", "atc",
-    "arqc", "iad", "un", "cdol1", "ttq", "cvmResults", "cvm_results",
-    "txn_date", "amount_cents",
+    "ok",
+    "pan",
+    "track2",
+    "expiry",
+    "aid",
+    "aidName",
+    "label",
+    "aip",
+    "atc",
+    "arqc",
+    "iad",
+    "un",
+    "cdol1",
+    "ttq",
+    "cvmResults",
+    "cvm_results",
+    "txn_date",
+    "amount_cents",
 }

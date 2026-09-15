@@ -9,6 +9,7 @@ TUI, estos widgets ofrecen copia explícita del elemento resaltado (fila/celda),
 cediendo a la copia de selección de texto estándar cuando el usuario sí tiene
 una selección activa en pantalla.
 """
+
 from __future__ import annotations
 
 from textual.actions import SkipAction

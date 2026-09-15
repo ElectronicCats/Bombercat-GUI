@@ -6,6 +6,7 @@ Cada nodo con valor lleva datos estructurados (tag / valor hex / ASCII) para:
     con la codificación correcta según el tag destino;
   - **guardar la captura** completa en el proyecto activo.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,7 +16,14 @@ from textual.actions import SkipAction
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
-    Button, Checkbox, Collapsible, Input, Label, Select, Static, Tree,
+    Button,
+    Checkbox,
+    Collapsible,
+    Input,
+    Label,
+    Select,
+    Static,
+    Tree,
 )
 
 from ...core import tlv
@@ -32,13 +40,23 @@ def _hexdata(tag, hexstr, suggest=None):
         ascii_ = ascii_of(from_hex(hexstr))
     except ValueError:
         ascii_ = ""
-    return {"tag": tag, "value": hexstr, "ascii": ascii_, "is_hex": True,
-            "suggest": suggest or tag}
+    return {
+        "tag": tag,
+        "value": hexstr,
+        "ascii": ascii_,
+        "is_hex": True,
+        "suggest": suggest or tag,
+    }
 
 
 def _textdata(text, suggest):
-    return {"tag": None, "value": str(text), "ascii": str(text), "is_hex": False,
-            "suggest": suggest}
+    return {
+        "tag": None,
+        "value": str(text),
+        "ascii": str(text),
+        "is_hex": False,
+        "suggest": suggest,
+    }
 
 
 class ExplorerScreen(Vertical):
@@ -97,8 +115,11 @@ class ExplorerScreen(Vertical):
 
     def compose(self):
         yield Label("Explorador de tarjeta", classes="title")
-        yield Static("Captura una tarjeta, inspecciona su árbol TLV y exporta lo que "
-                     "encuentres.", classes="exp-sub")
+        yield Static(
+            "Captura una tarjeta, inspecciona su árbol TLV y exporta lo que "
+            "encuentres.",
+            classes="exp-sub",
+        )
 
         with Horizontal(id="exp-actions"):
             yield Button("● Capturar", id="exp_capture", variant="success")
@@ -110,35 +131,51 @@ class ExplorerScreen(Vertical):
             yield Tree("tarjeta", id="exp_tree")
             with VerticalScroll(id="exp_sidebar"):
                 yield Static("NODO SELECCIONADO", classes="exp-label-first")
-                yield Label("[dim]Selecciona un nodo del árbol para copiar o "
-                            "asignar su valor.[/]", id="exp_detail")
+                yield Label(
+                    "[dim]Selecciona un nodo del árbol para copiar o "
+                    "asignar su valor.[/]",
+                    id="exp_detail",
+                )
                 with Horizontal(classes="exp-copyrow"):
                     yield Button("Hex", id="exp_copy")
                     yield Button("ASCII", id="exp_copyascii")
                     yield Button("tag=val", id="exp_copytv")
-                yield Static("[dim]Ctrl+C copia el nodo. En consola/paneles: "
-                             "arrastra para seleccionar y Ctrl+C.[/]",
-                             classes="exp-copyhint")
+                yield Static(
+                    "[dim]Ctrl+C copia el nodo. En consola/paneles: "
+                    "arrastra para seleccionar y Ctrl+C.[/]",
+                    classes="exp-copyhint",
+                )
 
                 yield Static("ASIGNAR A VARIABLE", classes="exp-label")
                 with Horizontal(classes="exp-inrow"):
-                    yield Input(placeholder="destino (tag/alias/nombre; vacío = sugerido)",
-                                id="exp_varname")
+                    yield Input(
+                        placeholder="destino (tag/alias/nombre; vacío = sugerido)",
+                        id="exp_varname",
+                    )
                     yield Button("→", id="exp_assign", variant="success")
                 with Horizontal(classes="exp-chkrow"):
                     yield Checkbox("libre", id="exp_varuser")
                     yield Checkbox("ASCII", id="exp_varascii")
 
                 yield Static("GUARDAR CAPTURA", classes="exp-label")
-                yield Select([("→ proyecto activo", "active")], value="active",
-                             allow_blank=False, id="exp_dest")
+                yield Select(
+                    [("→ proyecto activo", "active")],
+                    value="active",
+                    allow_blank=False,
+                    id="exp_dest",
+                )
                 with Horizontal(classes="exp-inrow"):
-                    yield Input(placeholder="nombre (o ruta .json si destino=archivo)",
-                                id="exp_savename")
+                    yield Input(
+                        placeholder="nombre (o ruta .json si destino=archivo)",
+                        id="exp_savename",
+                    )
                     yield Button("Guardar", id="exp_save", variant="warning")
 
-        with Collapsible(title="Consola en vivo (APDU + transporte del lector)",
-                         collapsed=True, id="exp_console_box"):
+        with Collapsible(
+            title="Consola en vivo (APDU + transporte del lector)",
+            collapsed=True,
+            id="exp_console_box",
+        ):
             yield ConsoleScreen(id="screen-console")
 
     def on_mount(self):
@@ -190,7 +227,9 @@ class ExplorerScreen(Vertical):
     def _raw(self):
         backend = getattr(getattr(self.app, "reader_device", None), "backend", None)
         if backend == "bombercat":
-            self.app.notify("Dump crudo (NFC genérico): sostén la tarjeta firme y cerca…")
+            self.app.notify(
+                "Dump crudo (NFC genérico): sostén la tarjeta firme y cerca…"
+            )
             self.app.capture_card_ui(mode="nfc")
         else:
             self.app.notify("Dump crudo: leyendo lo que haya en la tarjeta…")
@@ -200,14 +239,18 @@ class ExplorerScreen(Vertical):
     def _analyze(self):
         from ...core import analyze
         from ...session.model import tlvs_from_dump
+
         dump = getattr(self.app, "last_dump", None)
         if dump is None:
-            self.app.notify("No hay captura para analizar (captura primero).",
-                            severity="warning")
+            self.app.notify(
+                "No hay captura para analizar (captura primero).", severity="warning"
+            )
             return
         app, tlvs = tlvs_from_dump(dump)
         if not tlvs:
-            self.app.notify("La captura no tiene datos de aplicación.", severity="warning")
+            self.app.notify(
+                "La captura no tiene datos de aplicación.", severity="warning"
+            )
             return
         a = analyze.assess(tlvs)
         tree = self.query_one("#exp_tree", Tree)
@@ -227,7 +270,8 @@ class ExplorerScreen(Vertical):
         self._empty_tree()
         self._sel = None
         self.query_one("#exp_detail", Label).update(
-            "[dim]Selecciona un nodo del árbol para copiar o asignar su valor.[/]")
+            "[dim]Selecciona un nodo del árbol para copiar o asignar su valor.[/]"
+        )
 
     # -- guardar la captura en el proyecto ---------------------------------
     def _resolve_project(self, dest: str):
@@ -244,17 +288,22 @@ class ExplorerScreen(Vertical):
     def _save(self, _event=None):
         dump = getattr(self.app, "last_dump", None)
         if dump is None:
-            self.app.notify("No hay captura que guardar (captura una tarjeta primero).",
-                            severity="warning")
+            self.app.notify(
+                "No hay captura que guardar (captura una tarjeta primero).",
+                severity="warning",
+            )
             return
         dest = self.query_one("#exp_dest", Select).value
         name = self.query_one("#exp_savename", Input).value.strip()
         ts = f"captura-{datetime.now():%Y%m%d-%H%M%S}"
         try:
-            if dest == "file":                                   # guardar en un archivo
+            if dest == "file":  # guardar en un archivo
                 from pathlib import Path
+
                 if not name:
-                    self.app.notify("Indica la ruta del archivo .json.", severity="warning")
+                    self.app.notify(
+                        "Indica la ruta del archivo .json.", severity="warning"
+                    )
                     return
                 path = Path(name).expanduser()
                 if path.is_dir() or path.suffix == "":
@@ -262,10 +311,12 @@ class ExplorerScreen(Vertical):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(dump.to_json())
                 where = str(path)
-            else:                                                # guardar en un proyecto
+            else:  # guardar en un proyecto
                 proj = self._resolve_project(dest)
                 if not proj:
-                    self.app.notify("Sin proyecto destino (crea/activa uno).", severity="warning")
+                    self.app.notify(
+                        "Sin proyecto destino (crea/activa uno).", severity="warning"
+                    )
                     return
                 saved = store.save_capture(proj, name or ts, dump.to_json())
                 where = f"{proj.name}/{saved.name}"
@@ -289,8 +340,10 @@ class ExplorerScreen(Vertical):
         ascii_ = self._sel.get("ascii") or ""
         val = self._sel["value"]
         val_show = val if len(val) <= 72 else val[:72] + "…"
-        lines = [f"[dim]tag[/]    [b cyan]{tag or '—'}[/]",
-                 f"[dim]valor[/]  [yellow]{val_show}[/]"]
+        lines = [
+            f"[dim]tag[/]    [b cyan]{tag or '—'}[/]",
+            f"[dim]valor[/]  [yellow]{val_show}[/]",
+        ]
         if ascii_:
             lines.append(f'[dim]ascii[/]  [green]"{ascii_}"[/]')
         sug = self._sel.get("suggest")
@@ -346,10 +399,15 @@ class ExplorerScreen(Vertical):
             return
         proj = store.active_project()
         if not proj:
-            self.app.notify("No hay proyecto activo (pestaña Proyectos).", severity="warning")
+            self.app.notify(
+                "No hay proyecto activo (pestaña Proyectos).", severity="warning"
+            )
             return
-        name = (self.query_one("#exp_varname", Input).value.strip()
-                or self._sel.get("suggest") or "")
+        name = (
+            self.query_one("#exp_varname", Input).value.strip()
+            or self._sel.get("suggest")
+            or ""
+        )
         if not name:
             self.app.notify("Indica un nombre de variable.", severity="warning")
             return
@@ -367,7 +425,7 @@ class ExplorerScreen(Vertical):
             if tag is not None and is_hex:
                 value_str = envmod.decode_value(tag, from_hex(value))
             elif tag is not None and not is_hex and not envmod.is_text_tag(tag):
-                tag, value_str = None, value      # texto hacia tag numérico -> user
+                tag, value_str = None, value  # texto hacia tag numérico -> user
             else:
                 value_str = value
             kind = "terminal" if tag is not None else "user"
@@ -391,8 +449,10 @@ class ExplorerScreen(Vertical):
     def show_dump(self, dump):
         tree = self.query_one("#exp_tree", Tree)
         n = len(dump.applications)
-        tree.reset(f"[b]tarjeta[/]  [dim]{n} app{'s' if n != 1 else ''} · "
-                   f"{len(dump.blobs)} blobs[/]")
+        tree.reset(
+            f"[b]tarjeta[/]  [dim]{n} app{'s' if n != 1 else ''} · "
+            f"{len(dump.blobs)} blobs[/]"
+        )
         blobs = {b["source"]: b["hex"] for b in dump.blobs}
         for app in dump.applications:
             aid = app["aid"]
@@ -401,18 +461,23 @@ class ExplorerScreen(Vertical):
             node = tree.root.add(
                 f"[b cyan]{aid}[/]  [b]{app['scheme']}[/]"
                 + (f"  [dim]{meta}[/]" if meta else ""),
-                data=_hexdata("4F", aid))
+                data=_hexdata("4F", aid),
+            )
             ch = app.get("cardholder") or {}
             if ch:
                 info = node.add("[b]Titular[/]")
                 for k, v in ch.items():
                     info.add_leaf(f"[green]{k}[/][dim]:[/] {v}", data=_textdata(v, k))
             if app.get("aip"):
-                node.add_leaf(f"AIP [dim]=[/] [yellow]{app['aip']}[/]",
-                              data=_hexdata("82", app["aip"]))
+                node.add_leaf(
+                    f"AIP [dim]=[/] [yellow]{app['aip']}[/]",
+                    data=_hexdata("82", app["aip"]),
+                )
             if app.get("afl"):
-                node.add_leaf(f"AFL [dim]=[/] [yellow]{app['afl']}[/]",
-                              data=_hexdata("94", app["afl"]))
+                node.add_leaf(
+                    f"AFL [dim]=[/] [yellow]{app['afl']}[/]",
+                    data=_hexdata("94", app["afl"]),
+                )
             ndef_records = app.get("ndef_records") or []
             if ndef_records:
                 nnode = node.add(f"[b green]★ NDEF[/] [dim]({len(ndef_records)})[/]")
@@ -424,15 +489,19 @@ class ExplorerScreen(Vertical):
                 add_tlvs(fnode, tlv.parse(from_hex(fci_hex)))
             records = app.get("records", [])
             for rec in records:
-                rnode = node.add(f"[b]SFI {rec['sfi']}[/] [dim]·[/] REC {rec['record']}")
+                rnode = node.add(
+                    f"[b]SFI {rec['sfi']}[/] [dim]·[/] REC {rec['record']}"
+                )
                 add_tlvs(rnode, tlv.parse(from_hex(rec["hex"])))
             gd = app.get("get_data") or {}
             if gd:
                 gnode = node.add(f"[b]GET DATA[/] [dim]({len(gd)})[/]")
                 for tg, hx in gd.items():
                     short = hx if len(hx) <= 40 else hx[:40] + "…"
-                    leaf = gnode.add(f"[cyan]{tg}[/][dim]:[/] [yellow]{short}[/]",
-                                     data=_hexdata(tg, hx))
+                    leaf = gnode.add(
+                        f"[cyan]{tg}[/][dim]:[/] [yellow]{short}[/]",
+                        data=_hexdata(tg, hx),
+                    )
                     try:  # si el valor es TLV (p.ej. una FCI de SELECT), muéstralo como árbol
                         parsed = tlv.parse(from_hex(hx))
                         if parsed and any(t.constructed for t in parsed):

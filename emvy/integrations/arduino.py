@@ -4,6 +4,7 @@ compilar los sketches de `firmware/` desde la TUI. Efecto de subprocess aislado.
 Usa el `build.sh` del sketch si existe (instala core/libs y compila a `build/`);
 si no, cae a `arduino-cli compile --output-dir build`.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -31,8 +32,14 @@ def list_sketches() -> list[Path]:
     return out
 
 
-def compile_sketch(sketch_dir, *, fqbn: str = DEFAULT_FQBN, upload: bool = False,
-                   port: str | None = None, timeout: float = 900) -> subprocess.CompletedProcess:
+def compile_sketch(
+    sketch_dir,
+    *,
+    fqbn: str = DEFAULT_FQBN,
+    upload: bool = False,
+    port: str | None = None,
+    timeout: float = 900,
+) -> subprocess.CompletedProcess:
     """Compila el sketch (y opcionalmente sube). Salida capturada."""
     # Resuelto a absoluta: el subproceso corre con cwd=sketch_dir, así que una
     # ruta relativa aquí se reinterpretaría mal (relativa al propio sketch_dir).
@@ -43,15 +50,27 @@ def compile_sketch(sketch_dir, *, fqbn: str = DEFAULT_FQBN, upload: bool = False
         cmd = ["bash", str(build_sh)] + (["upload"] if upload else [])
         if port:
             import os
+
             env = dict(os.environ, PORT=port)
     else:
         cmd = ["arduino-cli", "compile", "--fqbn", fqbn, "--output-dir", "build", "."]
-    return subprocess.run(cmd, cwd=str(sketch_dir), env=env,
-                          capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(
+        cmd,
+        cwd=str(sketch_dir),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
 
 
-def upload_sketch(sketch_dir, *, fqbn: str = DEFAULT_FQBN, port: str | None = None,
-                  timeout: float = 300) -> subprocess.CompletedProcess:
+def upload_sketch(
+    sketch_dir,
+    *,
+    fqbn: str = DEFAULT_FQBN,
+    port: str | None = None,
+    timeout: float = 300,
+) -> subprocess.CompletedProcess:
     """Sube el sketch ya compilado a la placa.
 
     **No usa `.uf2`**: el FQBN `bombercat` sube por **picotool** (reset a 1200-bps
@@ -65,6 +84,7 @@ def upload_sketch(sketch_dir, *, fqbn: str = DEFAULT_FQBN, port: str | None = No
     env = None
     if build_sh.exists():
         import os
+
         cmd = ["bash", str(build_sh), "upload"]
         env = dict(os.environ, PORT=port) if port else None
     else:
@@ -72,14 +92,23 @@ def upload_sketch(sketch_dir, *, fqbn: str = DEFAULT_FQBN, port: str | None = No
         if port:
             cmd += ["-p", port]
         cmd += ["."]
-    return subprocess.run(cmd, cwd=str(sketch_dir), env=env,
-                          capture_output=True, text=True, timeout=timeout)
+    return subprocess.run(
+        cmd,
+        cwd=str(sketch_dir),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
 
 
 def latest_uf2(sketch_dir) -> Path | None:
     """El `.uf2` más reciente producido por la compilación del sketch, si el
     core lo genera (algunos no lo hacen; usa `upload_sketch()` en ese caso)."""
     build = Path(sketch_dir) / "build"
-    uf2s = sorted(build.glob("*.uf2"), key=lambda p: p.stat().st_mtime, reverse=True) \
-        if build.exists() else []
+    uf2s = (
+        sorted(build.glob("*.uf2"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if build.exists()
+        else []
+    )
     return uf2s[0] if uf2s else None

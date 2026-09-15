@@ -13,6 +13,7 @@ Codificación de valores de variable terminal según el formato del tag:
   * an/ans (texto)  -> el `value` es texto ASCII.
   * n/b/cn (binario)-> el `value` es hex.
 """
+
 from __future__ import annotations
 
 import json
@@ -88,8 +89,9 @@ def decode_value(tag: str, raw: bytes) -> str:
     return to_hex(raw)
 
 
-def make_variable(name: str, value: str, kind: str | None = None,
-                  description: str = "") -> Variable:
+def make_variable(
+    name: str, value: str, kind: str | None = None, description: str = ""
+) -> Variable:
     """Crea una Variable, infiriendo kind/tag si no se especifica."""
     tag = resolve_tag(name)
     if kind is None:
@@ -103,10 +105,16 @@ def make_variable(name: str, value: str, kind: str | None = None,
             )
         # valida que el valor codifique
         encode_value(tag, value)
-        return Variable(name=name, value=value, kind="terminal", tag=tag,
-                        description=description or tag_name(tag))
-    return Variable(name=name, value=value, kind="user", tag=None,
-                    description=description)
+        return Variable(
+            name=name,
+            value=value,
+            kind="terminal",
+            tag=tag,
+            description=description or tag_name(tag),
+        )
+    return Variable(
+        name=name, value=value, kind="user", tag=None, description=description
+    )
 
 
 # --- CRUD puro sobre list[Variable] ----------------------------------------
@@ -117,8 +125,13 @@ def get_var(variables: list[Variable], name: str) -> Variable | None:
     return None
 
 
-def set_var(variables: list[Variable], name: str, value: str,
-            kind: str | None = None, description: str = "") -> list[Variable]:
+def set_var(
+    variables: list[Variable],
+    name: str,
+    value: str,
+    kind: str | None = None,
+    description: str = "",
+) -> list[Variable]:
     """Añade o reemplaza la variable `name`. Devuelve una lista nueva."""
     new = make_variable(name, value, kind, description)
     out = [v for v in variables if v.name.lower() != name.lower()]
@@ -159,8 +172,15 @@ def default_variables() -> list[Variable]:
         if tag == "9F37":
             raw = bytes.fromhex("00000000")
         name = TAG_ALIAS.get(tag, tag)
-        out.append(Variable(name=name, value=decode_value(tag, raw),
-                            kind="terminal", tag=tag, description=tag_name(tag)))
+        out.append(
+            Variable(
+                name=name,
+                value=decode_value(tag, raw),
+                kind="terminal",
+                tag=tag,
+                description=tag_name(tag),
+            )
+        )
     return out
 
 
@@ -175,5 +195,6 @@ def load_variables(path: Path) -> list[Variable]:
 
 def save_variables(path: Path, variables: list[Variable]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps([v.to_dict() for v in variables],
-                               indent=2, ensure_ascii=False))
+    path.write_text(
+        json.dumps([v.to_dict() for v in variables], indent=2, ensure_ascii=False)
+    )

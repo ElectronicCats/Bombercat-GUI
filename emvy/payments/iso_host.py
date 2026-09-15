@@ -6,6 +6,7 @@ común; 0 = sin prefijo) y lee la respuesta con el mismo esquema.
 
 Uso previsto: pruebas **autorizadas** contra hosts de laboratorio/propios.
 """
+
 from __future__ import annotations
 
 import socket
@@ -28,8 +29,9 @@ def _recv_n(sock: socket.socket, n: int) -> bytes:
     return bytes(buf)
 
 
-def send_message(host: str, port: int, data: bytes, *, header: int = 2,
-                 timeout: float = 5.0) -> bytes:
+def send_message(
+    host: str, port: int, data: bytes, *, header: int = 2, timeout: float = 5.0
+) -> bytes:
     """Conecta, envía `data` enmarcado y devuelve el cuerpo de la respuesta.
 
     Con `header>0` lee primero esos bytes de longitud y luego el cuerpo; con

@@ -2,6 +2,7 @@
 
 Se auto-desactiva si la salida no es un TTY o si NO_COLOR está definido.
 """
+
 from __future__ import annotations
 
 import os

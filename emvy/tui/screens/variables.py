@@ -1,4 +1,5 @@
 """Panel de variables de entorno del proyecto activo (perfil terminal + libres)."""
+
 from __future__ import annotations
 
 from textual import on
@@ -14,14 +15,21 @@ from ..widgets.copyable import CopyableDataTable
 class VariablesScreen(Vertical):
     def compose(self):
         yield Static("Variables de entorno", classes="title")
-        yield Static("Perfil de terminal EMV (mapeado a tags) + variables libres "
-                     "del proyecto activo. Aplica un perfil preconfigurado abajo.",
-                     classes="subtitle")
+        yield Static(
+            "Perfil de terminal EMV (mapeado a tags) + variables libres "
+            "del proyecto activo. Aplica un perfil preconfigurado abajo.",
+            classes="subtitle",
+        )
         yield Label("", id="var_hint", classes="hint")
         yield CopyableDataTable(id="var_table")
         with Horizontal(classes="row"):
-            yield Input(placeholder="nombre / alias / tag (p.ej. amount, 9F02)", id="var_name")
-            yield Input(placeholder="valor (texto para an/ans, hex para el resto)", id="var_value")
+            yield Input(
+                placeholder="nombre / alias / tag (p.ej. amount, 9F02)", id="var_name"
+            )
+            yield Input(
+                placeholder="valor (texto para an/ans, hex para el resto)",
+                id="var_value",
+            )
         with Horizontal(classes="row"):
             yield Checkbox("variable libre (no terminal)", id="var_user")
             yield Button("Guardar", id="var_set", variant="success")
@@ -30,7 +38,10 @@ class VariablesScreen(Vertical):
         with Horizontal(classes="row"):
             yield Select(
                 [(p.title, p.id) for p in profilesmod.list_profiles()],
-                prompt="perfil de terminal preconfigurado…", allow_blank=True, id="var_profile")
+                prompt="perfil de terminal preconfigurado…",
+                allow_blank=True,
+                id="var_profile",
+            )
             yield Button("Aplicar perfil", id="var_apply_profile", variant="primary")
         yield Label("", id="var_profile_desc", classes="hint")
 
@@ -48,11 +59,15 @@ class VariablesScreen(Vertical):
         proj = store.active_project()
         hint = self.query_one("#var_hint", Label)
         if not proj:
-            hint.update("[yellow]No hay proyecto activo. Créalo/actívalo en la pestaña Proyectos.[/]")
+            hint.update(
+                "[yellow]No hay proyecto activo. Créalo/actívalo en la pestaña Proyectos.[/]"
+            )
             return
         hint.update(f"Proyecto activo: [b]{proj.name}[/]")
         variables = store.load_project_variables(proj)
-        for v in sorted(variables, key=lambda x: (x.kind != "terminal", x.tag or "", x.name)):
+        for v in sorted(
+            variables, key=lambda x: (x.kind != "terminal", x.tag or "", x.name)
+        ):
             t.add_row(v.tag or "", v.name, v.value, v.kind)
             self._rows.append(v.name)
 
@@ -76,7 +91,9 @@ class VariablesScreen(Vertical):
             return
         kind = "user" if self.query_one("#var_user", Checkbox).value else None
         try:
-            variables = envmod.set_var(store.load_project_variables(proj), name, value, kind=kind)
+            variables = envmod.set_var(
+                store.load_project_variables(proj), name, value, kind=kind
+            )
         except Exception as e:
             self.app.notify(str(e), severity="error")
             return
@@ -133,4 +150,4 @@ class VariablesScreen(Vertical):
         if v:
             self.query_one("#var_name", Input).value = v.name
             self.query_one("#var_value", Input).value = v.value
-            self.query_one("#var_user", Checkbox).value = (v.kind == "user")
+            self.query_one("#var_user", Checkbox).value = v.kind == "user"

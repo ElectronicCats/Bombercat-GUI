@@ -3,6 +3,7 @@
 `fmt` sugiere cómo interpretar/codificar el valor:
   b=binario/hex, n=numérico (BCD), an/ans=texto ASCII, cn=comprimido numérico.
 """
+
 from __future__ import annotations
 
 # tag -> (nombre, fmt)

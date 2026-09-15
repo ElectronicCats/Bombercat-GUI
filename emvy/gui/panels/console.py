@@ -7,6 +7,7 @@ niveles y **sin truncar**:
 
 Vive en un dock inferior siempre visible. Permite además enviar un APDU a mano.
 """
+
 from __future__ import annotations
 
 from html import escape
@@ -14,8 +15,14 @@ from html import escape
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLineEdit, QMessageBox, QPlainTextEdit,
-    QPushButton, QVBoxLayout, QWidget,
+    QFileDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...core.apdu import status_word
@@ -25,8 +32,10 @@ _MONO.setStyleHint(QFont.Monospace)
 
 
 class RawConsole(QWidget):
-    send_apdu = Signal(str)      # el usuario pidió enviar este APDU (hex)
-    save_to_project = Signal(str)   # el usuario pidió guardar el log (texto) en el proyecto
+    send_apdu = Signal(str)  # el usuario pidió enviar este APDU (hex)
+    save_to_project = Signal(
+        str
+    )  # el usuario pidió guardar el log (texto) en el proyecto
 
     def __init__(self) -> None:
         super().__init__()
@@ -36,7 +45,8 @@ class RawConsole(QWidget):
 
         self._entry = QLineEdit()
         self._entry.setPlaceholderText(
-            "APDU hex a enviar (p.ej. 00A404000E325041592E5359532E4444463031)")
+            "APDU hex a enviar (p.ej. 00A404000E325041592E5359532E4444463031)"
+        )
         self._entry.setFont(_MONO)
         self._entry.returnPressed.connect(self._on_send)
         send_btn = QPushButton("Enviar")
@@ -44,7 +54,9 @@ class RawConsole(QWidget):
         clear_btn = QPushButton("Limpiar")
         clear_btn.clicked.connect(self._log.clear)
         export_btn = QPushButton("Exportar…")
-        export_btn.setToolTip("Guarda toda la consola en un archivo de texto donde quieras")
+        export_btn.setToolTip(
+            "Guarda toda la consola en un archivo de texto donde quieras"
+        )
         export_btn.clicked.connect(self._export)
         save_btn = QPushButton("Guardar en proyecto")
         save_btn.setToolTip("Guarda la consola en logs/ del proyecto activo")
@@ -69,9 +81,11 @@ class RawConsole(QWidget):
 
     def _export(self) -> None:
         from datetime import datetime
+
         default = f"emvy-consola-{datetime.now():%Y%m%d-%H%M%S}.log"
-        path, _ = QFileDialog.getSaveFileName(self, "Exportar consola", default,
-                                              "Log (*.log *.txt);;Todos (*)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Exportar consola", default, "Log (*.log *.txt);;Todos (*)"
+        )
         if not path:
             return
         try:
@@ -98,8 +112,10 @@ class RawConsole(QWidget):
         col = "#3fb950" if ok else "#f85149"
         meaning = escape(status_word(int(sw[:2], 16), int(sw[2:], 16)))
         self._html(f"<span style='color:#58a6ff'>» {escape(command)}</span>")
-        self._html(f"<span style='color:{col}'>« {escape(response) or '(vacío)'}"
-                   f"  [{sw}] {meaning}</span>")
+        self._html(
+            f"<span style='color:{col}'>« {escape(response) or '(vacío)'}"
+            f"  [{sw}] {meaning}</span>"
+        )
 
     def wire(self, direction: str, text: str, transport: str = "serial") -> None:
         tag = f"<span style='color:#888'>{escape(transport)}</span>"

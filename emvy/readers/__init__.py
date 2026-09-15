@@ -3,6 +3,7 @@
 Aísla todas las dependencias de hardware (pyscard, nfcpy, evdev, pyserial). El
 resto del proyecto solo conoce `registry`, `OpenReader` y `DeviceInfo`.
 """
+
 from __future__ import annotations
 
 from . import registry  # noqa: F401
@@ -16,6 +17,11 @@ from .types import (  # noqa: F401
 )
 
 __all__ = [
-    "registry", "Capability", "DeviceInfo", "OpenReader", "ReaderError",
-    "TraceEvent", "Transceiver",
+    "registry",
+    "Capability",
+    "DeviceInfo",
+    "OpenReader",
+    "ReaderError",
+    "TraceEvent",
+    "Transceiver",
 ]

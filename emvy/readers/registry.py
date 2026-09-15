@@ -2,6 +2,7 @@
 descubrir dispositivos (PC/SC + NFC + MSR) y abrir conexiones, saltando los
 backends no disponibles sin romper.
 """
+
 from __future__ import annotations
 
 from . import bombercat, msr, nfc, pcsc
@@ -27,8 +28,14 @@ def list_all_devices() -> list[DeviceInfo]:
     return devices
 
 
-def open_device(device: DeviceInfo, *, protocol: str = "any",
-                timeout: float = 30.0, on_event=None, on_wire=None) -> OpenReader:
+def open_device(
+    device: DeviceInfo,
+    *,
+    protocol: str = "any",
+    timeout: float = 30.0,
+    on_event=None,
+    on_wire=None,
+) -> OpenReader:
     """Abre `device` con el backend adecuado.
 
     `on_event` (opcional) recibe un `TraceEvent` por cada APDU (traza de alto
@@ -54,7 +61,9 @@ def open_device(device: DeviceInfo, *, protocol: str = "any",
 def _no_devices_help() -> str:
     lines = ["No se detectó ningún lector. Estado de backends:"]
     for name, ok in available_backends().items():
-        lines.append(f"  · {name:5} : {'disponible' if ok else 'no disponible (falta dependencia)'}")
+        lines.append(
+            f"  · {name:5} : {'disponible' if ok else 'no disponible (falta dependencia)'}"
+        )
     lines.append("")
     lines.append(pcsc.PCSC_HELP)
     return "\n".join(lines)
@@ -70,7 +79,9 @@ def resolve(spec: str | None, devices: list[DeviceInfo] | None = None) -> Device
     if spec.isdigit():
         idx = int(spec)
         if idx >= len(devices):
-            raise ReaderError(f"Índice de lector {idx} fuera de rango (hay {len(devices)}).")
+            raise ReaderError(
+                f"Índice de lector {idx} fuera de rango (hay {len(devices)})."
+            )
         return devices[idx]
     low = spec.lower()
     for d in devices:

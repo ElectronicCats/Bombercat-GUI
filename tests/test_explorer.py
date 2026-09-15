@@ -2,6 +2,7 @@
 
 Prueba de humo headless (Textual Pilot) + la lógica de asignación (codificación
 correcta según el tag destino)."""
+
 import pytest
 
 pytest.importorskip("textual")
@@ -16,16 +17,28 @@ def xdg(tmp_path, monkeypatch):
 
 def _fake_dump():
     from emvy.session.model import CardDump
+
     return CardDump(
-        atr="3B00", reader="test",
-        applications=[{
-            "aid": "A0000000031010", "scheme": "Visa", "source": "ppse", "label": "VISA",
-            "cardholder": {"pan": "4111111111111111"},
-            "aip": "2000", "afl": "08010100",
-            "records": [{"sfi": 1, "record": 1, "hex": "70059F36020031"}],  # 9F36=0031
-            "get_data": {"9F17": "03"},
-        }],
-        blobs=[{"source": "A0000000031010:FCI", "hex": "6F06840456495341"}],  # 84="VISA"
+        atr="3B00",
+        reader="test",
+        applications=[
+            {
+                "aid": "A0000000031010",
+                "scheme": "Visa",
+                "source": "ppse",
+                "label": "VISA",
+                "cardholder": {"pan": "4111111111111111"},
+                "aip": "2000",
+                "afl": "08010100",
+                "records": [
+                    {"sfi": 1, "record": 1, "hex": "70059F36020031"}
+                ],  # 9F36=0031
+                "get_data": {"9F17": "03"},
+            }
+        ],
+        blobs=[
+            {"source": "A0000000031010:FCI", "hex": "6F06840456495341"}
+        ],  # 84="VISA"
     )
 
 
@@ -58,20 +71,32 @@ def test_explorer_copy_and_assign(xdg):
             datas: list = []
             _collect(app.query_one("#exp_tree", Tree).root, datas)
             tags = {d["tag"] for d in datas}
-            assert "9F36" in tags and "9F17" in tags and "82" in tags  # TLV, GETDATA, AIP
+            assert (
+                "9F36" in tags and "9F17" in tags and "82" in tags
+            )  # TLV, GETDATA, AIP
 
             def active_vars():
                 return store.load_project_variables(store.active_project())
 
             # 1) tag hex -> variable terminal (valor hex tal cual)
-            exp._sel = {"tag": "9F36", "value": "0031", "is_hex": True, "suggest": "9F36"}
+            exp._sel = {
+                "tag": "9F36",
+                "value": "0031",
+                "is_hex": True,
+                "suggest": "9F36",
+            }
             exp._assign()
             await pilot.pause()
             v = env.get_var(active_vars(), "9F36")
             assert v and v.kind == "terminal" and v.value == "0031"
 
             # 2) valor hex ASCII -> tag an/ans -> se guarda como TEXTO
-            exp._sel = {"tag": "5F20", "value": "4A4F484E", "is_hex": True, "suggest": "5F20"}
+            exp._sel = {
+                "tag": "5F20",
+                "value": "4A4F484E",
+                "is_hex": True,
+                "suggest": "5F20",
+            }
             exp._assign()
             await pilot.pause()
             assert env.get_var(active_vars(), "5F20").value == "JOHN"
@@ -79,7 +104,12 @@ def test_explorer_copy_and_assign(xdg):
             # 3) forzar variable libre (user) con nombre propio
             app.query_one("#exp_varname", Input).value = "mi_pan"
             app.query_one("#exp_varuser", Checkbox).value = True
-            exp._sel = {"tag": None, "value": "4111111111111111", "is_hex": False, "suggest": "pan"}
+            exp._sel = {
+                "tag": None,
+                "value": "4111111111111111",
+                "is_hex": False,
+                "suggest": "pan",
+            }
             exp._assign()
             await pilot.pause()
             v = env.get_var(active_vars(), "mi_pan")
@@ -89,15 +119,25 @@ def test_explorer_copy_and_assign(xdg):
             app.query_one("#exp_varname", Input).value = "50"
             app.query_one("#exp_varuser", Checkbox).value = False
             app.query_one("#exp_varascii", Checkbox).value = True
-            exp._sel = {"tag": "50", "value": "56495341", "ascii": "VISA",
-                        "is_hex": True, "suggest": "50"}
+            exp._sel = {
+                "tag": "50",
+                "value": "56495341",
+                "ascii": "VISA",
+                "is_hex": True,
+                "suggest": "50",
+            }
             exp._assign()
             await pilot.pause()
             assert env.get_var(active_vars(), "50").value == "VISA"
 
             # 5) copiar no revienta (portapapeles best-effort)
-            exp._sel = {"tag": "9F36", "value": "0031", "ascii": "", "is_hex": True,
-                        "suggest": "9F36"}
+            exp._sel = {
+                "tag": "9F36",
+                "value": "0031",
+                "ascii": "",
+                "is_hex": True,
+                "suggest": "9F36",
+            }
             exp._copy_value()
             exp._copy_tagvalue()
 
@@ -114,12 +154,26 @@ def test_explorer_analyze_button(xdg):
     from emvy.tui.app import EmvyApp
 
     rec = "7012" + "82027C00" + "8E0C" + "00000000000000001F000103"
-    dump = CardDump(applications=[{
-        "aid": "A0000000031010", "scheme": "Visa", "source": "ppse", "label": "lab",
-        "aip": "7C00", "afl": "08010100",
-        "records": [{"sfi": 1, "record": 1, "hex": rec}],
-        "get_data": {"90": "AA" * 96, "8F": "05", "9F32": "03", "93": "BB" * 96},
-    }], blobs=[])
+    dump = CardDump(
+        applications=[
+            {
+                "aid": "A0000000031010",
+                "scheme": "Visa",
+                "source": "ppse",
+                "label": "lab",
+                "aip": "7C00",
+                "afl": "08010100",
+                "records": [{"sfi": 1, "record": 1, "hex": rec}],
+                "get_data": {
+                    "90": "AA" * 96,
+                    "8F": "05",
+                    "9F32": "03",
+                    "93": "BB" * 96,
+                },
+            }
+        ],
+        blobs=[],
+    )
 
     async def scenario():
         store.create_project("lab")
@@ -141,7 +195,7 @@ def test_explorer_analyze_button(xdg):
 
             collect(app.query_one("#exp_tree", Tree).root)
             assert any("ANÁLISIS" in s for s in labels)
-            assert any("Sin CVM" in s for s in labels)     # hallazgo esperado
+            assert any("Sin CVM" in s for s in labels)  # hallazgo esperado
 
     asyncio.run(scenario())
 
@@ -163,7 +217,7 @@ def test_explorer_save_destinations(xdg, tmp_path):
             await pilot.pause()
             exp = app.query_one("#screen-explorer")
             app.last_dump = _fake_dump()
-            exp.reload()                                    # repuebla los destinos
+            exp.reload()  # repuebla los destinos
             await pilot.pause()
 
             # 1) guardar en un ARCHIVO (elige la ruta)
@@ -179,7 +233,9 @@ def test_explorer_save_destinations(xdg, tmp_path):
             app.query_one("#exp_savename", Input).value = "cap_en_b"
             exp._save()
             await pilot.pause()
-            assert [p.name for p in store.list_captures(store.open_project("b"))] == ["cap_en_b.json"]
+            assert [p.name for p in store.list_captures(store.open_project("b"))] == [
+                "cap_en_b.json"
+            ]
 
     asyncio.run(scenario())
 
@@ -207,6 +263,7 @@ def test_explorer_save_capture_to_project(xdg):
             # con captura -> se guarda con nombre dado
             app.last_dump = _fake_dump()
             from textual.widgets import Input
+
             app.query_one("#exp_savename", Input).value = "tarjeta1"
             exp._save()
             await pilot.pause()
@@ -226,8 +283,13 @@ def test_explorer_assign_requires_project(xdg):
         async with app.run_test() as pilot:
             await pilot.pause()
             exp = app.query_one("#screen-explorer")
-            exp._sel = {"tag": "9F36", "value": "0031", "is_hex": True, "suggest": "9F36"}
-            exp._assign()          # sin proyecto activo -> avisa, no revienta
+            exp._sel = {
+                "tag": "9F36",
+                "value": "0031",
+                "is_hex": True,
+                "suggest": "9F36",
+            }
+            exp._assign()  # sin proyecto activo -> avisa, no revienta
             await pilot.pause()
 
     asyncio.run(scenario())
@@ -248,7 +310,9 @@ def test_raw_button_uses_nfc_mode_for_bombercat(xdg):
             await pilot.pause()
             calls = []
             app.capture_card_ui = lambda **kw: calls.append(kw)
-            app.reader_device = DeviceInfo(backend="bombercat", id="x", name="BomberCat")
+            app.reader_device = DeviceInfo(
+                backend="bombercat", id="x", name="BomberCat"
+            )
             exp = app.query_one("#screen-explorer")
             exp._raw()
             assert calls == [{"mode": "nfc"}]
@@ -314,7 +378,9 @@ def test_on_dump_warns_when_bombercat_capture_empty(xdg):
         app = EmvyApp()
         async with app.run_test() as pilot:
             await pilot.pause()
-            app.reader_device = DeviceInfo(backend="bombercat", id="x", name="BomberCat")
+            app.reader_device = DeviceInfo(
+                backend="bombercat", id="x", name="BomberCat"
+            )
             notices = []
             app.notify = lambda msg, **kw: notices.append((msg, kw.get("severity")))
 

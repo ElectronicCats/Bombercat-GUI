@@ -2,6 +2,7 @@
 (p.ej. ACR122U). Compone un `transmit` de bajo nivel con `make_transceiver`, así
 que hereda gratis el manejo de 61xx/6Cxx.
 """
+
 from __future__ import annotations
 
 from ..core.apdu import make_transceiver
@@ -25,6 +26,7 @@ PCSC_HELP = (
 def available() -> bool:
     try:
         import smartcard  # noqa: F401
+
         return True
     except Exception:
         return False
@@ -51,6 +53,7 @@ def list_devices(*, retries: int = 3, delay: float = 0.25) -> list[DeviceInfo]:
     import time
 
     from smartcard.System import readers as pcsc_readers
+
     names: list[str] = []
     for attempt in range(max(1, retries)):
         try:

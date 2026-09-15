@@ -1,5 +1,6 @@
 """Tests del interceptor de APDUs (Burp para EMV): parser de reglas, aplicación
 a comando/respuesta y el middleware de Transceiver."""
+
 from emvy.core import intercept as ic
 from emvy.core import tlv
 from emvy.core.apdu import APDU, Response
@@ -20,8 +21,9 @@ def test_parse_rules_and_errors():
 
 
 def test_set_tag_in_tlv():
-    data = tlv.encode([tlv.tlv("82", from_hex("2000")),
-                       tlv.tlv("94", from_hex("08010100"))])
+    data = tlv.encode(
+        [tlv.tlv("82", from_hex("2000")), tlv.tlv("94", from_hex("08010100"))]
+    )
     out, ok = ic.set_tag_in(data, "82", from_hex("3900"))
     assert ok and tlv.parse(out).find("82").value == from_hex("3900")
     # tag ausente -> sin cambios
@@ -38,10 +40,10 @@ def test_intercepting_rewrites_and_logs():
 
     send = ic.intercepting(fake_send, rules, on_event=events.append)
     resp = send(APDU(0x80, 0xA8, 0, 0, from_hex("8300")))
-    assert tlv.parse(resp.data).find("82").value == from_hex("3900")   # AIP reescrito
-    assert resp.sw == 0x9000                                            # SW forzado
+    assert tlv.parse(resp.data).find("82").value == from_hex("3900")  # AIP reescrito
+    assert resp.sw == 0x9000  # SW forzado
     assert events and events[0].modified
-    assert events[0].resp_before.sw == 0x6985                           # antes del cambio
+    assert events[0].resp_before.sw == 0x6985  # antes del cambio
 
 
 def test_intercepting_ins_filter_skips():
@@ -51,7 +53,7 @@ def test_intercepting_ins_filter_skips():
         return Response(b"", 0x69, 0x85)
 
     resp = ic.intercepting(fake_send, rules)(APDU(0x00, 0xB2, 0, 0))
-    assert resp.sw == 0x6985            # INS B2 != A8 -> no aplica
+    assert resp.sw == 0x6985  # INS B2 != A8 -> no aplica
 
 
 def test_cmd_set_tag_reaches_send():

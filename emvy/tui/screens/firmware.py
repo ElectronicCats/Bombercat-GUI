@@ -7,6 +7,7 @@
 
 Todo el trabajo (subprocess/red) corre en workers de la app; la salida se captura.
 """
+
 from __future__ import annotations
 
 from textual import on
@@ -21,6 +22,7 @@ from ...integrations import firmware_sources as fs
 def discover_local_uf2() -> list:
     """`.uf2` compilados propios bajo `firmware/` (salida de arduino-cli)."""
     from ... import config
+
     root = config.repo_root() / "firmware"
     if not root.exists():
         return []
@@ -41,7 +43,9 @@ class BombercatScreen(VerticalScroll):
         yield Label("BomberCat — firmware", classes="title")
         yield Label("", id="fw_status", classes="hint")
         with Horizontal(classes="row"):
-            yield Input(placeholder="fuente: owner/repo (GitHub) o URL .uf2", id="fw_source")
+            yield Input(
+                placeholder="fuente: owner/repo (GitHub) o URL .uf2", id="fw_source"
+            )
             yield Button("Agregar + descargar", id="fw_addsrc", variant="primary")
             yield Button("Limpiar descargas", id="fw_clean")
         with Horizontal(classes="row"):
@@ -57,9 +61,13 @@ class BombercatScreen(VerticalScroll):
             yield Input(placeholder=".uf2 local (ruta manual)", id="fw_local")
             yield Button("Flashear .uf2 local", id="fw_flash_local", variant="warning")
         with Horizontal(classes="row"):
-            yield Select([], prompt="sketch a compilar…", allow_blank=True, id="fw_sketch")
+            yield Select(
+                [], prompt="sketch a compilar…", allow_blank=True, id="fw_sketch"
+            )
             yield Button("Compilar", id="fw_compile", variant="success")
-            yield Button("Compilar y subir (picotool)", id="fw_compileflash", variant="warning")
+            yield Button(
+                "Compilar y subir (picotool)", id="fw_compileflash", variant="warning"
+            )
         yield RichLog(id="fw_log", markup=True, wrap=True)
 
     def on_mount(self):
@@ -71,11 +79,16 @@ class BombercatScreen(VerticalScroll):
     def _update_status(self):
         try:
             root, ver, ready = bt.locate(), bt.version(), bt.venv_ready()
-            tools = (f"bombercat-tools v{ver} · " + ("venv listo" if ready
-                     else "[yellow]venv NO listo[/]"))
+            tools = f"bombercat-tools v{ver} · " + (
+                "venv listo" if ready else "[yellow]venv NO listo[/]"
+            )
         except Exception as e:
             tools = f"[red]bombercat-tools no disponible: {e}[/]"
-        acli = "arduino-cli ✓" if ard.arduino_cli_available() else "[yellow]arduino-cli ✗[/]"
+        acli = (
+            "arduino-cli ✓"
+            if ard.arduino_cli_available()
+            else "[yellow]arduino-cli ✗[/]"
+        )
         self.query_one("#fw_status", Label).update(f"{tools}  ·  {acli}")
 
     def _load_sketches(self):
@@ -160,15 +173,19 @@ class BombercatScreen(VerticalScroll):
     def _do_flash(self, target: str):
         port = self.query_one("#fw_port", Input).value.strip() or None
         kind = "tu .uf2" if target.endswith(".uf2") else "el release"
-        self.log(f"[yellow]⚠ Flasheando {kind} [b]{target}[/]… no desconectes la placa.[/]")
+        self.log(
+            f"[yellow]⚠ Flasheando {kind} [b]{target}[/]… no desconectes la placa.[/]"
+        )
         self.app.bombercat_flash_ui(target, port)
 
     @on(Button.Pressed, "#fw_del")
     def _del(self):
         target = self._selected()
         if not target or not target.endswith(".uf2"):
-            self.app.notify("Solo se pueden eliminar descargas (.uf2 de la caché).",
-                            severity="warning")
+            self.app.notify(
+                "Solo se pueden eliminar descargas (.uf2 de la caché).",
+                severity="warning",
+            )
             return
         self.app.bombercat_clean_ui(target)
 

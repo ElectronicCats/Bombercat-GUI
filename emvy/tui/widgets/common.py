@@ -1,4 +1,5 @@
 """Widgets y helpers comunes de la TUI."""
+
 from __future__ import annotations
 
 from textual.widgets import Static

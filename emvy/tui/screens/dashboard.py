@@ -7,6 +7,7 @@ El **modelo** (`build_model`) es puro y testeable: recibe primitivas y devuelve 
 `DashboardModel`. El widget lo renderiza y añade la interacción (activar/crear
 proyecto, acciones rápidas). Rediseño descrito en TODO.md (§§6–27).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,9 +26,9 @@ OK, OFF, WARN, ERR = "●", "○", "!", "×"
 
 @dataclass(frozen=True)
 class Panel:
-    symbol: str          # ● ○ ! ×
-    state: str           # etiqueta de estado ("Conectado", "Sin tarjeta"…)
-    lines: tuple[str, ...] = ()   # detalle adicional
+    symbol: str  # ● ○ ! ×
+    state: str  # etiqueta de estado ("Conectado", "Sin tarjeta"…)
+    lines: tuple[str, ...] = ()  # detalle adicional
 
 
 @dataclass(frozen=True)
@@ -41,16 +42,24 @@ class DashboardModel:
     capture: Panel
     next_text: str
     next_keys: str
-    next_action: str = ""      # id de destino: "tab-proj"/"tab-rdr"/"capture"/"tab-fuzz"…
-    next_label: str = ""       # etiqueta del botón de acción
+    next_action: str = ""  # id de destino: "tab-proj"/"tab-rdr"/"capture"/"tab-fuzz"…
+    next_label: str = ""  # etiqueta del botón de acción
     last_activity: str | None = None
 
 
-def build_model(*, project_name: str | None, var_count: int, capture_count: int,
-                reader_name: str | None, reader_backend: str | None,
-                reader_caps: str | None, card_atr: str | None,
-                capture_apps: int | None, capture_blobs: int | None,
-                last_activity: str | None = None) -> DashboardModel:
+def build_model(
+    *,
+    project_name: str | None,
+    var_count: int,
+    capture_count: int,
+    reader_name: str | None,
+    reader_backend: str | None,
+    reader_caps: str | None,
+    card_atr: str | None,
+    capture_apps: int | None,
+    capture_blobs: int | None,
+    last_activity: str | None = None,
+) -> DashboardModel:
     """Deriva el modelo del dashboard desde el estado de sesión (puro)."""
     if reader_name:
         reader = Panel(OK, "Conectado", (reader_name, (reader_backend or "").upper()))
@@ -65,28 +74,63 @@ def build_model(*, project_name: str | None, var_count: int, capture_count: int,
         card = Panel(OFF, "Sin tarjeta", ("Presenta una tarjeta",))
 
     if capture_apps is not None:
-        capture = Panel(OK, "Disponible",
-                        (f"{capture_apps} app(s) · {capture_blobs or 0} blobs",))
+        capture = Panel(
+            OK, "Disponible", (f"{capture_apps} app(s) · {capture_blobs or 0} blobs",)
+        )
     else:
-        extra = (f"{capture_count} guardada(s) en el proyecto",) if capture_count else ()
+        extra = (
+            (f"{capture_count} guardada(s) en el proyecto",) if capture_count else ()
+        )
         capture = Panel(OFF, "Sin captura", extra)
 
     if not project_name:
-        nxt, keys, act, lbl = "Crea o selecciona un proyecto.", "P", "tab-proj", "Ir a Proyectos"
+        nxt, keys, act, lbl = (
+            "Crea o selecciona un proyecto.",
+            "P",
+            "tab-proj",
+            "Ir a Proyectos",
+        )
     elif not reader_name:
-        nxt, keys, act, lbl = "Conecta un lector para continuar.", "L", "tab-rdr", "Conectar lector"
+        nxt, keys, act, lbl = (
+            "Conecta un lector para continuar.",
+            "L",
+            "tab-rdr",
+            "Conectar lector",
+        )
     elif not card_atr:
-        nxt, keys, act, lbl = "Presenta una tarjeta al lector.", "L", "tab-rdr", "Ir a Lectores"
+        nxt, keys, act, lbl = (
+            "Presenta una tarjeta al lector.",
+            "L",
+            "tab-rdr",
+            "Ir a Lectores",
+        )
     elif capture_apps is None:
-        nxt, keys, act, lbl = "Abre el Explorador e inicia una captura.", "E", "capture", "Capturar tarjeta"
+        nxt, keys, act, lbl = (
+            "Abre el Explorador e inicia una captura.",
+            "E",
+            "capture",
+            "Capturar tarjeta",
+        )
     else:
-        nxt, keys, act, lbl = "Revisa la captura o busca flags.", "E / F", "tab-fuzz", "Ir a Fuzzing"
+        nxt, keys, act, lbl = (
+            "Revisa la captura o busca flags.",
+            "E / F",
+            "tab-fuzz",
+            "Ir a Fuzzing",
+        )
 
     return DashboardModel(
-        version=__version__, project_name=project_name,
-        var_count=var_count, capture_count=capture_count,
-        reader=reader, card=card, capture=capture,
-        next_text=nxt, next_keys=keys, next_action=act, next_label=lbl,
+        version=__version__,
+        project_name=project_name,
+        var_count=var_count,
+        capture_count=capture_count,
+        reader=reader,
+        card=card,
+        capture=capture,
+        next_text=nxt,
+        next_keys=keys,
+        next_action=act,
+        next_label=lbl,
         last_activity=last_activity,
     )
 
@@ -165,13 +209,15 @@ class DashboardScreen(VerticalScroll):
         t = self.query_one("#dash-recent", DataTable)
         t.add_columns("", "proyecto", "tipo", "info")
         t.cursor_type = "row"
-        self._recent: list[tuple[str, object]] = []   # (name, path|None)
+        self._recent: list[tuple[str, object]] = []  # (name, path|None)
         self.reload()
 
     # -- render de un panel de entorno (símbolo + estado + detalle) ---------
     @staticmethod
     def _panel_text(title: str, p: Panel) -> str:
-        color = {OK: "$success", OFF: "$text-muted", WARN: "$warning", ERR: "$error"}[p.symbol]
+        color = {OK: "$success", OFF: "$text-muted", WARN: "$warning", ERR: "$error"}[
+            p.symbol
+        ]
         head = f"[b]{title}[/]\n[{color}]{p.symbol}[/] {p.state}"
         detail = "\n".join(f"[$text-muted]{ln}[/]" for ln in p.lines if ln)
         return f"{head}\n{detail}" if detail else head
@@ -192,7 +238,8 @@ class DashboardScreen(VerticalScroll):
         dump = getattr(app, "last_dump", None)
         model = build_model(
             project_name=store.active_label() if proj else None,
-            var_count=var_count, capture_count=capture_count,
+            var_count=var_count,
+            capture_count=capture_count,
             reader_name=(dev.name if dev else None),
             reader_backend=(dev.backend if dev else None),
             reader_caps=(dev.caps_str if dev else None),
@@ -225,13 +272,17 @@ class DashboardScreen(VerticalScroll):
 
         up("dash-header", f"EMVy Controller   [$text-muted]v{m.version}[/]")
         if m.project_name:
-            up("dash-project",
-               f"[b]{m.project_name}[/]\n"
-               f"[$text-muted]Activo · {m.var_count} variables · {m.capture_count} capturas[/]")
+            up(
+                "dash-project",
+                f"[b]{m.project_name}[/]\n"
+                f"[$text-muted]Activo · {m.var_count} variables · {m.capture_count} capturas[/]",
+            )
         else:
-            up("dash-project",
-               "[b]Sin proyecto seleccionado[/]\n"
-               "[$text-muted]Crea uno abajo o pulsa P[/]")
+            up(
+                "dash-project",
+                "[b]Sin proyecto seleccionado[/]\n"
+                "[$text-muted]Crea uno abajo o pulsa P[/]",
+            )
         up("dash-reader", self._panel_text("LECTOR", m.reader))
         up("dash-card", self._panel_text("TARJETA", m.card))
         up("dash-capture", self._panel_text("CAPTURA", m.capture))
@@ -292,10 +343,10 @@ class DashboardScreen(VerticalScroll):
             self.app.notify("Indica un nombre (o una ruta).", severity="warning")
             return
         try:
-            if path:                                   # elige dónde: proyecto en ruta
+            if path:  # elige dónde: proyecto en ruta
                 p = store.create_project_at(path, name=name or None)
                 store.set_active_path(p.path)
-            else:                                      # XDG por defecto
+            else:  # XDG por defecto
                 store.create_project(name)
                 store.set_active(name)
         except Exception as e:

@@ -5,6 +5,7 @@ respuesta 0210 (F39) → reverso 0400 opcional. El switch y el terminal se
 configuran por **variables del proyecto** (switch_host, switch_port, switch_tls,
 tpdu, terminal_id, merchant_id, mcc…). Genérico: apunta al switch que quieras.
 """
+
 from __future__ import annotations
 
 from textual import on
@@ -23,12 +24,16 @@ _CARD_SOURCES = [
 
 class ChargesScreen(Vertical):
     def compose(self):
-        yield Label("Cobros — flujo de switch (crear → enviar → respuesta)", classes="title")
+        yield Label(
+            "Cobros — flujo de switch (crear → enviar → respuesta)", classes="title"
+        )
         yield Label("", id="ch_cfg", classes="hint")
         with Horizontal(classes="row"):
             yield Input(value="500", id="ch_amount", placeholder="monto (centavos)")
             yield Select(_CARD_SOURCES, value="session", allow_blank=False, id="ch_src")
-            yield Select([], prompt="captura guardada…", allow_blank=True, id="ch_capfile")
+            yield Select(
+                [], prompt="captura guardada…", allow_blank=True, id="ch_capfile"
+            )
             yield Checkbox("sign-on", value=True, id="ch_signon")
             yield Checkbox("dry-run", value=True, id="ch_dry")
         with Horizontal(classes="row"):
@@ -54,10 +59,15 @@ class ChargesScreen(Vertical):
         variables = self._vars()
         cfg = SwitchConfig.from_vars(lambda k: variables.get(k))
         proj = store.active_project()
-        dest = f"{cfg.host}:{cfg.port}" if cfg.port else "[red]sin destino (define switch_host/switch_port)[/]"
+        dest = (
+            f"{cfg.host}:{cfg.port}"
+            if cfg.port
+            else "[red]sin destino (define switch_host/switch_port)[/]"
+        )
         self.query_one("#ch_cfg", Label).update(
             f"Destino: [b]{dest}[/]  TLS={cfg.tls}  ·  TID={cfg.tid or '—'} "
-            f"MID={cfg.mid or '—'} MCC={cfg.mcc}  ·  proyecto: {proj.name if proj else '—'}")
+            f"MID={cfg.mid or '—'} MCC={cfg.mcc}  ·  proyecto: {proj.name if proj else '—'}"
+        )
         caps = [c.name for c in store.list_captures(proj)] if proj else []
         self.query_one("#ch_capfile", Select).set_options([(c, c) for c in caps])
 
@@ -72,7 +82,9 @@ class ChargesScreen(Vertical):
         capfile = self.query_one("#ch_capfile", Select).value
         return {
             "card_source": src,
-            "capture_name": (capfile if src == "saved" and isinstance(capfile, str) else None),
+            "capture_name": (
+                capfile if src == "saved" and isinstance(capfile, str) else None
+            ),
             "amount": self._amount(),
             "dry_run": self.query_one("#ch_dry", Checkbox).value,
             "sign_on": self.query_one("#ch_signon", Checkbox).value,
@@ -102,7 +114,9 @@ class ChargesScreen(Vertical):
         log.write(f"[cyan]>>[/] {res.mti}: {res.request.hex()}")
         if res.response:
             log.write(f"[green]<<[/] {res.response.hex()}")
-            log.write(f"[b {color}]F39={res.rc}[/] {res.rc_meaning}  → "
-                      + ("[green]APROBADA[/]" if res.approved else "[red]DECLINADA/otro[/]"))
+            log.write(
+                f"[b {color}]F39={res.rc}[/] {res.rc_meaning}  → "
+                + ("[green]APROBADA[/]" if res.approved else "[red]DECLINADA/otro[/]")
+            )
         for line in res.log:
             log.write(f"   [dim]{line}[/]")

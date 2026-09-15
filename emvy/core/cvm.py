@@ -6,6 +6,7 @@ bytes. Cada regla = (byte de CV Rule, byte de condición). En el CV Rule: bit 7
 (0x40) = "aplicar la siguiente regla si esta falla"; bits 6..1 (0x3F) = código de
 CVM.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,12 +42,12 @@ CVM_CONDITIONS = {
 
 @dataclass(frozen=True)
 class CvmRule:
-    code: int                      # 0..0x3F
+    code: int  # 0..0x3F
     code_name: str
     condition: int
     condition_name: str
     apply_next_if_fails: bool
-    raw: str                       # 2 bytes hex
+    raw: str  # 2 bytes hex
 
 
 @dataclass(frozen=True)
@@ -61,11 +62,15 @@ class CvmList:
         for r in self.rules:
             if r.code == 0x1F:
                 cond = "siempre" if r.condition == 0x00 else r.condition_name.lower()
-                notes.append(f"'Sin CVM requerido' presente (condición: {cond}) "
-                             "→ posible ausencia de verificación de titular")
+                notes.append(
+                    f"'Sin CVM requerido' presente (condición: {cond}) "
+                    "→ posible ausencia de verificación de titular"
+                )
             if r.code in (0x01, 0x03):
-                notes.append("PIN en claro (offline plaintext PIN) → el PIN viaja "
-                             "sin cifrar hacia la tarjeta")
+                notes.append(
+                    "PIN en claro (offline plaintext PIN) → el PIN viaja "
+                    "sin cifrar hacia la tarjeta"
+                )
             if r.code == 0x1E:
                 notes.append("Firma como CVM → verificación débil (no criptográfica)")
         # dedup preservando orden
@@ -84,12 +89,14 @@ def parse_cvm_list(data: bytes) -> CvmList | None:
     for i in range(0, len(body) - 1, 2):
         b1, b2 = body[i], body[i + 1]
         code = b1 & 0x3F
-        rules.append(CvmRule(
-            code=code,
-            code_name=CVM_CODES.get(code, f"desconocido (0x{code:02X})"),
-            condition=b2,
-            condition_name=CVM_CONDITIONS.get(b2, f"desconocida (0x{b2:02X})"),
-            apply_next_if_fails=bool(b1 & 0x40),
-            raw=to_hex(bytes([b1, b2])),
-        ))
+        rules.append(
+            CvmRule(
+                code=code,
+                code_name=CVM_CODES.get(code, f"desconocido (0x{code:02X})"),
+                condition=b2,
+                condition_name=CVM_CONDITIONS.get(b2, f"desconocida (0x{b2:02X})"),
+                apply_next_if_fails=bool(b1 & 0x40),
+                raw=to_hex(bytes([b1, b2])),
+            )
+        )
     return CvmList(amount_x=amount_x, amount_y=amount_y, rules=tuple(rules))

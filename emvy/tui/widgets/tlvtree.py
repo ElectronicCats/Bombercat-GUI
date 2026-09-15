@@ -1,6 +1,7 @@
 """Construcción de un árbol Textual a partir de una TLVList (reutilizable por el
 explorador de tarjeta). Funciones puras de presentación sobre `core.tlv`.
 """
+
 from __future__ import annotations
 
 from ...core import tlv
@@ -14,7 +15,7 @@ def ascii_of(raw: bytes) -> str:
     además del hex."""
     if not raw:
         return ""
-    s = ascii_printable(raw)                       # no imprimible -> '.'
+    s = ascii_printable(raw)  # no imprimible -> '.'
     printable = sum(ch != "." for ch in s)
     return s if printable >= max(1, len(s) * 0.6) else ""
 
@@ -37,8 +38,13 @@ def node_data(t: tlv.TLV) -> dict:
     completo codificado (así 'copiar' devuelve el objeto entero)."""
     is_leaf = not (t.constructed and t.children)
     raw = t.value if is_leaf else t.to_bytes()
-    return {"tag": t.tag, "value": to_hex(raw), "ascii": ascii_of(raw),
-            "is_hex": True, "suggest": t.tag}
+    return {
+        "tag": t.tag,
+        "value": to_hex(raw),
+        "ascii": ascii_of(raw),
+        "is_hex": True,
+        "suggest": t.tag,
+    }
 
 
 def add_tlvs(node, tlvs) -> None:

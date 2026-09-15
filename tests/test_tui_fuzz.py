@@ -1,5 +1,6 @@
 """Pruebas headless de la pestaña Fuzzing: generar plantillas, escribir en
 tarjeta (fake transceiver) y magspoof (fake serial)."""
+
 import pytest
 
 pytest.importorskip("textual")
@@ -39,10 +40,11 @@ def test_fuzz_tab_generate_and_write():
             class FakeReader:
                 transceive = staticmethod(lambda a: Response(b"", 0x90, 0x00))
                 atr = None
+
             app.reader = FakeReader()
             scr._card_write()
             await app.workers.wait_for_complete()
-            await pilot.pause()   # no revienta; log recibido en ambas pestañas
+            await pilot.pause()  # no revienta; log recibido en ambas pestañas
 
     asyncio.run(scenario())
 
@@ -57,6 +59,7 @@ def test_fuzz_tab_magspoof(monkeypatch):
 
     fakeserial.install()
     try:
+
         async def scenario():
             app = EmvyApp()
             async with app.run_test() as pilot:
@@ -84,6 +87,7 @@ def test_fuzz_tab_ndef(monkeypatch):
 
     fakeserial.install()
     try:
+
         async def scenario():
             app = EmvyApp()
             async with app.run_test() as pilot:

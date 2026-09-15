@@ -4,6 +4,7 @@ UPDATE RECORD, UPDATE BINARY, PUT DATA, APPEND RECORD. **Modifica la tarjeta**;
 solo tarjetas propias/de laboratorio. Muchas escrituras requieren canal
 seguro/autenticación (la tarjeta responde SW 6982/6985).
 """
+
 from __future__ import annotations
 
 from textual import on
@@ -24,9 +25,11 @@ _OPS = [
 class WriteScreen(Vertical):
     def compose(self):
         yield Label("Escritura en tarjeta", classes="title")
-        yield Label("[yellow]⚠ Modifica la tarjeta (puede ser irreversible). Solo tarjetas "
-                    "propias/de laboratorio; muchas escrituras exigen canal seguro.[/]",
-                    classes="hint")
+        yield Label(
+            "[yellow]⚠ Modifica la tarjeta (puede ser irreversible). Solo tarjetas "
+            "propias/de laboratorio; muchas escrituras exigen canal seguro.[/]",
+            classes="hint",
+        )
         with Horizontal(classes="row"):
             yield Select(_OPS, value="record", allow_blank=False, id="w_op")
             yield Input(placeholder="SFI", id="w_sfi")
@@ -67,7 +70,9 @@ class WriteScreen(Vertical):
     def log_write(self, op: str, resp) -> None:
         log = self.query_one("#w_log", RichLog)
         ok = resp.sw == 0x9000
-        log.write(f"[b {'green' if ok else 'red'}]{op}  SW {resp.sw_hex}[/] "
-                  f"{cardwrite.write_status(resp.sw)}")
+        log.write(
+            f"[b {'green' if ok else 'red'}]{op}  SW {resp.sw_hex}[/] "
+            f"{cardwrite.write_status(resp.sw)}"
+        )
         if resp.data:
             log.write(f"   data: {to_hex(resp.data)}")

@@ -3,14 +3,23 @@ proyecto/lector/tarjeta, el siguiente paso como acción directa, capturas y
 proyectos recientes (abribles con doble clic) y accesos rápidos. Refleja el
 estado de sesión de MainWindow y el proyecto activo.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QAbstractItemView, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QPushButton, QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ... import __release__, __version__
@@ -28,56 +37,77 @@ class DashboardPanel(QWidget):
         # -- encabezado compacto -------------------------------------------
         title = QLabel("EMVy Controller")
         title.setStyleSheet(f"font-size:20px; font-weight:700; color:{TEXT};")
-        ver = QLabel(f"v{__version__} · {__release__} · EMV security testing & card exploration")
+        ver = QLabel(
+            f"v{__version__} · {__release__} · EMV security testing & card exploration"
+        )
         ver.setStyleSheet(f"color:{MUTED}; font-size:12px;")
-        head = QVBoxLayout(); head.setSpacing(2); head.addWidget(title); head.addWidget(ver)
+        head = QVBoxLayout()
+        head.setSpacing(2)
+        head.addWidget(title)
+        head.addWidget(ver)
 
         # -- fila de tarjetas de estado ------------------------------------
         self._proj_box, self._proj_v, self._proj_c = self._stat("Proyecto activo")
         self._rdr_box, self._rdr_v, self._rdr_c = self._stat("Lector")
         self._card_box, self._card_v, self._card_c = self._stat("Tarjeta · captura")
-        cards = QHBoxLayout(); cards.setSpacing(12)
+        cards = QHBoxLayout()
+        cards.setSpacing(12)
         for b in (self._proj_box, self._rdr_box, self._card_box):
             cards.addWidget(b, 1)
 
         # -- siguiente paso (acción directa) -------------------------------
         step_box = QGroupBox("Siguiente paso")
         sv = QHBoxLayout(step_box)
-        self._next_lbl = QLabel(""); self._next_lbl.setWordWrap(True)
+        self._next_lbl = QLabel("")
+        self._next_lbl.setWordWrap(True)
         self._next_lbl.setStyleSheet(f"color:{TEXT};")
-        self._next_btn = QPushButton("Continuar"); self._next_btn.setProperty("accent", True)
+        self._next_btn = QPushButton("Continuar")
+        self._next_btn.setProperty("accent", True)
         self._next_btn.setIcon(icon("play", color=ACCENT_FG))
         self._next_btn.setMinimumWidth(160)
-        self._next_btn.clicked.connect(lambda: self._next_action and self._next_action())
-        sv.addWidget(self._next_lbl, 1); sv.addWidget(self._next_btn)
+        self._next_btn.clicked.connect(
+            lambda: self._next_action and self._next_action()
+        )
+        sv.addWidget(self._next_lbl, 1)
+        sv.addWidget(self._next_btn)
 
         # -- listas: capturas del proyecto | proyectos ---------------------
         cap_box = QGroupBox("Capturas del proyecto  ·  doble clic para abrir")
         self._caps = QListWidget()
         self._caps.setSelectionBehavior(QAbstractItemView.SelectRows)
         self._caps.itemDoubleClicked.connect(self._open_capture)
-        cv = QVBoxLayout(cap_box); cv.addWidget(self._caps)
+        cv = QVBoxLayout(cap_box)
+        cv.addWidget(self._caps)
 
         prj_box = QGroupBox("Proyectos  ·  doble clic para activar")
         self._projs = QListWidget()
         self._projs.itemDoubleClicked.connect(self._activate_recent)
-        pv = QVBoxLayout(prj_box); pv.addWidget(self._projs)
+        pv = QVBoxLayout(prj_box)
+        pv.addWidget(self._projs)
 
-        lists = QHBoxLayout(); lists.setSpacing(12)
-        lists.addWidget(cap_box, 1); lists.addWidget(prj_box, 1)
+        lists = QHBoxLayout()
+        lists.setSpacing(12)
+        lists.addWidget(cap_box, 1)
+        lists.addWidget(prj_box, 1)
 
         # -- accesos rápidos ------------------------------------------------
         qa = QHBoxLayout()
         qa.addWidget(QLabel("Accesos rápidos:"))
-        for text, ic, fn in (("Lectores", "plug", lambda: self._go("Lectores")),
-                             ("Capturar", "search", self._capture_now),
-                             ("Emular / Editor", "zap", lambda: self._go("Fuzzing")),
-                             ("Cobros", "credit-card", lambda: self._go("Cobros")),
-                             ("PoC", "flask", lambda: self._go("PoC"))):
-            b = QPushButton(text); b.setIcon(icon(ic)); b.clicked.connect(fn); qa.addWidget(b)
+        for text, ic, fn in (
+            ("Lectores", "plug", lambda: self._go("Lectores")),
+            ("Capturar", "search", self._capture_now),
+            ("Emular / Editor", "zap", lambda: self._go("Fuzzing")),
+            ("Cobros", "credit-card", lambda: self._go("Cobros")),
+            ("PoC", "flask", lambda: self._go("PoC")),
+        ):
+            b = QPushButton(text)
+            b.setIcon(icon(ic))
+            b.clicked.connect(fn)
+            qa.addWidget(b)
         qa.addStretch(1)
 
-        lay = QVBoxLayout(self); lay.setSpacing(12)
+        lay = QVBoxLayout(self)
+        lay.setSpacing(12)
         lay.addLayout(head)
         lay.addLayout(cards)
         lay.addWidget(step_box)
@@ -88,10 +118,14 @@ class DashboardPanel(QWidget):
     # -- helpers de UI ------------------------------------------------------
     def _stat(self, title: str):
         box = QGroupBox(title)
-        v = QVBoxLayout(box); v.setSpacing(2)
-        value = QLabel("—"); value.setStyleSheet(f"font-size:16px; font-weight:600; color:{TEXT};")
-        caption = QLabel(""); caption.setStyleSheet(f"color:{MUTED}; font-size:12px;")
-        v.addWidget(value); v.addWidget(caption)
+        v = QVBoxLayout(box)
+        v.setSpacing(2)
+        value = QLabel("—")
+        value.setStyleSheet(f"font-size:16px; font-weight:600; color:{TEXT};")
+        caption = QLabel("")
+        caption.setStyleSheet(f"color:{MUTED}; font-size:12px;")
+        v.addWidget(value)
+        v.addWidget(caption)
         return box, value, caption
 
     # -- refresco -----------------------------------------------------------
@@ -109,28 +143,47 @@ class DashboardPanel(QWidget):
 
         rdr = self.win.reader_device.name if self.win.reader_device else None
         self._rdr_v.setText(rdr or "Desconectado")
-        self._rdr_c.setText(f"{self.win.reader_device.backend}" if rdr else "pulsa Lectores")
+        self._rdr_c.setText(
+            f"{self.win.reader_device.backend}" if rdr else "pulsa Lectores"
+        )
 
         dump = self.win.last_dump
-        self._card_v.setText(self.win.card_atr[:22] + "…" if (self.win.card_atr and
-                             len(self.win.card_atr) > 23) else (self.win.card_atr or
-                             ("Sin tarjeta" if rdr else "Sin lector")))
-        self._card_c.setText(f"captura: {len(dump.applications)} app · {len(dump.blobs)} blobs"
-                             if dump else "sin captura")
+        self._card_v.setText(
+            self.win.card_atr[:22] + "…"
+            if (self.win.card_atr and len(self.win.card_atr) > 23)
+            else (self.win.card_atr or ("Sin tarjeta" if rdr else "Sin lector"))
+        )
+        self._card_c.setText(
+            f"captura: {len(dump.applications)} app · {len(dump.blobs)} blobs"
+            if dump
+            else "sin captura"
+        )
 
         # siguiente paso + acción
         if not proj:
-            self._set_next("Crea o selecciona un proyecto para empezar.",
-                           "Ir a Proyectos", lambda: self._go("Proyectos"))
+            self._set_next(
+                "Crea o selecciona un proyecto para empezar.",
+                "Ir a Proyectos",
+                lambda: self._go("Proyectos"),
+            )
         elif not rdr:
-            self._set_next("Conecta un lector (PC/SC, NFC o BomberCat).",
-                           "Conectar lector", lambda: self._go("Lectores"))
+            self._set_next(
+                "Conecta un lector (PC/SC, NFC o BomberCat).",
+                "Conectar lector",
+                lambda: self._go("Lectores"),
+            )
         elif dump is None:
-            self._set_next("Captura una tarjeta para inspeccionar su árbol TLV.",
-                           "Capturar tarjeta", self._capture_now)
+            self._set_next(
+                "Captura una tarjeta para inspeccionar su árbol TLV.",
+                "Capturar tarjeta",
+                self._capture_now,
+            )
         else:
-            self._set_next("Tarjeta capturada. Explórala, emúlala o busca flags.",
-                           "Ir a Fuzzing", lambda: self._go("Fuzzing"))
+            self._set_next(
+                "Tarjeta capturada. Explórala, emúlala o busca flags.",
+                "Ir a Fuzzing",
+                lambda: self._go("Fuzzing"),
+            )
 
         # capturas del proyecto (recientes primero)
         self._caps.clear()
@@ -165,9 +218,11 @@ class DashboardPanel(QWidget):
             return
         try:
             from ...session.model import CardDump
+
             dump = CardDump.from_json(Path(path).read_text())
         except Exception as e:  # noqa: BLE001
-            self.win.notify.emit(f"Abrir captura: {e}"); return
+            self.win.notify.emit(f"Abrir captura: {e}")
+            return
         self.win.last_dump = dump
         self.win.explorer_panel.show_dump(dump)
         self._go("Explorador")
@@ -190,7 +245,8 @@ class DashboardPanel(QWidget):
         tabs = self.win.tabs
         for i in range(tabs.count()):
             if tabs.tabText(i) == tab_name:
-                tabs.setCurrentIndex(i); return
+                tabs.setCurrentIndex(i)
+                return
 
     def _capture_now(self) -> None:
         self._go("Explorador")

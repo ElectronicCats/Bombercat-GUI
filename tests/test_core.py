@@ -1,4 +1,5 @@
 """Tests del núcleo puro (sin hardware): TLV, DOL, APDU, ATR, AID, track, search."""
+
 from emvy.core import apdu, atr, search, tlv, track
 from emvy.core.aids import rid_scheme
 from emvy.core.hexutil import from_hex, to_hex
@@ -6,20 +7,46 @@ from emvy.core.hexutil import from_hex, to_hex
 
 # --- TLV --------------------------------------------------------------------
 def test_tlv_parse_basic():
-    data = tlv.encode([tlv.tlv("5A", from_hex("4761739001010010")),
-                       tlv.tlv("5F24", from_hex("251231"))])
+    data = tlv.encode(
+        [
+            tlv.tlv("5A", from_hex("4761739001010010")),
+            tlv.tlv("5F24", from_hex("251231")),
+        ]
+    )
     parsed = tlv.parse(data)
     assert parsed.find("5A").value == from_hex("4761739001010010")
     assert parsed.find("5F24").value == from_hex("251231")
 
 
 def test_tlv_nested_ppse():
-    fci = tlv.TLV("6F", b"", [
-        tlv.tlv("84", b"2PAY.SYS.DDF01"),
-        tlv.TLV("A5", b"", [tlv.TLV("BF0C", b"", [
-            tlv.TLV("61", b"", [tlv.tlv("4F", from_hex("A0000000041010"))], constructed=True),
-        ], constructed=True)], constructed=True),
-    ], constructed=True)
+    fci = tlv.TLV(
+        "6F",
+        b"",
+        [
+            tlv.tlv("84", b"2PAY.SYS.DDF01"),
+            tlv.TLV(
+                "A5",
+                b"",
+                [
+                    tlv.TLV(
+                        "BF0C",
+                        b"",
+                        [
+                            tlv.TLV(
+                                "61",
+                                b"",
+                                [tlv.tlv("4F", from_hex("A0000000041010"))],
+                                constructed=True,
+                            ),
+                        ],
+                        constructed=True,
+                    )
+                ],
+                constructed=True,
+            ),
+        ],
+        constructed=True,
+    )
     parsed = tlv.parse(tlv.encode_tlv(fci))
     assert to_hex(parsed.find("4F").value) == "A0000000041010"
     assert parsed.find("84").value == b"2PAY.SYS.DDF01"
@@ -102,7 +129,9 @@ def test_track1():
 
 def test_track2_and_emv():
     t = track.parse_track2(";4761739001010010=25122010000000?")
-    assert t.pan == "4761739001010010" and t.expiry == "2512" and t.service_code == "201"
+    assert (
+        t.pan == "4761739001010010" and t.expiry == "2512" and t.service_code == "201"
+    )
     e = track.parse_track2_emv(from_hex("4761739001010010D2512201" + "F" * 4))
     assert e.pan == "4761739001010010" and e.expiry == "2512"
 
@@ -112,9 +141,11 @@ def test_build_track2_emv_roundtrip():
     track2 al editar PAN/caducidad en el editor de tarjetas)."""
     t2 = track.build_track2_emv("4189143370041827", "2909", "221", "1000002600000")
     assert t2.startswith("4189143370041827D2909221")
-    assert len(t2) % 2 == 0                         # nibble par (relleno F)
+    assert len(t2) % 2 == 0  # nibble par (relleno F)
     p = track.parse_track2_emv(t2)
-    assert p.pan == "4189143370041827" and p.expiry == "2909" and p.service_code == "221"
+    assert (
+        p.pan == "4189143370041827" and p.expiry == "2909" and p.service_code == "221"
+    )
     # PAN editado → el nuevo track2 lleva el PAN nuevo
     t2b = track.build_track2_emv("4111111111111111", "2512", "201")
     assert track.parse_track2_emv(t2b).pan == "4111111111111111"

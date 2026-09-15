@@ -2,15 +2,22 @@
 fuerzan status words. Al activarse, todo el tráfico de la sesión pasa por ellas
 (`core.intercept.intercepting`, cableado en `MainWindow.active_send`).
 """
+
 from __future__ import annotations
 
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QCheckBox, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout,
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
     QWidget,
 )
 
-_MONO = QFont("monospace"); _MONO.setStyleHint(QFont.Monospace)
+_MONO = QFont("monospace")
+_MONO.setStyleHint(QFont.Monospace)
 
 _EXAMPLE = (
     "# una regla por línea (scope cmd|resp; @INS filtra por instrucción):\n"
@@ -25,21 +32,34 @@ class InterceptPanel(QWidget):
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win
-        sub = QLabel("Reglas MITM sobre los APDU de la sesión. Al activar, capturas/PoCs/"
-                     "escritura pasan por ellas. Cada intercambio afectado se registra abajo.")
-        sub.setWordWrap(True); sub.setStyleSheet("color:#8b949e")
+        sub = QLabel(
+            "Reglas MITM sobre los APDU de la sesión. Al activar, capturas/PoCs/"
+            "escritura pasan por ellas. Cada intercambio afectado se registra abajo."
+        )
+        sub.setWordWrap(True)
+        sub.setStyleSheet("color:#8b949e")
 
-        self._rules = QPlainTextEdit(); self._rules.setFont(_MONO)
+        self._rules = QPlainTextEdit()
+        self._rules.setFont(_MONO)
         self._rules.setPlaceholderText(_EXAMPLE)
         self._rules.setMaximumHeight(140)
 
-        apply_b = QPushButton("Aplicar reglas"); apply_b.clicked.connect(self._apply)
-        self._active = QCheckBox("Interceptar activo"); self._active.toggled.connect(self._toggle)
-        row = QHBoxLayout(); row.addWidget(apply_b); row.addWidget(self._active); row.addStretch(1)
+        apply_b = QPushButton("Aplicar reglas")
+        apply_b.clicked.connect(self._apply)
+        self._active = QCheckBox("Interceptar activo")
+        self._active.toggled.connect(self._toggle)
+        row = QHBoxLayout()
+        row.addWidget(apply_b)
+        row.addWidget(self._active)
+        row.addStretch(1)
 
-        self._log = QPlainTextEdit(readOnly=True); self._log.setFont(_MONO)
+        self._log = QPlainTextEdit(readOnly=True)
+        self._log.setFont(_MONO)
         lay = QVBoxLayout(self)
-        lay.addWidget(sub); lay.addWidget(self._rules); lay.addLayout(row); lay.addWidget(self._log, 1)
+        lay.addWidget(sub)
+        lay.addWidget(self._rules)
+        lay.addLayout(row)
+        lay.addWidget(self._log, 1)
 
         win.intercept_event.connect(self._on_exchange)
 

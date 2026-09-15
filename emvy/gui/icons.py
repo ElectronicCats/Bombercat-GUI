@@ -1,6 +1,7 @@
 """Iconografía SVG (estilo Lucide, trazo) para la GUI — sin emojis, coherente
 con el tema. `icon(name, color, size)` renderiza un SVG inline a `QIcon` en
 memoria (sin ficheros ni recursos externos). Los paths son trazos de 24×24."""
+
 from __future__ import annotations
 
 from PySide6.QtCore import QByteArray, Qt
@@ -30,9 +31,11 @@ _PATHS: dict[str, str] = {
 
 
 def _svg(body: str, color: str, stroke: float = 2.0) -> bytes:
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
-            f'fill="none" stroke="{color}" stroke-width="{stroke}" '
-            f'stroke-linecap="round" stroke-linejoin="round">{body}</svg>').encode()
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+        f'fill="none" stroke="{color}" stroke-width="{stroke}" '
+        f'stroke-linecap="round" stroke-linejoin="round">{body}</svg>'
+    ).encode()
 
 
 def icon(name: str, color: str = MUTED, size: int = 18) -> QIcon:

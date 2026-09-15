@@ -7,6 +7,7 @@
 
 Cada plantilla se puede **editar en caliente** antes de disparar.
 """
+
 from __future__ import annotations
 
 from textual import on
@@ -35,16 +36,22 @@ class FuzzScreen(Vertical):
 
     def compose(self):
         yield Static("Fuzzing de terminales / lectores / POS", classes="title")
-        yield Static("⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
-                     "reacciona un lector real. Solo hardware propio o autorizado.",
-                     classes="fz-sub")
+        yield Static(
+            "⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
+            "reacciona un lector real. Solo hardware propio o autorizado.",
+            classes="fz-sub",
+        )
 
         with VerticalScroll(id="fz-lanes"):
             # -- Banda magnética (magspoof) --------------------------------
             with Vertical(classes="fz-lane", id="fz-lane-track"):
                 with Horizontal(classes="fz-row"):
-                    yield Select([(t.title, t.id) for t in cardfuzz.track_templates()],
-                                 value="baseline", allow_blank=False, id="fz_track_tpl")
+                    yield Select(
+                        [(t.title, t.id) for t in cardfuzz.track_templates()],
+                        value="baseline",
+                        allow_blank=False,
+                        id="fz_track_tpl",
+                    )
                     yield Button("Generar", id="fz_track_gen")
                     yield Button("Enviar", id="fz_track_send", variant="error")
                 yield Static("", id="fz_track_desc", classes="fz-desc")
@@ -56,44 +63,70 @@ class FuzzScreen(Vertical):
             # -- Registro EMV (escritura en tarjeta de prueba) -------------
             with Vertical(classes="fz-lane", id="fz-lane-card"):
                 with Horizontal(classes="fz-row"):
-                    yield Select([(t.title, t.id) for t in cardfuzz.emv_templates()],
-                                 value="baseline", allow_blank=False, id="fz_card_tpl")
+                    yield Select(
+                        [(t.title, t.id) for t in cardfuzz.emv_templates()],
+                        value="baseline",
+                        allow_blank=False,
+                        id="fz_card_tpl",
+                    )
                     yield Button("Generar", id="fz_card_gen")
                 yield Static("", id="fz_card_desc", classes="fz-desc")
                 with Horizontal(classes="fz-row"):
-                    yield Input(placeholder="registro en hex (editable)", id="fz_card_hex")
+                    yield Input(
+                        placeholder="registro en hex (editable)", id="fz_card_hex"
+                    )
                 with Horizontal(classes="fz-row"):
-                    yield Input(placeholder="SFI", id="fz_card_sfi", value="1",
-                                classes="fz-narrow")
-                    yield Input(placeholder="registro", id="fz_card_rec", value="1",
-                                classes="fz-narrow")
+                    yield Input(
+                        placeholder="SFI",
+                        id="fz_card_sfi",
+                        value="1",
+                        classes="fz-narrow",
+                    )
+                    yield Input(
+                        placeholder="registro",
+                        id="fz_card_rec",
+                        value="1",
+                        classes="fz-narrow",
+                    )
                     yield Button("Escribir", id="fz_card_write", variant="error")
 
             # -- NDEF (emular tag NFC vía BomberCat) -----------------------
             with Vertical(classes="fz-lane", id="fz-lane-ndef"):
                 with Horizontal(classes="fz-row"):
-                    yield Select([(t.title, t.id) for t in cardfuzz.ndef_templates()],
-                                 value="baseline", allow_blank=False, id="fz_ndef_tpl")
+                    yield Select(
+                        [(t.title, t.id) for t in cardfuzz.ndef_templates()],
+                        value="baseline",
+                        allow_blank=False,
+                        id="fz_ndef_tpl",
+                    )
                     yield Button("Generar", id="fz_ndef_gen")
                     yield Button("Emular (NFC)", id="fz_ndef_emit", variant="error")
                     yield Button("Detener", id="fz_ndef_stop")
                     yield Button("Reboot", id="fz_ndef_reboot", variant="warning")
                 yield Static("", id="fz_ndef_desc", classes="fz-desc")
                 with Horizontal(classes="fz-row"):
-                    yield Input(placeholder="mensaje NDEF en hex (editable)", id="fz_ndef_hex")
-                yield Static("Emular una TARJETA EMV (perfila/fuzzea un terminal de pago: "
-                             "responde PPSE/SELECT/GPO y muestra qué pide — TTQ/monto/país…):",
-                             classes="fz-desc")
+                    yield Input(
+                        placeholder="mensaje NDEF en hex (editable)", id="fz_ndef_hex"
+                    )
+                yield Static(
+                    "Emular una TARJETA EMV (perfila/fuzzea un terminal de pago: "
+                    "responde PPSE/SELECT/GPO y muestra qué pide — TTQ/monto/país…):",
+                    classes="fz-desc",
+                )
                 with Horizontal(classes="fz-row"):
-                    yield Button("Emular tarjeta EMV", id="fz_emv_emit", variant="error")
+                    yield Button(
+                        "Emular tarjeta EMV", id="fz_emv_emit", variant="error"
+                    )
 
         yield Static("SALIDA", classes="fz-sub")
         yield RichLog(id="fuzz_log", markup=True, wrap=True)
 
     def on_mount(self):
-        for lane, title in (("#fz-lane-track", "Banda magnética · magspoof"),
-                            ("#fz-lane-card", "Registro EMV · escribir en tarjeta"),
-                            ("#fz-lane-ndef", "NDEF · emular tag NFC")):
+        for lane, title in (
+            ("#fz-lane-track", "Banda magnética · magspoof"),
+            ("#fz-lane-card", "Registro EMV · escribir en tarjeta"),
+            ("#fz-lane-ndef", "NDEF · emular tag NFC"),
+        ):
             try:
                 self.query_one(lane).border_title = title
             except Exception:
@@ -169,7 +202,7 @@ class FuzzScreen(Vertical):
     def _ndef_emit(self):
         hexval = self.query_one("#fz_ndef_hex", Input).value.strip()
         try:
-            from_hex(hexval)                 # valida (vacío también vale)
+            from_hex(hexval)  # valida (vacío también vale)
         except ValueError:
             self.app.notify("Mensaje NDEF hex inválido.", severity="error")
             return
@@ -205,19 +238,19 @@ class FuzzScreen(Vertical):
         # del lector de un vistazo: lo que pide (RX) vs. lo que respondemos (TX).
         stripped = line.lstrip()
         if line.startswith("EMU:MSG-SENT"):
-            color = "bold green"        # mensaje NDEF completo entregado
+            color = "bold green"  # mensaje NDEF completo entregado
         elif stripped.startswith("PDOL") or stripped.startswith("CDOL1"):
-            color = "bold green"        # datos del terminal decodificados (EMV)
+            color = "bold green"  # datos del terminal decodificados (EMV)
         elif line.startswith("EMU:RX GPO") or line.startswith("EMU:RX GENERATE-AC"):
-            color = "bold yellow"       # pasos clave del flujo EMV
+            color = "bold yellow"  # pasos clave del flujo EMV
         elif line.startswith("EMU:RX"):
-            color = "cyan"              # el lector pide algo (SELECT/READ/…)
+            color = "cyan"  # el lector pide algo (SELECT/READ/…)
         elif line.startswith("EMU:TX"):
-            color = "magenta"           # nuestra respuesta
+            color = "magenta"  # nuestra respuesta
         elif line.startswith("EMU:DONE") or line.startswith("ERR"):
             color = "yellow"
         else:
-            color = "blue"              # EMU:START, banners (#), etc.
+            color = "blue"  # EMU:START, banners (#), etc.
         self.log(f"[{color}]← {line}[/]")
 
     def log_write(self, op: str, resp) -> None:

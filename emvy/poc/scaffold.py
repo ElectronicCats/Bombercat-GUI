@@ -1,4 +1,5 @@
 """Generación de plantillas de plugin de PoC (`emvy poc new`)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -41,8 +42,9 @@ def run(ctx):
 '''
 
 
-def scaffold_poc(pocs_dir: Path, poc_id: str, title: str = "",
-                 template: str | None = None) -> Path:
+def scaffold_poc(
+    pocs_dir: Path, poc_id: str, title: str = "", template: str | None = None
+) -> Path:
     """Crea `<pocs_dir>/<id>.py`. Con `template`, usa una plantilla genérica
     (ver `emvy.poc.templates`); si no, la plantilla de ejemplo por defecto."""
     pocs_dir.mkdir(parents=True, exist_ok=True)
@@ -52,6 +54,7 @@ def scaffold_poc(pocs_dir: Path, poc_id: str, title: str = "",
         raise FileExistsError(f"Ya existe {path}")
     if template:
         from .templates import render
+
         content = render(template, poc_id)
     else:
         content = TEMPLATE.format(id=poc_id, title=title or poc_id)

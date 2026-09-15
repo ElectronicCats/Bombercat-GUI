@@ -1,9 +1,17 @@
 """Panel Lectores (GUI): descubre dispositivos de todos los backends y conecta."""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QAbstractItemView, QHBoxLayout, QHeaderView, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...readers import registry
@@ -15,8 +23,10 @@ class ReadersPanel(QWidget):
         self.win = win
         self._devices = []
 
-        sub = QLabel("Descubre los lectores de todos los backends y conecta uno "
-                     "(selecciona una fila y pulsa Conectar).")
+        sub = QLabel(
+            "Descubre los lectores de todos los backends y conecta uno "
+            "(selecciona una fila y pulsa Conectar)."
+        )
         sub.setWordWrap(True)
         sub.setStyleSheet("color:#8b949e")
 
@@ -32,11 +42,16 @@ class ReadersPanel(QWidget):
         self._table.verticalHeader().setVisible(False)
         self._table.doubleClicked.connect(lambda *_: self._connect())
 
-        refresh = QPushButton("Refrescar"); refresh.clicked.connect(self.reload)
-        connect = QPushButton("Conectar"); connect.clicked.connect(self._connect)
-        disc = QPushButton("Desconectar"); disc.clicked.connect(self.win.disconnect_reader)
+        refresh = QPushButton("Refrescar")
+        refresh.clicked.connect(self.reload)
+        connect = QPushButton("Conectar")
+        connect.clicked.connect(self._connect)
+        disc = QPushButton("Desconectar")
+        disc.clicked.connect(self.win.disconnect_reader)
         row = QHBoxLayout()
-        row.addWidget(refresh); row.addWidget(connect); row.addWidget(disc)
+        row.addWidget(refresh)
+        row.addWidget(connect)
+        row.addWidget(disc)
         row.addStretch(1)
 
         lay = QVBoxLayout(self)
@@ -49,8 +64,10 @@ class ReadersPanel(QWidget):
 
     def reload(self) -> None:
         backends = registry.available_backends()
-        self._backends.setText("Backends:  " + "   ".join(
-            f"{n}={'✓' if ok else '✗'}" for n, ok in backends.items()))
+        self._backends.setText(
+            "Backends:  "
+            + "   ".join(f"{n}={'✓' if ok else '✗'}" for n, ok in backends.items())
+        )
         self._devices = registry.list_all_devices()
         self._table.setRowCount(len(self._devices))
         for i, d in enumerate(self._devices):

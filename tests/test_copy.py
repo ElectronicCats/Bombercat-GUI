@@ -1,10 +1,11 @@
 """Copia con Ctrl+C en toda la TUI:
-  - widgets de texto (Static/RichLog/Input): selección con ratón + Ctrl+C
-    (nativo de Textual; se verifica el mecanismo con un arrastre simulado);
-  - `CopyableDataTable`: Ctrl+C copia la fila resaltada;
-  - árbol del Explorador: Ctrl+C copia el valor del nodo resaltado, cediendo a
-    la selección de texto cuando la hay.
+- widgets de texto (Static/RichLog/Input): selección con ratón + Ctrl+C
+  (nativo de Textual; se verifica el mecanismo con un arrastre simulado);
+- `CopyableDataTable`: Ctrl+C copia la fila resaltada;
+- árbol del Explorador: Ctrl+C copia el valor del nodo resaltado, cediendo a
+  la selección de texto cuando la hay.
 """
+
 import asyncio
 
 import pytest
@@ -24,11 +25,23 @@ def xdg(tmp_path, monkeypatch):
 
 def _dump():
     from emvy.session.model import CardDump
-    return CardDump(applications=[{
-        "aid": "A0000000031010", "scheme": "Visa", "source": "ppse", "label": "VISA",
-        "aip": "2000", "afl": "08010100", "cardholder": {},
-        "records": [{"sfi": 1, "record": 1, "hex": "70059F36020031"}], "get_data": {}}],
-        blobs=[])
+
+    return CardDump(
+        applications=[
+            {
+                "aid": "A0000000031010",
+                "scheme": "Visa",
+                "source": "ppse",
+                "label": "VISA",
+                "aip": "2000",
+                "afl": "08010100",
+                "cardholder": {},
+                "records": [{"sfi": 1, "record": 1, "hex": "70059F36020031"}],
+                "get_data": {},
+            }
+        ],
+        blobs=[],
+    )
 
 
 # --- selección de texto nativa (Static) -------------------------------------
@@ -47,8 +60,9 @@ def test_native_text_selection_and_copy():
             s = app.query_one("#s", Static)
             await pilot.mouse_down(s, offset=(0, 0))
             for x in range(1, 22, 3):
-                await pilot._post_mouse_events([events.MouseMove], widget=s,
-                                               offset=(x, 0), button=1)
+                await pilot._post_mouse_events(
+                    [events.MouseMove], widget=s, offset=(x, 0), button=1
+                )
             await pilot.mouse_up(s, offset=(21, 0))
             await pilot.pause()
             assert app.screen.get_selected_text().startswith("PAN 4111")
@@ -116,8 +130,13 @@ def test_tree_node_copy(xdg):
             exp = app.query_one("#screen-explorer")
             exp.show_dump(_dump())
             app.query_one("#exp_tree").focus()
-            exp._sel = {"tag": "9F36", "value": "DEADBEEF", "ascii": "",
-                        "is_hex": True, "suggest": "9F36"}
+            exp._sel = {
+                "tag": "9F36",
+                "value": "DEADBEEF",
+                "ascii": "",
+                "is_hex": True,
+                "suggest": "9F36",
+            }
             app._clipboard = None
             await pilot.press("ctrl+c")
             await pilot.pause()
@@ -151,8 +170,13 @@ def test_tree_copy_defers_to_text_selection(xdg, monkeypatch):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             exp = app.query_one("#screen-explorer")
-            exp._sel = {"tag": "9F36", "value": "DEADBEEF", "ascii": "",
-                        "is_hex": True, "suggest": "9F36"}
+            exp._sel = {
+                "tag": "9F36",
+                "value": "DEADBEEF",
+                "ascii": "",
+                "is_hex": True,
+                "suggest": "9F36",
+            }
             # simula una selección de texto activa
             monkeypatch.setattr(exp.screen, "get_selected_text", lambda: "seleccion")
             with pytest.raises(SkipAction):

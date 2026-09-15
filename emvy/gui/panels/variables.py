@@ -1,9 +1,20 @@
 """Panel Variables (GUI): perfil de terminal EMV + variables libres del proyecto."""
+
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QComboBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from ...project import env as envmod
@@ -17,7 +28,8 @@ class VariablesPanel(QWidget):
         self.win = win
         self._rows: list[str] = []
 
-        self._hint = QLabel(""); self._hint.setStyleSheet("color:#8b949e")
+        self._hint = QLabel("")
+        self._hint.setStyleSheet("color:#8b949e")
 
         self._table = QTableWidget(0, 4)
         self._table.setHorizontalHeaderLabels(["tag", "nombre", "valor", "tipo"])
@@ -27,43 +39,64 @@ class VariablesPanel(QWidget):
         self._table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._table.verticalHeader().setVisible(False)
 
-        self._name = QLineEdit(); self._name.setPlaceholderText("nombre / alias / tag (p.ej. amount, 9F02)")
-        self._value = QLineEdit(); self._value.setPlaceholderText("valor (texto para an/ans, hex para el resto)")
+        self._name = QLineEdit()
+        self._name.setPlaceholderText("nombre / alias / tag (p.ej. amount, 9F02)")
+        self._value = QLineEdit()
+        self._value.setPlaceholderText("valor (texto para an/ans, hex para el resto)")
         self._user = QCheckBox("variable libre (no terminal)")
-        form = QHBoxLayout(); form.addWidget(self._name); form.addWidget(self._value)
+        form = QHBoxLayout()
+        form.addWidget(self._name)
+        form.addWidget(self._value)
 
-        setb = QPushButton("Guardar"); setb.clicked.connect(self._set)
-        delb = QPushButton("Borrar selección"); delb.clicked.connect(self._del)
-        rel = QPushButton("Recargar"); rel.clicked.connect(self.reload)
+        setb = QPushButton("Guardar")
+        setb.clicked.connect(self._set)
+        delb = QPushButton("Borrar selección")
+        delb.clicked.connect(self._del)
+        rel = QPushButton("Recargar")
+        rel.clicked.connect(self.reload)
         actions = QHBoxLayout()
-        actions.addWidget(self._user); actions.addWidget(setb)
-        actions.addWidget(delb); actions.addWidget(rel); actions.addStretch(1)
+        actions.addWidget(self._user)
+        actions.addWidget(setb)
+        actions.addWidget(delb)
+        actions.addWidget(rel)
+        actions.addStretch(1)
 
         self._profile = QComboBox()
         self._profile.addItem("perfil de terminal preconfigurado…", None)
         for p in profilesmod.list_profiles():
             self._profile.addItem(p.title, p.id)
         self._profile.currentIndexChanged.connect(self._profile_changed)
-        apply_b = QPushButton("Aplicar perfil"); apply_b.clicked.connect(self._apply_profile)
-        self._profile_desc = QLabel(""); self._profile_desc.setStyleSheet("color:#8b949e")
-        prow = QHBoxLayout(); prow.addWidget(self._profile, 1); prow.addWidget(apply_b)
+        apply_b = QPushButton("Aplicar perfil")
+        apply_b.clicked.connect(self._apply_profile)
+        self._profile_desc = QLabel("")
+        self._profile_desc.setStyleSheet("color:#8b949e")
+        prow = QHBoxLayout()
+        prow.addWidget(self._profile, 1)
+        prow.addWidget(apply_b)
 
         lay = QVBoxLayout(self)
         lay.addWidget(self._hint)
         lay.addWidget(self._table, 1)
-        lay.addLayout(form); lay.addLayout(actions)
-        lay.addLayout(prow); lay.addWidget(self._profile_desc)
+        lay.addLayout(form)
+        lay.addLayout(actions)
+        lay.addLayout(prow)
+        lay.addWidget(self._profile_desc)
         self.reload()
 
     def reload(self) -> None:
         proj = store.active_project()
         if not proj:
-            self._hint.setText("No hay proyecto activo. Créalo/actívalo en la pestaña Proyectos.")
-            self._table.setRowCount(0); self._rows = []
+            self._hint.setText(
+                "No hay proyecto activo. Créalo/actívalo en la pestaña Proyectos."
+            )
+            self._table.setRowCount(0)
+            self._rows = []
             return
         self._hint.setText(f"Proyecto activo: {proj.name}")
         variables = store.load_project_variables(proj)
-        vs = sorted(variables, key=lambda x: (x.kind != "terminal", x.tag or "", x.name))
+        vs = sorted(
+            variables, key=lambda x: (x.kind != "terminal", x.tag or "", x.name)
+        )
         self._rows = [v.name for v in vs]
         self._table.setRowCount(len(vs))
         for i, v in enumerate(vs):
@@ -85,18 +118,21 @@ class VariablesPanel(QWidget):
             return
         kind = "user" if self._user.isChecked() else None
         try:
-            variables = envmod.set_var(store.load_project_variables(proj), name,
-                                       self._value.text(), kind=kind)
+            variables = envmod.set_var(
+                store.load_project_variables(proj), name, self._value.text(), kind=kind
+            )
         except Exception as e:  # noqa: BLE001
             self.win.notify.emit(str(e))
             return
         store.save_project_variables(proj, variables)
-        self._name.clear(); self._value.clear()
+        self._name.clear()
+        self._value.clear()
         self.reload()
         self.win.notify.emit(f"Variable {name!r} guardada.")
 
     def _del(self) -> None:
-        proj = store.active_project(); name = self._selected()
+        proj = store.active_project()
+        name = self._selected()
         if not (proj and name):
             self.win.notify.emit("Selecciona una variable.")
             return

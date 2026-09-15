@@ -10,6 +10,7 @@ lector conectado, en dos niveles:
 
 Vive embebido en el Explorador (dentro de un `Collapsible`, que ya aporta su
 propio título) para tener a la vista, mientras se captura, ambos niveles."""
+
 from __future__ import annotations
 
 from textual import on
@@ -23,11 +24,16 @@ from ...core.hexutil import to_hex
 class ConsoleScreen(Vertical):
     def compose(self):
         with Horizontal(classes="row"):
-            yield Input(placeholder="APDU hex (p.ej. 00A404000E325041592E5359532E4444463031)", id="con_apdu")
+            yield Input(
+                placeholder="APDU hex (p.ej. 00A404000E325041592E5359532E4444463031)",
+                id="con_apdu",
+            )
             yield Button("Enviar", id="con_send", variant="success")
             yield Button("Ver traza", id="con_trace")
             yield Button("Limpiar", id="con_clear")
-        yield RichLog(id="con_log", markup=True, highlight=False, wrap=True, max_lines=1000)
+        yield RichLog(
+            id="con_log", markup=True, highlight=False, wrap=True, max_lines=1000
+        )
 
     @on(Button.Pressed, "#con_send")
     @on(Input.Submitted, "#con_apdu")
@@ -61,7 +67,9 @@ class ConsoleScreen(Vertical):
         log = self.query_one("#con_log", RichLog)
         color = "green" if e.sw == "9000" else "red"
         log.write(f"[dim]›[/] [cyan]>>[/] {e.command}")
-        log.write(f"[dim]›[/] [{color}]<<[/] {e.response or '(vacío)'}  [{color}][{e.sw}][/]")
+        log.write(
+            f"[dim]›[/] [{color}]<<[/] {e.response or '(vacío)'}  [{color}][{e.sw}][/]"
+        )
 
     # -- transporte en vivo: línea serie cruda (BomberCat) por debajo del APDU.
     # Se muestra con un estilo distinto (etiqueta ⇢/⇠ + transporte tenue) para
@@ -87,8 +95,10 @@ class ConsoleScreen(Vertical):
         log = self.query_one("#con_log", RichLog)
         log.write(f"[cyan]>>[/] {hexstr.upper()}")
         color = "green" if resp.ok else "red"
-        log.write(f"[{color}]<<[/] {to_hex(resp.data, sep=' ') or '(vacío)'}  "
-                  f"[{color}][{resp.sw_hex}][/] {resp.sw_str()}")
+        log.write(
+            f"[{color}]<<[/] {to_hex(resp.data, sep=' ') or '(vacío)'}  "
+            f"[{color}][{resp.sw_hex}][/] {resp.sw_str()}"
+        )
         if resp.data:
             parsed = tlv.parse(resp.data)
             if parsed:

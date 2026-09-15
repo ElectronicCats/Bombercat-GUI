@@ -5,6 +5,7 @@ capturas). Una **variable** es o bien un parámetro del *perfil de terminal* EMV
 (kind="terminal", mapeada a un tag que alimenta los DOL) o una variable libre
 clave-valor del usuario (kind="user").
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -15,15 +16,20 @@ VariableKind = str  # "terminal" | "user"
 
 @dataclass(frozen=True)
 class Variable:
-    name: str                      # identificador (alias, tag EMV o clave libre)
-    value: str                     # texto (para an/ans) o hex (para n/b/cn)
-    kind: VariableKind = "user"    # "terminal" | "user"
-    tag: str | None = None         # tag EMV asociado (solo kind="terminal")
+    name: str  # identificador (alias, tag EMV o clave libre)
+    value: str  # texto (para an/ans) o hex (para n/b/cn)
+    kind: VariableKind = "user"  # "terminal" | "user"
+    tag: str | None = None  # tag EMV asociado (solo kind="terminal")
     description: str = ""
 
     def to_dict(self) -> dict:
-        return {"name": self.name, "value": self.value, "kind": self.kind,
-                "tag": self.tag, "description": self.description}
+        return {
+            "name": self.name,
+            "value": self.value,
+            "kind": self.kind,
+            "tag": self.tag,
+            "description": self.description,
+        }
 
     @classmethod
     def from_dict(cls, d: dict) -> "Variable":
@@ -41,8 +47,8 @@ class Project:
     name: str
     path: Path
     description: str = ""
-    created: str = ""              # fecha ISO
-    reader: str = ""               # lector preferido (índice/subcadena/backend)
+    created: str = ""  # fecha ISO
+    reader: str = ""  # lector preferido (índice/subcadena/backend)
 
     # -- rutas derivadas ----------------------------------------------------
     @property
@@ -70,5 +76,9 @@ class Project:
         return self.path / "logs"
 
     def manifest(self) -> dict:
-        return {"name": self.name, "description": self.description,
-                "created": self.created, "reader": self.reader}
+        return {
+            "name": self.name,
+            "description": self.description,
+            "created": self.created,
+            "reader": self.reader,
+        }

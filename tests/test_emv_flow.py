@@ -1,4 +1,5 @@
 """Tests del flujo EMV funcional con una tarjeta simulada (sin hardware)."""
+
 from fakecard import AID, FLAG, build_fake_card
 
 from emvy.core import emv
@@ -46,14 +47,21 @@ def test_gpo_format2_qvsdc_extracts_cardholder():
     DENTRO del GPO (template 77), sin registros. _parse_gpo debe guardarlos en
     gpo_tlvs para que el titular/track2 se extraigan igual."""
     from emvy.session.model import app_to_dict
+
     gpo = from_hex(
-        "77" "3A"
-        "8202" "2000"                                   # AIP
-        "5713" "4189143370041827D29092211000002600000F"  # Track2 equiv
-        "5F2403" "290930"                                # expiry YYMMDD
-        "5F200C" "504159574156452F56495341")            # nombre PAYWAVE/VISA
+        "77"
+        "3A"
+        "8202"
+        "2000"  # AIP
+        "5713"
+        "4189143370041827D29092211000002600000F"  # Track2 equiv
+        "5F2403"
+        "290930"  # expiry YYMMDD
+        "5F200C"
+        "504159574156452F56495341"
+    )  # nombre PAYWAVE/VISA
     app = emv._parse_gpo(gpo, emv.Application(aid="A0000000031010"))
-    assert app.aip == b"\x20\x00" and not app.afl       # AFL vacío (típico)
+    assert app.aip == b"\x20\x00" and not app.afl  # AFL vacío (típico)
     ch = emv.extract_cardholder(app.all_tlvs())
     assert ch["pan"] == "4189143370041827"
     assert ch["track2"].upper().startswith("4189143370041827")

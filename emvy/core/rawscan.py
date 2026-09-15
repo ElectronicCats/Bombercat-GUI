@@ -6,6 +6,7 @@ lista amplia de AIDs (de pago y no-pago), barre READ RECORD por todos los SFI,
 barre GET DATA de tags comunes e intenta READ BINARY de ficheros transparentes.
 Todo tolerante a errores y agnóstico de la estructura: devuelve bytes crudos.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -17,8 +18,8 @@ from .aids import KNOWN_AIDS, PPSE, PSE, RIDS
 from .apdu import APDU, CLA_ISO, INS_READ_BINARY, INS_SELECT, Transceiver
 from .hexutil import to_hex
 
-NDEF_AID = bytes.fromhex("D2760000850101")   # NFC Forum Type 4 Tag Application
-NDEF_CC_FILE_ID = bytes.fromhex("E103")      # Capability Container
+NDEF_AID = bytes.fromhex("D2760000850101")  # NFC Forum Type 4 Tag Application
+NDEF_CC_FILE_ID = bytes.fromhex("E103")  # Capability Container
 
 # AIDs no-EMV frecuentes (además de los de pago en KNOWN_AIDS): identidad,
 # criptografía, transporte, SIM, GlobalPlatform, NDEF…
@@ -42,19 +43,29 @@ EXTRA_AIDS: dict[str, str] = {
 
 @dataclass
 class RawScan:
-    selects: list[tuple[str, str]] = field(default_factory=list)   # (etiqueta, resp hex)
+    selects: list[tuple[str, str]] = field(default_factory=list)  # (etiqueta, resp hex)
     records: list[tuple[int, int, str]] = field(default_factory=list)  # (sfi, rec, hex)
-    get_data: dict[str, str] = field(default_factory=dict)          # tag -> hex
-    binaries: list[tuple[str, str]] = field(default_factory=list)   # (etiqueta, hex)
+    get_data: dict[str, str] = field(default_factory=dict)  # tag -> hex
+    binaries: list[tuple[str, str]] = field(default_factory=list)  # (etiqueta, hex)
 
     def is_empty(self) -> bool:
         return not (self.selects or self.records or self.get_data or self.binaries)
 
     def blobs(self) -> list[dict]:
-        out = [{"source": f"RAW:SELECT {label}", "hex": hx} for label, hx in self.selects]
-        out += [{"source": f"RAW:SFI{sfi}/REC{rec}", "hex": hx} for sfi, rec, hx in self.records]
-        out += [{"source": f"RAW:GETDATA {tag}", "hex": hx} for tag, hx in self.get_data.items()]
-        out += [{"source": f"RAW:BINARY {label}", "hex": hx} for label, hx in self.binaries]
+        out = [
+            {"source": f"RAW:SELECT {label}", "hex": hx} for label, hx in self.selects
+        ]
+        out += [
+            {"source": f"RAW:SFI{sfi}/REC{rec}", "hex": hx}
+            for sfi, rec, hx in self.records
+        ]
+        out += [
+            {"source": f"RAW:GETDATA {tag}", "hex": hx}
+            for tag, hx in self.get_data.items()
+        ]
+        out += [
+            {"source": f"RAW:BINARY {label}", "hex": hx} for label, hx in self.binaries
+        ]
         return out
 
 
@@ -74,10 +85,19 @@ def _read_binary(send: Transceiver, p1: int, p2: int = 0x00):
         return None
 
 
-def raw_scan(send: Transceiver, *, max_sfi: int = 31, max_rec: int = 16,
-             do_aids: bool = True, do_records: bool = True, do_getdata: bool = True,
-             do_binary: bool = True, progress=None) -> RawScan:
+def raw_scan(
+    send: Transceiver,
+    *,
+    max_sfi: int = 31,
+    max_rec: int = 16,
+    do_aids: bool = True,
+    do_records: bool = True,
+    do_getdata: bool = True,
+    do_binary: bool = True,
+    progress=None,
+) -> RawScan:
     """Lee de forma cruda todo lo que responda la tarjeta. Devuelve un `RawScan`."""
+
     def log(msg: str):
         if progress:
             progress(msg)
@@ -99,10 +119,10 @@ def raw_scan(send: Transceiver, *, max_sfi: int = 31, max_rec: int = 16,
     # 3) READ BINARY de ficheros transparentes (EF por SFI corto y EF actual).
     if do_binary:
         log("crudo: intentando READ BINARY...")
-        resp = _read_binary(send, 0x00, 0x00)          # EF seleccionado, offset 0
+        resp = _read_binary(send, 0x00, 0x00)  # EF seleccionado, offset 0
         if _positive(resp) and resp.data:
             scan.binaries.append(("EF-actual", to_hex(resp.data)))
-        for sfi in range(1, 31):                        # EF por identificador corto
+        for sfi in range(1, 31):  # EF por identificador corto
             resp = _read_binary(send, 0x80 | sfi, 0x00)
             if _positive(resp) and resp.data:
                 scan.binaries.append((f"sfi{sfi}", to_hex(resp.data)))
@@ -113,7 +133,7 @@ def raw_scan(send: Transceiver, *, max_sfi: int = 31, max_rec: int = 16,
     #    es justo lo que este barrido cubre.
     if do_aids:
         log("crudo: forzando SELECT (RID parcial + AIDs de pago y no-pago)...")
-        seen_fci: set[str] = set()          # dedup por FCI recuperado
+        seen_fci: set[str] = set()  # dedup por FCI recuperado
 
         def record_select(label: str, resp) -> bool:
             hx = to_hex(resp.data)
@@ -141,7 +161,9 @@ def raw_scan(send: Transceiver, *, max_sfi: int = 31, max_rec: int = 16,
                     resp = send(APDU(CLA_ISO, INS_SELECT, 0x04, p2, rid, le=0x00))
                 except Exception:
                     break
-                if not _positive(resp) or not record_select(f"{rid_hex} (RID {scheme})", resp):
+                if not _positive(resp) or not record_select(
+                    f"{rid_hex} (RID {scheme})", resp
+                ):
                     break
                 p2 = 0x02
 
@@ -194,7 +216,7 @@ def read_type4_ndef(send: Transceiver) -> dict | None:
     while i + 1 < len(ccb):
         t, length = ccb[i], ccb[i + 1]
         if t == 0x04 and length >= 6:
-            file_id = ccb[i + 2:i + 4]
+            file_id = ccb[i + 2 : i + 4]
             break
         i += 2 + length
     if not file_id:

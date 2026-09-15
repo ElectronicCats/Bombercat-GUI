@@ -1,4 +1,5 @@
 """Tests del parseo NDEF puro (core.ndef): registros Texto/URI y TLV contenedor."""
+
 from emvy.core import ndef
 
 

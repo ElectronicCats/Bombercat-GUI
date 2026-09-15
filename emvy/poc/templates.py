@@ -11,6 +11,7 @@ Variables reconocidas (todas opcionales salvo destino):
   terminal_id/tid, merchant_id/mid, mcc, currency(hex), country(hex),
   pos_entry, ttq, cvm_results, amount(centavos)
 """
+
 from __future__ import annotations
 
 _SIGNON = '''\
@@ -110,5 +111,7 @@ def list_templates() -> list[str]:
 
 def render(name: str, poc_id: str) -> str:
     if name not in TEMPLATES:
-        raise KeyError(f"plantilla desconocida: {name!r}. Disponibles: {', '.join(list_templates())}")
+        raise KeyError(
+            f"plantilla desconocida: {name!r}. Disponibles: {', '.join(list_templates())}"
+        )
     return TEMPLATES[name].format(id=poc_id)

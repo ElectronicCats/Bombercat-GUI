@@ -4,6 +4,7 @@ Python al centro y un panel de salida (resultados) abajo.
 
 Seleccionar un archivo/PoC en el explorador **abre su código** en el editor.
 """
+
 from __future__ import annotations
 
 from textual import on
@@ -62,15 +63,21 @@ class PocScreen(Vertical):
 
         with Vertical(id="poc_toolbar"):
             with Horizontal():
-                yield Select(_CARD_SOURCES, value="session", allow_blank=False, id="poc_cardsrc")
+                yield Select(
+                    _CARD_SOURCES, value="session", allow_blank=False, id="poc_cardsrc"
+                )
                 yield Select([], prompt="captura…", allow_blank=True, id="poc_capfile")
                 yield Checkbox("dry-run", value=True, id="poc_dry")
                 yield Checkbox("allow-write", id="poc_write")
                 yield Button("▶ Ejecutar", id="poc_run", variant="success")
             with Horizontal():
                 yield Input(placeholder="id del nuevo PoC", id="poc_newid")
-                yield Select([(t, t) for t in _templates()], prompt="plantilla…",
-                             allow_blank=True, id="poc_template")
+                yield Select(
+                    [(t, t) for t in _templates()],
+                    prompt="plantilla…",
+                    allow_blank=True,
+                    id="poc_template",
+                )
                 yield Button("Nuevo", id="poc_new", variant="primary")
                 yield Button("Guardar", id="poc_save", variant="success")
                 yield Button("Eliminar", id="poc_del", variant="error")
@@ -126,7 +133,11 @@ class PocScreen(Vertical):
         for pid in loaded:
             self._file_pocs.setdefault(pocmod.source_file(pid) or "?", []).append(pid)
 
-        files = sorted(f.name for f in proj.pocs_dir.glob("*.py")) if proj.pocs_dir.exists() else []
+        files = (
+            sorted(f.name for f in proj.pocs_dir.glob("*.py"))
+            if proj.pocs_dir.exists()
+            else []
+        )
         for fname in files:
             self._files.append(fname)
             lv.append(ListItem(Label(self._file_label(fname))))
@@ -138,7 +149,9 @@ class PocScreen(Vertical):
             msg += f"  [red]({len(errors)} con error de carga)[/]"
         hint.update(msg)
 
-        self._set_options("#poc_capfile", [(c.name, c.name) for c in store.list_captures(proj)])
+        self._set_options(
+            "#poc_capfile", [(c.name, c.name) for c in store.list_captures(proj)]
+        )
         self.query_one("#poc_ref", Static).update(self._reference(proj))
 
     def _file_label(self, fname: str) -> str:
@@ -158,9 +171,13 @@ class PocScreen(Vertical):
             names = []
         dev = getattr(self.app, "reader_device", None)
         reader = dev.name if dev else "ninguno"
-        varlist = ", ".join(names[:16]) + (" …" if len(names) > 16 else "") or "(ninguna)"
-        return ("[b]ctx[/]: var/require · card · http() · save_evidence · finding/result\n"
-                f"[b]vars[/]: {varlist}\n[b]lector[/]: {reader}")
+        varlist = (
+            ", ".join(names[:16]) + (" …" if len(names) > 16 else "") or "(ninguna)"
+        )
+        return (
+            "[b]ctx[/]: var/require · card · http() · save_evidence · finding/result\n"
+            f"[b]vars[/]: {varlist}\n[b]lector[/]: {reader}"
+        )
 
     def _set_options(self, sel_id: str, options):
         self.query_one(sel_id, Select).set_options(options)
@@ -189,15 +206,21 @@ class PocScreen(Vertical):
         self._open_file = filename
         pocs = self._file_pocs.get(filename, [])
         self._run_target = pocs[0] if pocs else None
-        tgt = f" · ejecutará [b]{self._run_target}[/]" if self._run_target else " · [red]sin PoC cargable[/]"
+        tgt = (
+            f" · ejecutará [b]{self._run_target}[/]"
+            if self._run_target
+            else " · [red]sin PoC cargable[/]"
+        )
         self.query_one("#poc_hint", Label).update(f"Editando [b]{filename}[/]{tgt}")
 
     # -- ejecutar -----------------------------------------------------------
     @on(Button.Pressed, "#poc_run")
     def _run(self):
         if not self._run_target:
-            self.app.notify("Abre en el explorador un archivo con un PoC cargable.",
-                            severity="warning")
+            self.app.notify(
+                "Abre en el explorador un archivo con un PoC cargable.",
+                severity="warning",
+            )
             return
         source = self.query_one("#poc_cardsrc", Select).value
         capfile = self.query_one("#poc_capfile", Select).value
@@ -220,7 +243,9 @@ class PocScreen(Vertical):
     def _proj(self):
         proj = store.active_project()
         if not proj:
-            self.app.notify("No hay proyecto activo (pestaña Proyectos).", severity="warning")
+            self.app.notify(
+                "No hay proyecto activo (pestaña Proyectos).", severity="warning"
+            )
         return proj
 
     @on(Button.Pressed, "#poc_new")
@@ -233,8 +258,11 @@ class PocScreen(Vertical):
             self.app.notify("Indica un id para el nuevo PoC.", severity="warning")
             return
         from textual.widgets import Select
+
         val = self.query_one("#poc_template", Select).value
-        tmpl = val if isinstance(val, str) else None    # el sentinela "sin selección" no es str
+        tmpl = (
+            val if isinstance(val, str) else None
+        )  # el sentinela "sin selección" no es str
         try:
             path = scaffold_poc(proj.pocs_dir, pid, template=tmpl)
         except FileExistsError:
@@ -254,12 +282,15 @@ class PocScreen(Vertical):
         if not proj:
             return
         if not self._open_file:
-            self.app.notify("No hay archivo abierto (usa Nuevo o selecciona uno).",
-                            severity="warning")
+            self.app.notify(
+                "No hay archivo abierto (usa Nuevo o selecciona uno).",
+                severity="warning",
+            )
             return
         try:
             (proj.pocs_dir / self._open_file).write_text(
-                self.query_one("#poc_editor", TextArea).text)
+                self.query_one("#poc_editor", TextArea).text
+            )
         except Exception as e:
             self.app.notify(f"No se pudo guardar: {e}", severity="error")
             return
@@ -291,14 +322,20 @@ class PocScreen(Vertical):
     # -- llamado por la app tras ejecutar ----------------------------------
     def log_result(self, meta, result, run_dir) -> None:
         log = self.query_one("#poc_log", RichLog)
-        color = {"vulnerable": "red", "error": "red", "passed": "green",
-                 "not_vulnerable": "green"}.get(str(result.status), "cyan")
+        color = {
+            "vulnerable": "red",
+            "error": "red",
+            "passed": "green",
+            "not_vulnerable": "green",
+        }.get(str(result.status), "cyan")
         log.write(f"[b {color}][{result.status}][/] [b]{meta.title}[/] ({meta.id})")
         if result.summary:
             log.write(f"  {result.summary}")
         for f in result.findings:
-            log.write(f"  · [yellow][{f.severity}][/] {f.title}"
-                      + (f" — {f.detail}" if f.detail else ""))
+            log.write(
+                f"  · [yellow][{f.severity}][/] {f.title}"
+                + (f" — {f.detail}" if f.detail else "")
+            )
         if result.error:
             log.write(f"  [red]error: {result.error}[/]")
         log.write(f"  [dim]run: {run_dir}[/]")

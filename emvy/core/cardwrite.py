@@ -6,6 +6,7 @@ traduce el status word.
 suele requerir un canal seguro/autenticación (SW 6982/6985). Usar solo con
 tarjetas propias/de laboratorio y con autorización.
 """
+
 from __future__ import annotations
 
 from . import apdu as apdumod
@@ -48,8 +49,9 @@ def append_record(send: Transceiver, sfi: int, data: bytes) -> Response:
     return send(apdumod.append_record(sfi, data))
 
 
-def update_binary(send: Transceiver, offset: int, data: bytes,
-                  sfi: int | None = None) -> Response:
+def update_binary(
+    send: Transceiver, offset: int, data: bytes, sfi: int | None = None
+) -> Response:
     return send(apdumod.update_binary(offset, data, sfi))
 
 
