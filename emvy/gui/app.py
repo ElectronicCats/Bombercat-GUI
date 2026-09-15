@@ -641,6 +641,19 @@ class MainWindow(QMainWindow):
                on_result=lambda r: self.firmware_panel.log_result(r),
                on_error=lambda m: self.notify.emit(f"Firmware: {m}"))
 
+    # -- BomberCat: permisos USB (udev) — bombercat-tools >= v1.3.0 ---------
+    def setup_udev(self) -> None:
+        """Instala reglas udev + añade al usuario a dialout/plugdev vía el nuevo
+        comando `setup-env` de bombercat-tools (v1.3.0), con elevación gráfica
+        (pkexec). Arregla el fallo de permisos del upload por picotool (§12)."""
+        from ..integrations import bombercat_tools as bt
+        self.firmware_panel.log("→ Configurando permisos USB (udev + grupos, vía pkexec)…")
+        submit(self.pool, bt.setup_env_gui,
+               want_progress=True,
+               on_line=lambda m: self.firmware_panel.log(f"  · {m}"),
+               on_result=lambda r: self.firmware_panel.log_result(r),
+               on_error=lambda m: self.notify.emit(f"udev: {m}"))
+
 
 def _harden_qt_env() -> None:
     """Evita SIGSEGV al arrancar en Linux: PySide6 trae su **propio** Qt, y

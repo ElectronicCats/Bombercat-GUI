@@ -1069,6 +1069,10 @@ def cmd_bombercat_bridge(args) -> int:
             return bctools.devices()
         if action == "status":
             return bctools.status(port)
+        if action == "setup-env":
+            # bombercat-tools >= v1.3.0: instala reglas udev y añade al usuario a
+            # dialout/plugdev. Necesita root: `sudo emvy bombercat setup-env`.
+            return bctools.setup_env_passthrough()
         if action == "tools":
             rest = list(args.args or [])
             if rest and rest[0] == "--":
@@ -1459,6 +1463,7 @@ def build_parser() -> argparse.ArgumentParser:
     bsub.add_parser("setup", help="prepara bombercat-tools (venv del framework)").set_defaults(func=cmd_bombercat_bridge)
     bsub.add_parser("devices", help="lista dispositivos (framework)").set_defaults(func=cmd_bombercat_bridge)
     bsub.add_parser("status", help="firmware flasheado (framework)").set_defaults(func=cmd_bombercat_bridge)
+    bsub.add_parser("setup-env", help="reglas udev + grupos (Linux; requiere sudo)").set_defaults(func=cmd_bombercat_bridge)
     q = bsub.add_parser("tools", help="passthrough al framework: bombercat tools -- <args>")
     q.add_argument("args", nargs=argparse.REMAINDER); q.set_defaults(func=cmd_bombercat_bridge)
     q = bsub.add_parser("fw", help="firmware oficial UF2 (list|flash)")

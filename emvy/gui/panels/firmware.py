@@ -33,9 +33,18 @@ class FirmwarePanel(QWidget):
         row.addWidget(QLabel("Sketch")); row.addWidget(self._sketch, 1)
         row.addWidget(self._port); row.addWidget(comp); row.addWidget(upl); row.addWidget(rel)
 
+        # bombercat-tools >= v1.3.0: `setup-env` instala las reglas udev y añade
+        # al usuario a dialout/plugdev — arregla el "try sudo or check your
+        # permissions" del upload por picotool (CLAUDE.md §12). Se eleva con pkexec.
+        udev = QPushButton("Permisos USB (udev)…")
+        udev.setToolTip("Instala reglas udev y grupos (dialout/plugdev) para subir sin sudo.\n"
+                        "Requiere pkexec (pedirá contraseña de administrador).")
+        udev.clicked.connect(lambda: self.win.setup_udev())
+        row2 = QHBoxLayout(); row2.addWidget(udev); row2.addStretch(1)
+
         self._log = QPlainTextEdit(readOnly=True); self._log.setFont(_MONO)
         lay = QVBoxLayout(self)
-        lay.addWidget(sub); lay.addLayout(row); lay.addWidget(self._log, 1)
+        lay.addWidget(sub); lay.addLayout(row); lay.addLayout(row2); lay.addWidget(self._log, 1)
         self.reload()
 
     def reload(self) -> None:

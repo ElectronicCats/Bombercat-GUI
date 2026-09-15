@@ -10,7 +10,13 @@ Expone:
   * `run_json(args)` — captura stdout y extrae el/los objeto(s) JSON (para
     `tags/readers --json`).
   * helpers: `version()`, `devices()`, `fw_list()`, `flash()`, `tags_read()`,
-    `readers_read()`.
+    `readers_read()`, `setup_env_passthrough()` / `setup_env_gui()` (v1.3.0:
+    reglas udev + membresía de grupos, con elevación pkexec para la GUI).
+
+Compatibilidad con bombercat-tools >= v1.3.0: `tags`/`readers` ahora están
+gated por capacidad de firmware y pasan por el auto-flash; `_env()` fija
+`BOMBERCAT_AUTO_FLASH=never` para que EMVy nunca dispare un flasheo/prompt
+implícito por subprocess (ver `_env`).
 """
 from __future__ import annotations
 
@@ -98,6 +104,15 @@ def _env() -> dict:
     e = dict(os.environ)
     e.setdefault("NO_COLOR", "1")
     e.setdefault("TERM", "dumb")
+    # bombercat-tools >= v1.3.0: los grupos de detección (`tags`/`readers`)
+    # están *gated* por capacidad de firmware y enrutan por el orquestador de
+    # auto-flash. Su política es ASK en una TTY / NEVER en un pipe; como EMVy
+    # invoca por subprocess capturando stdout, un ASK dejaría un prompt de
+    # confirmación INVISIBLE bloqueado en stdin. Fijamos NEVER para que, si la
+    # placa no trae la capacidad, el comando falle limpio (mismatch de firmware)
+    # en vez de colgarse — el usuario flashea explícitamente desde el panel.
+    # Versiones antiguas de las tools ignoran esta variable (inocuo).
+    e.setdefault("BOMBERCAT_AUTO_FLASH", "never")
     return e
 
 
@@ -122,9 +137,13 @@ def run_json(args: list[str], *, timeout: float | None = 120):
     cp = run_capture(args, timeout=timeout)
     objs = _extract_json(cp.stdout)
     if not objs:
+        # bombercat-tools >= v1.3.0 imprime los errores de mismatch de firmware
+        # (BomberCatError) con rich, que suele ir a stdout — inclúyelo también
+        # para que el mensaje real ("la placa corre X; este comando necesita Y")
+        # llegue al usuario, no solo el stderr.
+        tail = (cp.stderr.strip() or cp.stdout.strip())[:400]
         raise BombercatToolsError(
-            f"El comando no devolvió JSON (rc={cp.returncode}).\n"
-            f"stderr: {cp.stderr.strip()[:400]}")
+            f"El comando no devolvió JSON (rc={cp.returncode}).\n{tail}")
     return objs if len(objs) > 1 else objs[0]
 
 
@@ -225,8 +244,65 @@ def status_text(port: str | None = None, timeout: float = 30) -> str:
 
 
 def tags_read(timeout: int = 20):
+    # bombercat-tools >= v1.3.0 añade un campo `model` por fila (fingerprint del
+    # chip resuelto host-side desde ATQA/SAK); es aditivo, el JSON se pasa tal cual.
     return run_json(["tags", "read", "--json", "-t", str(timeout)])
 
 
 def readers_read(timeout: int = 20):
     return run_json(["readers", "read", "--json", "-t", str(timeout)])
+
+
+# ---------------------------------------------------------------------------
+# setup-env (bombercat-tools >= v1.3.0): reglas udev + membresía de grupos
+# ---------------------------------------------------------------------------
+def setup_env_passthrough() -> int:
+    """Ejecuta `bombercat setup-env` heredando la terminal (para la CLI).
+
+    El comando necesita root y NO pide contraseña por sí mismo: se corre con
+    `sudo emvy bombercat setup-env`. Si no es root, imprime el `sudo …` exacto.
+    """
+    return run_passthrough(["setup-env"])
+
+
+def setup_env_gui(*, progress=None) -> subprocess.CompletedProcess:
+    """Instala reglas udev + añade al usuario a `dialout`/`plugdev` con elevación
+    gráfica (`pkexec`), capturando la salida — para el botón del panel Firmware.
+
+    `setup-env` de las tools exige geteuid()==0, así que se eleva con pkexec.
+    Como pkexec limpia el entorno (no propaga `SUDO_USER`), pasamos el usuario
+    real explícito por `env SUDO_USER=…` para que los grupos se apliquen a él y
+    no a root. Sin pkexec, devuelve el comando `sudo` a ejecutar a mano.
+    """
+    root = locate()
+    py = ensure_venv(root, log=progress)
+    inner = [str(py), "bombercat.py", "setup-env"]
+
+    if os.name == "nt":
+        raise BombercatToolsError("setup-env es solo para Linux (reglas udev + usermod).")
+
+    if os.geteuid() == 0:                        # ya root: directo
+        return subprocess.run(inner, cwd=str(root), env=_env(),
+                              capture_output=True, text=True, timeout=120)
+
+    pkexec = shutil.which("pkexec")
+    if not pkexec:
+        sudo_cmd = "sudo " + " ".join(inner)
+        raise BombercatToolsError(
+            "Se requiere root y no encuentro `pkexec` para elevar gráficamente.\n"
+            f"Ejecuta a mano en una terminal:\n  cd {root} && {sudo_cmd}")
+
+    user = os.environ.get("SUDO_USER") or _login_name()
+    # `pkexec env SUDO_USER=<user> <py> bombercat.py setup-env`: env corre como
+    # root fijando la variable que _target_user() de las tools lee.
+    cmd = [pkexec, "env", f"SUDO_USER={user}", *inner]
+    return subprocess.run(cmd, cwd=str(root), env=_env(),
+                          capture_output=True, text=True, timeout=180)
+
+
+def _login_name() -> str:
+    try:
+        import getpass
+        return getpass.getuser()
+    except Exception:
+        return os.environ.get("USER", "")
