@@ -4,6 +4,7 @@ import io
 import json
 import subprocess
 import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -31,26 +32,17 @@ def test_sources_crud(fw_env):
     assert a.name not in {s.name for s in fs.load_sources()}
 
 
-def test_fetch_and_download_and_clean(fw_env, monkeypatch):
+def test_download_url_source_and_clean(fw_env, monkeypatch):
+    """Fuente 'url': descarga directa local (urllib), sin bombercat-tools."""
     from emvy.integrations import firmware_sources as fs
 
-    api = json.dumps(
-        {
-            "assets": [
-                {"name": "Foo.uf2", "browser_download_url": "http://x/Foo.uf2"},
-                {"name": "notes.txt", "browser_download_url": "http://x/notes.txt"},
-            ]
-        }
-    ).encode()
-
     def fake_urlopen(req, timeout=0):
-        url = getattr(req, "full_url", req)
-        return io.BytesIO(api if "api.github.com" in url else b"UF2BYTES")
+        return io.BytesIO(b"UF2BYTES")
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
 
-    src = fs.add_source("owner/repo")
-    assert fs.fetch_assets(src) == [("Foo.uf2", "http://x/Foo.uf2")]  # solo .uf2
+    src = fs.add_source("https://x.org/y/Mine.uf2")
+    assert fs.fetch_assets(src) == [("Mine.uf2", "https://x.org/y/Mine.uf2")]
     paths = fs.download_source(src)
     assert len(paths) == 1 and paths[0].read_bytes() == b"UF2BYTES"
     assert fs.cached_firmwares() == paths
@@ -60,6 +52,55 @@ def test_fetch_and_download_and_clean(fw_env, monkeypatch):
     # limpiar todo (idempotente)
     fs.download_source(src)
     assert fs.clean_cache() == 1 and fs.cached_firmwares() == []
+
+
+def test_download_github_delegates_to_bombercat_tools(fw_env, monkeypatch):
+    """Fuente 'github': delega en el ReleaseCache de bombercat-tools por
+    subprocess; el .uf2 baja al cache anidado por tag y clean_cache lo limpia."""
+    from emvy.integrations import bombercat_tools as bt
+    from emvy.integrations import firmware_sources as fs
+
+    # No se listan assets aquí: el release lo resuelve bombercat-tools.
+    src = fs.add_source("owner/repo")
+    assert src.kind == "github"
+    with pytest.raises(ValueError):
+        fs.fetch_assets(src)
+
+    monkeypatch.setattr(bt, "locate", lambda: fw_env)
+    monkeypatch.setattr(bt, "ensure_venv", lambda root, log=None: "py")
+
+    def fake_run(cmd, **kw):
+        # emula al ReleaseCache: crea <dest>/<tag>/Foo.uf2 y devuelve su ruta.
+        dest, repo = cmd[3], cmd[4]
+        assert repo == "owner/repo"
+        tagdir = Path(dest) / "v1.0"
+        tagdir.mkdir(parents=True, exist_ok=True)
+        img = tagdir / "Foo.uf2"
+        img.write_bytes(b"UF2BYTES")
+        return subprocess.CompletedProcess(cmd, 0, json.dumps([str(img)]), "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    paths = fs.download_source(src)
+    assert len(paths) == 1 and paths[0].read_bytes() == b"UF2BYTES"
+    assert fs.cached_firmwares() == paths  # rglob encuentra el .uf2 anidado
+    assert fs.clean_cache() == 1 and fs.cached_firmwares() == []
+
+
+def test_download_github_surfaces_failure(fw_env, monkeypatch):
+    from emvy.integrations import bombercat_tools as bt
+    from emvy.integrations import firmware_sources as fs
+
+    src = fs.add_source("owner/repo")
+    monkeypatch.setattr(bt, "locate", lambda: fw_env)
+    monkeypatch.setattr(bt, "ensure_venv", lambda root, log=None: "py")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda cmd, **kw: subprocess.CompletedProcess(cmd, 1, "", "no release"),
+    )
+    with pytest.raises(RuntimeError, match="no release"):
+        fs.download_source(src)
 
 
 def test_list_sketches_and_compile(monkeypatch, tmp_path):
