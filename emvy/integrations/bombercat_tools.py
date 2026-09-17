@@ -13,10 +13,11 @@ Expone:
     `readers_read()`, `setup_env_passthrough()` / `setup_env_gui()` (v1.3.0:
     reglas udev + membresía de grupos, con elevación pkexec para la GUI).
 
-Compatibilidad con bombercat-tools >= v1.3.0: `tags`/`readers` ahora están
-gated por capacidad de firmware y pasan por el auto-flash; `_env()` fija
-`BOMBERCAT_AUTO_FLASH=never` para que EMVy nunca dispare un flasheo/prompt
-implícito por subprocess (ver `_env`).
+EMVy está fijado al tag `v1.3.0` del framework (ver `PINNED_TAG`): el gitlink
+del submódulo `vendor/bombercat-tools` apunta exactamente a ese tag. En v1.3.0
+`tags`/`readers` están gated por capacidad de firmware y pasan por el
+auto-flash; `_env()` fija `BOMBERCAT_AUTO_FLASH=never` para que EMVy nunca
+dispare un flasheo/prompt implícito por subprocess (ver `_env`).
 """
 
 from __future__ import annotations
@@ -33,6 +34,14 @@ from .. import config
 
 class BombercatToolsError(RuntimeError):
     pass
+
+
+# Tag del submódulo `vendor/bombercat-tools` al que EMVy está fijado. El
+# gitlink del repo padre apunta a este mismo tag (git submodule), así que el
+# checkout vendorizado queda clavado aquí y no deriva. `version()` reporta el
+# tag git real (no el fichero VERSION del upstream, que quedó en 1.2.0.0
+# incluso en v1.3.0).
+PINNED_TAG = "v1.3.0"
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +189,33 @@ def _extract_json(text: str):
 # Helpers de alto nivel
 # ---------------------------------------------------------------------------
 def version() -> str:
+    """Versión del checkout vendorizado, sin la `v` inicial (los sitios que la
+    muestran ya prefijan `v`).
+
+    Preferimos el tag git real (`git describe`) porque EMVy fija el submódulo en
+    `PINNED_TAG` y el fichero VERSION del upstream quedó desactualizado (dice
+    1.2.0.0 incluso en el tag v1.3.0). Si git no está disponible, caemos al
+    fichero VERSION.
+    """
     try:
-        return (locate() / "VERSION").read_text().strip()
+        root = locate()
+    except BombercatToolsError:
+        return "?"
+    try:
+        r = subprocess.run(
+            ["git", "describe", "--tags", "--always"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        tag = r.stdout.strip()
+        if r.returncode == 0 and tag:
+            return tag.lstrip("v")
+    except Exception:
+        pass
+    try:
+        return (root / "VERSION").read_text().strip()
     except Exception:
         return "?"
 
