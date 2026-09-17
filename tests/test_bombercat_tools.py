@@ -133,3 +133,66 @@ def test_capability_image_matches_vendor():
     assert r.returncode == 0, r.stderr
     vendor_map = json.loads(r.stdout.strip().splitlines()[-1])
     assert vendor_map == bt.CAPABILITY_IMAGE
+
+
+# ---------------------------------------------------------------------------
+# magspoof: los helpers son wrappers finos del CLI del vendor. Aquí probamos
+# la lógica propia (JSONL de `card list`, construcción de args) monkeypatcheando
+# `run_capture`/`run_json`, sin tocar el subproceso ni el hardware.
+# ---------------------------------------------------------------------------
+class _CP:
+    def __init__(self, stdout="", returncode=0, stderr=""):
+        self.stdout = stdout
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+def test_magspoof_card_list_returns_list(monkeypatch):
+    # `card list --json` emite un objeto JSON por línea (JSONL).
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: _CP('{"name": "visa"}\n')
+    )
+    assert bt.magspoof_card_list() == [{"name": "visa"}]
+
+
+def test_magspoof_card_list_empty_store(monkeypatch):
+    # Un store vacío es válido → lista vacía, NO un error (a diferencia de run_json).
+    monkeypatch.setattr(bt, "run_capture", lambda args, timeout=None: _CP(""))
+    assert bt.magspoof_card_list() == []
+
+
+def test_magspoof_card_add_builds_args(monkeypatch):
+    seen = {}
+
+    def fake(args, timeout=None):
+        seen["args"] = args
+        return _CP()
+
+    monkeypatch.setattr(bt, "run_capture", fake)
+    bt.magspoof_card_add("visa", t1="%B?", t2=";?", port="/dev/ttyACM0")
+    assert seen["args"] == [
+        "magspoof",
+        "card",
+        "add",
+        "visa",
+        "--t1",
+        "%B?",
+        "--t2",
+        ";?",
+        "-p",
+        "/dev/ttyACM0",
+    ]
+
+
+def test_magspoof_card_add_omits_empty_tracks(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.magspoof_card_add("visa", t1="%B?")
+    assert seen["args"] == ["magspoof", "card", "add", "visa", "--t1", "%B?"]
+
+
+def test_magspoof_show_returns_dict(monkeypatch):
+    monkeypatch.setattr(bt, "run_json", lambda args, timeout=None: {"t1": "x"})
+    assert bt.magspoof_show() == {"t1": "x"}

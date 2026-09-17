@@ -387,6 +387,7 @@ def test_firmware_subtabs_and_status_gating(win):
         "Flashear",
         "Tags",
         "Readers",
+        "Magspoof",
     ]
     # los sub-tabs gated (Tags/Readers) arrancan deshabilitados (sin caps)
     tags_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Tags")
@@ -435,6 +436,41 @@ def test_firmware_tags_readers_render(win):
     fp.show_reader([{"aid": None, "label": "emv-payment"}])
     assert fp._readers_table.rowCount() == 2
     assert fp._readers_table.item(1, 1).text() == "emv-payment"
+
+
+def test_firmware_magspoof_render(win):
+    """El sub-tab Magspoof se habilita por capacidad; `show_magspoof` aplana
+    el `analysis` y `show_cards` puebla la tabla + el combo de nombres."""
+    fp = win.firmware_panel
+    ms_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Magspoof")
+    assert not fp._sub.isTabEnabled(ms_idx)  # gated: arranca deshabilitado
+    fp.set_status({"name": "magspoof", "capabilities": ["magspoof", "identify"]})
+    assert fp._sub.isTabEnabled(ms_idx)
+
+    # show --json: t1/t2/btn planos + analysis.* aplanado
+    fp.show_magspoof(
+        {
+            "t1": "%B4111...?",
+            "t2": ";4111...?",
+            "btn": None,
+            "analysis": {"standard": "ISO 7813", "pan": "4111 1111 1111 1111"},
+        }
+    )
+    rows = {
+        fp._magspoof_table.item(i, 0).text(): fp._magspoof_table.item(i, 1).text()
+        for i in range(fp._magspoof_table.rowCount())
+    }
+    assert rows["t1"] == "%B4111...?"
+    assert rows["btn"] == "—"  # None → guion
+    assert rows["analysis.standard"] == "ISO 7813"
+
+    # card list --json: una fila por tarjeta + nombres en el combo
+    fp.show_cards([{"name": "visa", "t2": ";4111...?"}, {"name": "amex"}])
+    assert fp._cards_table.rowCount() == 2
+    assert fp._cards_table.item(0, 0).text() == "visa"
+    assert "t2=;4111...?" in fp._cards_table.item(0, 1).text()
+    names = [fp._card_name.itemText(i) for i in range(fp._card_name.count())]
+    assert names == ["visa", "amex"]
 
 
 def test_charges_and_poc_construct(win):
