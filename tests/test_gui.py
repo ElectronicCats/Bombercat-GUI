@@ -376,6 +376,35 @@ def test_firmware_lists_sketches(win):
     assert any("EMVyBomberCat" in n for n in names)
 
 
+def test_firmware_subtabs_and_status_gating(win):
+    """El panel BomberCat tiene sub-tabs Dispositivo/Flashear; `set_status`
+    pinta la cabecera y habilita los sub-tabs 'gated' por capacidad."""
+    from PySide6.QtWidgets import QWidget
+
+    fp = win.firmware_panel
+    assert [fp._sub.tabText(i) for i in range(fp._sub.count())] == [
+        "Dispositivo",
+        "Flashear",
+    ]
+    # un sub-tab ficticio que exige 'mifare' arranca deshabilitado (sin caps)
+    dummy = QWidget()
+    idx = fp._sub.addTab(dummy, "Mifare")
+    fp.register_gated("mifare", dummy)
+    assert not fp._sub.isTabEnabled(idx)
+    # tras leer el estado con la capacidad presente, se habilita
+    fp.set_status(
+        {
+            "name": "MifareClassic",
+            "version": "1.0",
+            "detected": "handshake (certain)",
+            "capabilities": ["mifare", "monitor", "identify"],
+        }
+    )
+    assert fp._l_name.text() == "MifareClassic"
+    assert "mifare" in fp._l_caps.text()
+    assert fp._sub.isTabEnabled(idx)
+
+
 def test_charges_and_poc_construct(win):
     win.charges_panel.log_flow("signon", type("R", (), {"summary": lambda s: "demo"})())
     assert "demo" in win.charges_panel._log.toPlainText()

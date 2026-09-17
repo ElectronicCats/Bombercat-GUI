@@ -77,8 +77,9 @@ class FakeSerial:
     def _handle(self, line: str):
         if not line:
             return
-        if line == "PING":
-            self._emit("PONG")
+        if line == "ping":
+            # Contrato BomberCatControl: `ping` (minúsculas) → `+OK bombercat`.
+            self._emit("+OK bombercat")
         elif line.startswith("WAIT"):
             self._emit("READY:")
         elif line.startswith("APDU:"):

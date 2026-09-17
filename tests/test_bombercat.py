@@ -222,10 +222,11 @@ def test_passthrough_on_wire_reports_serial_lines(fake_serial):
     wire: list = []
     dev = [d for d in registry.list_all_devices() if d.backend == "bombercat"][0]
     with registry.open_device(dev, on_wire=wire.append) as r:
-        # al conectar solo hay handshake PING/PONG (la tarjeta se detecta perezoso)
+        # al conectar solo hay handshake `ping → +OK bombercat` (la tarjeta se
+        # detecta perezoso), según el contrato BomberCatControl
         tx = [w.text for w in wire if w.direction == "tx"]
         rx = [w.text for w in wire if w.direction == "rx"]
-        assert "PING" in tx and "PONG" in rx
+        assert "ping" in tx and any("bombercat" in r for r in rx)
         assert not any(t.startswith("WAIT") for t in tx)  # aún no
 
         emv.discover(r.transceive, brute=False)
