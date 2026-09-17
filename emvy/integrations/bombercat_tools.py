@@ -315,6 +315,96 @@ def readers_read(timeout: int = 20):
 
 
 # ---------------------------------------------------------------------------
+# Estado de la placa / gating por capacidad (bombercat-tools >= v1.3.0)
+# ---------------------------------------------------------------------------
+# `bombercat status` NO ofrece `--json` (verificado en v1.3.0): solo imprime una
+# tabla rich con name/version/detected/capabilities. La parseamos igual que
+# `parse_fw_names` hace con `flash --list` (filas que empiezan por `│`).
+def parse_status(text: str) -> dict:
+    """Extrae {name, version, detected, capabilities:[...]} de la tabla de
+    `bombercat status`. Puro/testeable contra salida canned."""
+    fields: dict[str, str] = {}
+    last: str | None = None
+    for line in text.splitlines():
+        s = line.strip()
+        if not s.startswith("│"):  # solo filas de la tabla ligera
+            continue
+        cells = [c.strip() for c in s.strip("│").split("│")]
+        if len(cells) < 2:
+            continue
+        key, val = cells[0], cells[1]
+        if key:
+            fields[key] = val
+            last = key
+        elif last:  # continuación: rich partió el valor en varias líneas
+            fields[last] = f"{fields[last]} {val}".strip()
+    caps = [
+        c.strip()
+        for c in fields.get("capabilities", "").split(",")
+        if c.strip() and c.strip() != "—"
+    ]
+    return {
+        "name": fields.get("name", ""),
+        "version": fields.get("version", ""),
+        "detected": fields.get("detected", ""),
+        "capabilities": caps,
+    }
+
+
+def status_json(port: str | None = None, timeout: float = 30) -> dict:
+    """Estado de la placa como dict plano (parsea la tabla de `status`).
+
+    Lanza `BombercatToolsError` si nada respondió en el puerto (no hay tabla)."""
+    args = ["status"] + (["-p", port] if port else [])
+    cp = run_capture(args, timeout=timeout)
+    st = parse_status(cp.stdout)
+    if not st["name"]:
+        tail = (cp.stderr.strip() or cp.stdout.strip())[:400]
+        raise BombercatToolsError(
+            f"No se pudo leer el estado de la placa (rc={cp.returncode}).\n{tail}"
+        )
+    return st
+
+
+def capability_present(cap: str, *, port: str | None = None) -> bool:
+    """True si la placa (según `status`) declara la capacidad `cap`."""
+    try:
+        return cap in status_json(port=port)["capabilities"]
+    except BombercatToolsError:
+        return False
+
+
+# Capacidad -> imagen `.uf2` (stem) que la provee. Espejo de
+# `requirements.CAPABILITY_PROVIDER` del vendor, DUPLICADO a propósito para no
+# importar del otro venv; `test_capability_image_matches_vendor` asegura que no
+# derive. Los stems coinciden con los nombres que espera `flash <NOMBRE>`.
+CAPABILITY_IMAGE: dict[str, str] = {
+    "tags": "DetectTags",
+    "readers": "DetectReaders",
+    "mifare": "MifareClassic",
+    "magspoof": "magspoof",
+    "relay": "NFCGate",
+    "config": "NFCGate",
+    "capture": "NFCGate",
+}
+
+
+def image_for_capability(cap: str) -> str:
+    """Imagen `.uf2` (stem) a flashear para habilitar `cap`."""
+    try:
+        return CAPABILITY_IMAGE[cap]
+    except KeyError:
+        raise BombercatToolsError(
+            f"La capacidad {cap!r} no tiene una imagen canónica asociada."
+        )
+
+
+def identify(port: str | None = None, timeout: float = 30):
+    """Parpadea el LED de la placa (`identify`), capturando la salida."""
+    return run_capture(["identify"] + (["-p", port] if port else []), timeout=timeout)
+
+
+# ---------------------------------------------------------------------------
 # setup-env (bombercat-tools >= v1.3.0): reglas udev + membresía de grupos
 # ---------------------------------------------------------------------------
 def setup_env_passthrough() -> int:

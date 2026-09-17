@@ -867,6 +867,88 @@ class MainWindow(QMainWindow):
             on_error=lambda m: self.notify.emit(f"udev: {m}"),
         )
 
+    # -- BomberCat: estado de la placa / capacidades (bombercat-tools) ------
+    def refresh_device(self) -> None:
+        """Lee `bombercat status` → actualiza la cabecera del panel y el gating."""
+        from ..integrations import bombercat_tools as bt
+
+        port = self.firmware_panel.port()
+        self.firmware_panel.log("→ Leyendo estado de la placa (status)…")
+        submit(
+            self.pool,
+            bt.status_json,
+            port,
+            on_result=self._on_device_status,
+            on_error=lambda m: self.notify.emit(f"BomberCat: {m}"),
+        )
+
+    def _on_device_status(self, st: dict) -> None:
+        self.firmware_panel.set_status(st)
+        caps = ", ".join(st.get("capabilities", [])) or "—"
+        self.firmware_panel.log(
+            f"  firmware={st.get('name') or '?'} versión={st.get('version') or '?'} "
+            f"capacidades=[{caps}]"
+        )
+
+    def identify_device(self) -> None:
+        from ..integrations import bombercat_tools as bt
+
+        port = self.firmware_panel.port()
+        self.firmware_panel.log("→ Identificando placa (LED)…")
+        submit(
+            self.pool,
+            bt.identify,
+            port,
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"identify: {m}"),
+        )
+
+    def reload_flash_images(self) -> None:
+        """Lista las imágenes `.uf2` oficiales flasheables (arranca el venv del
+        vendor la primera vez → por worker)."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log("→ Listando imágenes oficiales (flash --list)…")
+        submit(
+            self.pool,
+            bt.fw_list_names,
+            on_result=lambda names: self.firmware_panel.set_images(names),
+            on_error=lambda m: self.notify.emit(f"flash --list: {m}"),
+        )
+
+    def flash_image(self, name: str, *, port: str | None = None) -> None:
+        """Flashea una imagen oficial (`bombercat flash <name>`), con
+        confirmación: reescribe toda la imagen y BORRA la config guardada."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from ..integrations import bombercat_tools as bt
+
+        resp = QMessageBox.question(
+            self,
+            "Confirmar flasheo",
+            f"Se flasheará «{name}» en la placa.\n\n"
+            "Esto reescribe TODA la imagen y BORRA la configuración guardada "
+            "(WiFi/relay de NFCGate). ¿Continuar?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if resp != QMessageBox.Yes:
+            return
+        self.firmware_panel.log(f"→ Flasheando «{name}»… (puede tardar)")
+        submit(
+            self.pool,
+            bt.flash_capture,
+            name,
+            port=port,
+            on_result=self._on_flash_done,
+            on_error=lambda m: self.notify.emit(f"flash: {m}"),
+        )
+
+    def _on_flash_done(self, res) -> None:
+        self.firmware_panel.log_result(res)
+        self.notify.emit("Flasheo terminado — releyendo estado…")
+        self.refresh_device()  # re-lee capacidades → re-aplica gating
+
 
 def _harden_qt_env() -> None:
     """Evita SIGSEGV al arrancar en Linux: PySide6 trae su **propio** Qt, y

@@ -121,7 +121,7 @@ def _open_serial(port: str, baud: int):
         ) from e
     # DTR debe quedar asertado: el firmware (USB CDC nativo, mbed core RP2040)
     # gatea la entrega de bytes al `Serial` de Arduino según el estado de DTR.
-    # Con dtr=False el BomberCat real nunca responde a PING (confirmado en
+    # Con dtr=False el BomberCat real nunca responde a `ping` (confirmado en
     # hardware); no forzar False aquí.
     try:
         ser.dtr = True
@@ -170,6 +170,37 @@ def _readline(ser, deadline: float) -> str | None:
 def _writeline(ser, text: str) -> None:
     ser.write((text + "\r\n").encode())
     ser.flush()
+
+
+# Comando de descubrimiento del contrato BomberCatControl (firmware oficial de
+# Electronic Cats): `ping` en MINÚSCULAS. El dispatch del firmware compara con
+# `strcmp(verb, "ping")` (sensible a mayúsculas: core/src/BomberCatControl.cpp),
+# así que un `PING` en mayúsculas cae al hook y devuelve `-ERR unknown command`.
+# La respuesta correcta es el terminador `+OK bombercat`.
+_PING = "ping"
+
+
+def _handshake(ser, on_wire=None, timeout: float = 3.0) -> bool:
+    """Handshake de descubrimiento del contrato BomberCatControl (§5): envía
+    `ping` y espera el terminador `+OK` cuyo mensaje contenga el token
+    `bombercat`. Las líneas de log/ruido (las que no empiezan por ':' '+' '-')
+    se ignoran (contrato §3.2). Devuelve True si el handshake confirma un
+    BomberCat; False si no llega un terminador antes de `timeout` o si el
+    terminador es `-ERR` / no contiene `bombercat`."""
+    _writeline(ser, _PING)
+    _wire(on_wire, "tx", _PING)
+    deadline = time.monotonic() + timeout
+    while True:
+        line = _readline(ser, deadline)
+        if line is None:
+            return False
+        _wire(on_wire, "rx", line)
+        marker = line[:1]
+        if marker == "+":  # terminador de éxito (+OK ...)
+            return "bombercat" in line
+        if marker == "-":  # terminador de error (-ERR ...)
+            return False
+        # ':' (línea de datos) o ruido de log → sigue leyendo hasta el terminador
 
 
 # ---------------------------------------------------------------------------
@@ -238,11 +269,12 @@ def open(
 ) -> OpenReader:
     """Abre el BomberCat en modo passthrough y lo expone como lector `transceive`.
 
-    Requiere el firmware con el parche de passthrough (comandos `PING`, `WAIT`,
-    `APDU:<hex>`, `RELEASE`). Espera a que haya una tarjeta ISO-DEP presente.
+    El handshake de descubrimiento sigue el contrato BomberCatControl
+    (`ping → +OK bombercat`); el passthrough usa además `WAIT`, `APDU:<hex>` y
+    `RELEASE`. Espera a que haya una tarjeta ISO-DEP presente.
 
     `on_wire` (opcional) recibe un `WireEvent` por cada línea serie enviada o
-    recibida — el handshake (PING/WAIT/READY), el framing APDU:/RESP: y las
+    recibida — el handshake (ping/WAIT/READY), el framing APDU:/RESP: y las
     líneas de depuración `#` del firmware — para verlo todo en vivo en la
     consola. Es la capa de transporte, por debajo del `TraceEvent` de APDU.
     """
@@ -270,10 +302,12 @@ def open(
     # el lector debe ser instantáneo (como un lector de contacto), sin exigir una
     # tarjeta puesta. La detección de tarjeta (WAIT) se hace **perezosa**, en el
     # primer APDU (p.ej. al capturar): así "Conectar" no falla con ERR:NOCARD.
-    wl("PING")
-    if rl(time.monotonic() + 3) is None:
+    if not _handshake(ser, on_wire=on_wire):
         ser.close()
-        raise ReaderError("El BomberCat no respondió a PING (¿firmware passthrough?).")
+        raise ReaderError(
+            "El BomberCat no respondió al handshake `ping → +OK bombercat` "
+            "(contrato BomberCatControl). ¿Firmware compatible flasheado?"
+        )
 
     trace: list = []
     state = {"activated": False, "ats": b""}
@@ -402,10 +436,10 @@ def _run_emulation(
             on_line(line)
 
     try:
-        _writeline(ser, "PING")
-        if _readline(ser, time.monotonic() + 3) is None:
+        if not _handshake(ser):
             raise ReaderError(
-                "El BomberCat no respondió a PING " "(¿firmware EMVyBomberCat?)."
+                "El BomberCat no respondió al handshake `ping` "
+                "(¿firmware EMVyBomberCat?)."
             )
         _writeline(ser, start_line)
         deadline = None if timeout is None else time.monotonic() + timeout
@@ -485,10 +519,10 @@ def card_scan_to_ram(device, timeout: float = 25.0, on_line=None) -> dict:
     Requiere el firmware **EMVyBomberCat** (comando `CARDSCAN`)."""
     ser = _open_serial(_resolve_port(device), BAUD_EMV)
     try:
-        _writeline(ser, "PING")
-        if _readline(ser, time.monotonic() + 3) is None:
+        if not _handshake(ser):
             raise ReaderError(
-                "El BomberCat no respondió a PING (¿firmware EMVyBomberCat?)."
+                "El BomberCat no respondió al handshake `ping` "
+                "(¿firmware EMVyBomberCat?)."
             )
         _writeline(ser, "CARDSCAN")
         dl = time.monotonic() + timeout
