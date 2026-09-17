@@ -41,7 +41,12 @@ from .panels.charges import ChargesPanel
 from .panels.console import RawConsole
 from .panels.dashboard import DashboardPanel
 from .panels.explorer import ExplorerPanel
-from .panels.firmware import FirmwarePanel
+from .panels.firmware import (
+    DevicePanel,
+    MagspoofPanel,
+    TagsPanel,
+)
+from .panels.firmware import ReadersPanel as FwReadersPanel
 from .panels.fuzz import FuzzPanel
 from .panels.intercept import InterceptPanel
 from .panels.poc import PocPanel
@@ -104,7 +109,19 @@ class MainWindow(QMainWindow):
         self.charges_panel = ChargesPanel(self)
         self.poc_panel = PocPanel(self)
         self.intercept_panel = InterceptPanel(self)
-        self.firmware_panel = FirmwarePanel(self)
+        # HARDWARE — un Tab por firmware (ADR-001). `fw_device` es el control-plane
+        # (posee el puerto y flashea); los demás son gated por capacidad. La lista
+        # `firmware_panels` recibe el broadcast de `set_status` tras cada status/flasheo.
+        self.fw_device = DevicePanel(self)
+        self.fw_tags = TagsPanel(self)
+        self.fw_readers = FwReadersPanel(self)
+        self.fw_magspoof = MagspoofPanel(self)
+        self.firmware_panels = [
+            self.fw_device,
+            self.fw_tags,
+            self.fw_readers,
+            self.fw_magspoof,
+        ]
         self.fuzz_panel = FuzzPanel(self)
         self.tabs = QTabWidget()
         self.tabs.addTab(self.dashboard_panel, "Inicio")
@@ -116,7 +133,10 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.charges_panel, "Cobros")
         self.tabs.addTab(self.poc_panel, "PoC")
         self.tabs.addTab(self.intercept_panel, "Intercept")
-        self.tabs.addTab(self.firmware_panel, "BomberCat")
+        self.tabs.addTab(self.fw_device, "Dispositivo")
+        self.tabs.addTab(self.fw_tags, "Tags")
+        self.tabs.addTab(self.fw_readers, "Readers")
+        self.tabs.addTab(self.fw_magspoof, "Magspoof")
         self.tabs.addTab(self.fuzz_panel, "Fuzzing")
         # Navegación por **barra lateral** (más limpia que 11 pestañas arriba):
         # el QTabWidget conserva las páginas (y `self.tabs` sigue siendo la API)
@@ -159,7 +179,10 @@ class MainWindow(QMainWindow):
             "Cobros",
             "PoC",
             "Intercept",
-            "BomberCat",
+            "Dispositivo",
+            "Tags",
+            "Readers",
+            "Magspoof",
             "Fuzzing",
         }
     )
@@ -185,7 +208,15 @@ class MainWindow(QMainWindow):
                 ("Fuzzing", "zap"),
             ),
         ),
-        ("HARDWARE", (("BomberCat", "cpu"),)),
+        (
+            "HARDWARE",
+            (
+                ("Dispositivo", "cpu"),
+                ("Tags", "nfc"),
+                ("Readers", "search"),
+                ("Magspoof", "credit-card"),
+            ),
+        ),
     )
 
     def _build_sidebar(self) -> QListWidget:
@@ -826,13 +857,18 @@ class MainWindow(QMainWindow):
         self.intercept_rules = rules
         return rules, errors
 
+    # -- BomberCat: puerto serie único (lo posee el panel Dispositivo) ------
+    def firmware_port(self) -> str | None:
+        """Puerto serie compartido por todos los paneles de firmware (ADR-001)."""
+        return self.fw_device.port()
+
     # -- BomberCat: compilar / subir firmware ------------------------------
     def compile_firmware(
         self, sketch_dir: str, *, upload: bool = False, port: str | None = None
     ) -> None:
         from ..integrations import arduino as ard
 
-        self.firmware_panel.log(
+        self.fw_device.log(
             f"→ {'compilar y subir' if upload else 'compilar'}: {sketch_dir}"
         )
 
@@ -844,7 +880,7 @@ class MainWindow(QMainWindow):
         submit(
             self.pool,
             _do,
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_result=lambda r: self.fw_device.log_result(r),
             on_error=lambda m: self.notify.emit(f"Firmware: {m}"),
         )
 
@@ -855,15 +891,13 @@ class MainWindow(QMainWindow):
         (pkexec). Arregla el fallo de permisos del upload por picotool (§12)."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log(
-            "→ Configurando permisos USB (udev + grupos, vía pkexec)…"
-        )
+        self.fw_device.log("→ Configurando permisos USB (udev + grupos, vía pkexec)…")
         submit(
             self.pool,
             bt.setup_env_gui,
             want_progress=True,
-            on_line=lambda m: self.firmware_panel.log(f"  · {m}"),
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_line=lambda m: self.fw_device.log(f"  · {m}"),
+            on_result=lambda r: self.fw_device.log_result(r),
             on_error=lambda m: self.notify.emit(f"udev: {m}"),
         )
 
@@ -872,8 +906,8 @@ class MainWindow(QMainWindow):
         """Lee `bombercat status` → actualiza la cabecera del panel y el gating."""
         from ..integrations import bombercat_tools as bt
 
-        port = self.firmware_panel.port()
-        self.firmware_panel.log("→ Leyendo estado de la placa (status)…")
+        port = self.fw_device.port()
+        self.fw_device.log("→ Leyendo estado de la placa (status)…")
         submit(
             self.pool,
             bt.status_json,
@@ -883,9 +917,11 @@ class MainWindow(QMainWindow):
         )
 
     def _on_device_status(self, st: dict) -> None:
-        self.firmware_panel.set_status(st)
+        # Fuente única de caps: broadcast a TODOS los paneles → cada uno re-gatea.
+        for p in self.firmware_panels:
+            p.set_status(st)
         caps = ", ".join(st.get("capabilities", [])) or "—"
-        self.firmware_panel.log(
+        self.fw_device.log(
             f"  firmware={st.get('name') or '?'} versión={st.get('version') or '?'} "
             f"capacidades=[{caps}]"
         )
@@ -893,13 +929,13 @@ class MainWindow(QMainWindow):
     def identify_device(self) -> None:
         from ..integrations import bombercat_tools as bt
 
-        port = self.firmware_panel.port()
-        self.firmware_panel.log("→ Identificando placa (LED)…")
+        port = self.fw_device.port()
+        self.fw_device.log("→ Identificando placa (LED)…")
         submit(
             self.pool,
             bt.identify,
             port,
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_result=lambda r: self.fw_device.log_result(r),
             on_error=lambda m: self.notify.emit(f"identify: {m}"),
         )
 
@@ -908,11 +944,11 @@ class MainWindow(QMainWindow):
         vendor la primera vez → por worker)."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log("→ Listando imágenes oficiales (flash --list)…")
+        self.fw_device.log("→ Listando imágenes oficiales (flash --list)…")
         submit(
             self.pool,
             bt.fw_list_names,
-            on_result=lambda names: self.firmware_panel.set_images(names),
+            on_result=lambda names: self.fw_device.set_images(names),
             on_error=lambda m: self.notify.emit(f"flash --list: {m}"),
         )
 
@@ -934,7 +970,7 @@ class MainWindow(QMainWindow):
         )
         if resp != QMessageBox.Yes:
             return
-        self.firmware_panel.log(f"→ Flasheando «{name}»… (puede tardar)")
+        self.fw_device.log(f"→ Flasheando «{name}»… (puede tardar)")
         submit(
             self.pool,
             bt.flash_capture,
@@ -945,7 +981,7 @@ class MainWindow(QMainWindow):
         )
 
     def _on_flash_done(self, res) -> None:
-        self.firmware_panel.log_result(res)
+        self.fw_device.log_result(res)
         self.notify.emit("Flasheo terminado — releyendo estado…")
         self.refresh_device()  # re-lee capacidades → re-aplica gating
 
@@ -954,7 +990,7 @@ class MainWindow(QMainWindow):
         """Lee un tag NFC (`tags read --json`) → tabla del sub-tab Tags."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log(f"→ Esperando un tag ({timeout}s)…")
+        self.fw_tags.log(f"→ Esperando un tag ({timeout}s)…")
         submit(
             self.pool,
             bt.tags_read,
@@ -964,14 +1000,14 @@ class MainWindow(QMainWindow):
         )
 
     def _on_tags_read(self, data) -> None:
-        self.firmware_panel.show_tag(data)
-        self.firmware_panel.log(f"  tag: {data}")
+        self.fw_tags.show_tag(data)
+        self.fw_tags.log(f"  tag: {data}")
 
     def readers_read(self, timeout: int = 15) -> None:
         """Detecta un lector/POS (`readers read --json`) → sub-tab Readers."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log(f"→ Esperando un lector ({timeout}s)…")
+        self.fw_readers.log(f"→ Esperando un lector ({timeout}s)…")
         submit(
             self.pool,
             bt.readers_read,
@@ -981,37 +1017,37 @@ class MainWindow(QMainWindow):
         )
 
     def _on_readers_read(self, data) -> None:
-        self.firmware_panel.show_reader(data)
-        self.firmware_panel.log(f"  lector: {data}")
+        self.fw_readers.show_reader(data)
+        self.fw_readers.log(f"  lector: {data}")
 
     # -- BomberCat: magspoof (bombercat-tools) -----------------------------
     def magspoof_show(self) -> None:
         """Tarjeta activa (`magspoof show --json`) → tabla del sub-tab Magspoof."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log("→ magspoof show…")
+        self.fw_magspoof.log("→ magspoof show…")
         submit(
             self.pool,
             bt.magspoof_show,
-            port=self.firmware_panel.port(),
+            port=self.firmware_port(),
             on_result=self._on_magspoof_show,
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
     def _on_magspoof_show(self, data) -> None:
-        self.firmware_panel.show_magspoof(data)
-        self.firmware_panel.log(f"  activa: {data}")
+        self.fw_magspoof.show_magspoof(data)
+        self.fw_magspoof.log(f"  activa: {data}")
 
     def magspoof_play(self) -> None:
         """Reproduce un swipe de la tarjeta activa (`magspoof play`)."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log("→ magspoof play (swipe)…")
+        self.fw_magspoof.log("→ magspoof play (swipe)…")
         submit(
             self.pool,
             bt.magspoof_play,
-            port=self.firmware_panel.port(),
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_magspoof.log_result(r),
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
@@ -1019,12 +1055,12 @@ class MainWindow(QMainWindow):
         """Emula Visa contactless por NFC (`magspoof nfc visa`)."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log("→ magspoof nfc visa…")
+        self.fw_magspoof.log("→ magspoof nfc visa…")
         submit(
             self.pool,
             bt.magspoof_nfc_visa,
-            port=self.firmware_panel.port(),
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_magspoof.log_result(r),
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
@@ -1032,19 +1068,19 @@ class MainWindow(QMainWindow):
         """Lista el store de tarjetas (`magspoof card list --json`)."""
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log("→ magspoof card list…")
+        self.fw_magspoof.log("→ magspoof card list…")
         submit(
             self.pool,
             bt.magspoof_card_list,
-            port=self.firmware_panel.port(),
+            port=self.firmware_port(),
             on_result=self._on_magspoof_cards,
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
     def _on_magspoof_cards(self, cards) -> None:
-        self.firmware_panel.show_cards(cards)
+        self.fw_magspoof.show_cards(cards)
         n = len(cards) if isinstance(cards, list) else "?"
-        self.firmware_panel.log(f"  tarjetas en el store: {n}")
+        self.fw_magspoof.log(f"  tarjetas en el store: {n}")
 
     def magspoof_card_add(self, name: str, t1: str = "", t2: str = "") -> None:
         """Agrega una tarjeta al store (`magspoof card add`)."""
@@ -1056,20 +1092,20 @@ class MainWindow(QMainWindow):
             return
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log(f"→ magspoof card add «{name}»…")
+        self.fw_magspoof.log(f"→ magspoof card add «{name}»…")
         submit(
             self.pool,
             bt.magspoof_card_add,
             name,
             t1=t1 or None,
             t2=t2 or None,
-            port=self.firmware_panel.port(),
+            port=self.firmware_port(),
             on_result=self._on_magspoof_card_written,
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
     def _on_magspoof_card_written(self, res) -> None:
-        self.firmware_panel.log_result(res)
+        self.fw_magspoof.log_result(res)
         self.magspoof_card_list()  # refresca el store tras escribir
 
     def magspoof_card_select(self, name: str) -> None:
@@ -1079,13 +1115,13 @@ class MainWindow(QMainWindow):
             return
         from ..integrations import bombercat_tools as bt
 
-        self.firmware_panel.log(f"→ magspoof card select «{name}»…")
+        self.fw_magspoof.log(f"→ magspoof card select «{name}»…")
         submit(
             self.pool,
             bt.magspoof_card_select,
             name,
-            port=self.firmware_panel.port(),
-            on_result=lambda r: self.firmware_panel.log_result(r),
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_magspoof.log_result(r),
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
         )
 
