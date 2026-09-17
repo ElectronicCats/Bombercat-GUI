@@ -949,6 +949,41 @@ class MainWindow(QMainWindow):
         self.notify.emit("Flasheo terminado — releyendo estado…")
         self.refresh_device()  # re-lee capacidades → re-aplica gating
 
+    # -- BomberCat: DetectTags / DetectReaders (bombercat-tools) ------------
+    def tags_read(self, timeout: int = 15) -> None:
+        """Lee un tag NFC (`tags read --json`) → tabla del sub-tab Tags."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log(f"→ Esperando un tag ({timeout}s)…")
+        submit(
+            self.pool,
+            bt.tags_read,
+            timeout,
+            on_result=self._on_tags_read,
+            on_error=lambda m: self.notify.emit(f"tags: {m}"),
+        )
+
+    def _on_tags_read(self, data) -> None:
+        self.firmware_panel.show_tag(data)
+        self.firmware_panel.log(f"  tag: {data}")
+
+    def readers_read(self, timeout: int = 15) -> None:
+        """Detecta un lector/POS (`readers read --json`) → sub-tab Readers."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log(f"→ Esperando un lector ({timeout}s)…")
+        submit(
+            self.pool,
+            bt.readers_read,
+            timeout,
+            on_result=self._on_readers_read,
+            on_error=lambda m: self.notify.emit(f"readers: {m}"),
+        )
+
+    def _on_readers_read(self, data) -> None:
+        self.firmware_panel.show_reader(data)
+        self.firmware_panel.log(f"  lector: {data}")
+
 
 def _harden_qt_env() -> None:
     """Evita SIGSEGV al arrancar en Linux: PySide6 trae su **propio** Qt, y

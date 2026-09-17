@@ -17,13 +17,18 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -64,6 +69,14 @@ class FirmwarePanel(QWidget):
         self._sub = QTabWidget()
         self._sub.addTab(self._build_device_tab(), "Dispositivo")
         self._sub.addTab(self._build_flash_tab(), "Flashear")
+
+        # Sub-tabs específicos de firmware — habilitados por capacidad (gating).
+        tags_tab = self._build_tags_tab()
+        self._sub.addTab(tags_tab, "Tags")
+        self.register_gated("tags", tags_tab)
+        readers_tab = self._build_readers_tab()
+        self._sub.addTab(readers_tab, "Readers")
+        self.register_gated("readers", readers_tab)
 
         self._log = QPlainTextEdit(readOnly=True)
         self._log.setFont(_MONO)
@@ -174,6 +187,98 @@ class FirmwarePanel(QWidget):
         lay.addWidget(dev)
         lay.addStretch(1)
         return w
+
+    # -- sub-tab Tags (gated:tags) -----------------------------------------
+    def _build_tags_tab(self) -> QWidget:
+        w = QWidget()
+        hint = QLabel(
+            "Lee un tag NFC (DetectTags): espera a que se acerque una tarjeta y "
+            "muestra UID, tecnología, protocolo y modelo resuelto host-side."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color:#8b949e")
+
+        self._tags_timeout = QSpinBox()
+        self._tags_timeout.setRange(1, 120)
+        self._tags_timeout.setValue(15)
+        self._tags_timeout.setSuffix(" s")
+        read = QPushButton("Leer tag")
+        read.clicked.connect(lambda: self.win.tags_read(self._tags_timeout.value()))
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Timeout"))
+        row.addWidget(self._tags_timeout)
+        row.addWidget(read)
+        row.addStretch(1)
+
+        self._tags_table = self._kv_table()
+
+        lay = QVBoxLayout(w)
+        lay.addWidget(hint)
+        lay.addLayout(row)
+        lay.addWidget(self._tags_table, 1)
+        return w
+
+    # -- sub-tab Readers (gated:readers) -----------------------------------
+    def _build_readers_tab(self) -> QWidget:
+        w = QWidget()
+        hint = QLabel(
+            "Detecta un lector/POS (DetectReaders): espera a que un terminal "
+            "consulte la placa y muestra su primer APDU (p.ej. SELECT PPSE)."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color:#8b949e")
+
+        self._readers_timeout = QSpinBox()
+        self._readers_timeout.setRange(1, 120)
+        self._readers_timeout.setValue(15)
+        self._readers_timeout.setSuffix(" s")
+        read = QPushButton("Detectar lector")
+        read.clicked.connect(
+            lambda: self.win.readers_read(self._readers_timeout.value())
+        )
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Timeout"))
+        row.addWidget(self._readers_timeout)
+        row.addWidget(read)
+        row.addStretch(1)
+
+        self._readers_table = self._kv_table()
+
+        lay = QVBoxLayout(w)
+        lay.addWidget(hint)
+        lay.addLayout(row)
+        lay.addWidget(self._readers_table, 1)
+        return w
+
+    def _kv_table(self) -> QTableWidget:
+        """Tabla Campo/Valor genérica (las claves del JSON varían por firmware)."""
+        t = QTableWidget(0, 2)
+        t.setHorizontalHeaderLabels(["Campo", "Valor"])
+        t.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        t.setSelectionBehavior(QAbstractItemView.SelectRows)
+        t.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        t.verticalHeader().setVisible(False)
+        return t
+
+    @staticmethod
+    def _fill_kv(table: QTableWidget, data: dict) -> None:
+        rows = list(data.items())
+        table.setRowCount(len(rows))
+        for i, (k, v) in enumerate(rows):
+            table.setItem(i, 0, QTableWidgetItem(str(k)))
+            table.setItem(i, 1, QTableWidgetItem("—" if v is None else str(v)))
+
+    def show_tag(self, data) -> None:
+        """Pinta el resultado de `tags read --json` (un objeto) en la tabla."""
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        self._fill_kv(self._tags_table, data or {})
+
+    def show_reader(self, data) -> None:
+        """Pinta el resultado de `readers read --json` (un objeto) en la tabla."""
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        self._fill_kv(self._readers_table, data or {})
 
     # -- gating por capacidad (para sesiones futuras) ----------------------
     def register_gated(self, cap: str, widget: QWidget) -> None:
