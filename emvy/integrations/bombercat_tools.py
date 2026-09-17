@@ -405,6 +405,70 @@ def identify(port: str | None = None, timeout: float = 30):
 
 
 # ---------------------------------------------------------------------------
+# magspoof (imagen magspoof.uf2) — emulación de banda magnética
+# ---------------------------------------------------------------------------
+# El CLI del vendor conversa con el REPL del firmware magspoof. `show` y
+# `card list` ofrecen `--json` (verificado en v1.3.0); `play`/`card add`/
+# `card select`/`nfc visa` solo confirman en texto → devolvemos el
+# CompletedProcess para volcarlo con `log_result`. El `timeout` es el del
+# subproceso, NO un flag del CLI (estos subcomandos no aceptan `-t`).
+def _port_args(port: str | None) -> list[str]:
+    return ["-p", port] if port else []
+
+
+def magspoof_show(port: str | None = None, timeout: float = 20) -> dict:
+    """Tarjeta activa cargada en la placa (`magspoof show --json`) →
+    `{t1, t2, btn, analysis:{...}}`."""
+    data = run_json(["magspoof", "show", "--json"] + _port_args(port), timeout=timeout)
+    return data[0] if isinstance(data, list) else data
+
+
+def magspoof_play(port: str | None = None, timeout: float = 20):
+    """Reproduce un swipe de la tarjeta activa (`magspoof play`)."""
+    return run_capture(["magspoof", "play"] + _port_args(port), timeout=timeout)
+
+
+def magspoof_card_list(port: str | None = None, timeout: float = 20) -> list[dict]:
+    """Tarjetas del store persistente (`magspoof card list --json`).
+
+    Emite un objeto JSON por tarjeta; un store vacío es un estado válido (lista
+    vacía), por eso NO usa `run_json` (que trataría "sin JSON" como error)."""
+    cp = run_capture(
+        ["magspoof", "card", "list", "--json"] + _port_args(port), timeout=timeout
+    )
+    return [o for o in _extract_json(cp.stdout) if isinstance(o, dict)]
+
+
+def magspoof_card_add(
+    name: str,
+    *,
+    t1: str | None = None,
+    t2: str | None = None,
+    port: str | None = None,
+    timeout: float = 20,
+):
+    """Agrega una tarjeta al store (`magspoof card add <name> [--t1] [--t2]`)."""
+    args = ["magspoof", "card", "add", name]
+    if t1:
+        args += ["--t1", t1]
+    if t2:
+        args += ["--t2", t2]
+    return run_capture(args + _port_args(port), timeout=timeout)
+
+
+def magspoof_card_select(name: str, *, port: str | None = None, timeout: float = 20):
+    """Marca `name` como tarjeta activa (`magspoof card select <name>`)."""
+    return run_capture(
+        ["magspoof", "card", "select", name] + _port_args(port), timeout=timeout
+    )
+
+
+def magspoof_nfc_visa(port: str | None = None, timeout: float = 30):
+    """Emulación Visa contactless por NFC (`magspoof nfc visa`)."""
+    return run_capture(["magspoof", "nfc", "visa"] + _port_args(port), timeout=timeout)
+
+
+# ---------------------------------------------------------------------------
 # setup-env (bombercat-tools >= v1.3.0): reglas udev + membresía de grupos
 # ---------------------------------------------------------------------------
 def setup_env_passthrough() -> int:

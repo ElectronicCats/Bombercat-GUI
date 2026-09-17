@@ -984,6 +984,111 @@ class MainWindow(QMainWindow):
         self.firmware_panel.show_reader(data)
         self.firmware_panel.log(f"  lector: {data}")
 
+    # -- BomberCat: magspoof (bombercat-tools) -----------------------------
+    def magspoof_show(self) -> None:
+        """Tarjeta activa (`magspoof show --json`) → tabla del sub-tab Magspoof."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log("→ magspoof show…")
+        submit(
+            self.pool,
+            bt.magspoof_show,
+            port=self.firmware_panel.port(),
+            on_result=self._on_magspoof_show,
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    def _on_magspoof_show(self, data) -> None:
+        self.firmware_panel.show_magspoof(data)
+        self.firmware_panel.log(f"  activa: {data}")
+
+    def magspoof_play(self) -> None:
+        """Reproduce un swipe de la tarjeta activa (`magspoof play`)."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log("→ magspoof play (swipe)…")
+        submit(
+            self.pool,
+            bt.magspoof_play,
+            port=self.firmware_panel.port(),
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    def magspoof_nfc_visa(self) -> None:
+        """Emula Visa contactless por NFC (`magspoof nfc visa`)."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log("→ magspoof nfc visa…")
+        submit(
+            self.pool,
+            bt.magspoof_nfc_visa,
+            port=self.firmware_panel.port(),
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    def magspoof_card_list(self) -> None:
+        """Lista el store de tarjetas (`magspoof card list --json`)."""
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log("→ magspoof card list…")
+        submit(
+            self.pool,
+            bt.magspoof_card_list,
+            port=self.firmware_panel.port(),
+            on_result=self._on_magspoof_cards,
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    def _on_magspoof_cards(self, cards) -> None:
+        self.firmware_panel.show_cards(cards)
+        n = len(cards) if isinstance(cards, list) else "?"
+        self.firmware_panel.log(f"  tarjetas en el store: {n}")
+
+    def magspoof_card_add(self, name: str, t1: str = "", t2: str = "") -> None:
+        """Agrega una tarjeta al store (`magspoof card add`)."""
+        if not name:
+            self.notify.emit("magspoof: indica un nombre de tarjeta")
+            return
+        if not (t1 or t2):
+            self.notify.emit("magspoof: indica Track 1 y/o Track 2")
+            return
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log(f"→ magspoof card add «{name}»…")
+        submit(
+            self.pool,
+            bt.magspoof_card_add,
+            name,
+            t1=t1 or None,
+            t2=t2 or None,
+            port=self.firmware_panel.port(),
+            on_result=self._on_magspoof_card_written,
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    def _on_magspoof_card_written(self, res) -> None:
+        self.firmware_panel.log_result(res)
+        self.magspoof_card_list()  # refresca el store tras escribir
+
+    def magspoof_card_select(self, name: str) -> None:
+        """Marca una tarjeta como activa (`magspoof card select`)."""
+        if not name:
+            self.notify.emit("magspoof: elige una tarjeta")
+            return
+        from ..integrations import bombercat_tools as bt
+
+        self.firmware_panel.log(f"→ magspoof card select «{name}»…")
+        submit(
+            self.pool,
+            bt.magspoof_card_select,
+            name,
+            port=self.firmware_panel.port(),
+            on_result=lambda r: self.firmware_panel.log_result(r),
+            on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
 
 def _harden_qt_env() -> None:
     """Evita SIGSEGV al arrancar en Linux: PySide6 trae su **propio** Qt, y

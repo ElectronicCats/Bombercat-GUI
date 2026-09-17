@@ -77,6 +77,9 @@ class FirmwarePanel(QWidget):
         readers_tab = self._build_readers_tab()
         self._sub.addTab(readers_tab, "Readers")
         self.register_gated("readers", readers_tab)
+        magspoof_tab = self._build_magspoof_tab()
+        self._sub.addTab(magspoof_tab, "Magspoof")
+        self.register_gated("magspoof", magspoof_tab)
 
         self._log = QPlainTextEdit(readOnly=True)
         self._log.setFont(_MONO)
@@ -249,6 +252,129 @@ class FirmwarePanel(QWidget):
         lay.addLayout(row)
         lay.addWidget(self._readers_table, 1)
         return w
+
+    # -- sub-tab Magspoof (gated:magspoof) ---------------------------------
+    def _build_magspoof_tab(self) -> QWidget:
+        w = QWidget()
+        hint = QLabel(
+            "Emulación de banda magnética (magspoof): inspecciona la tarjeta "
+            "activa, reprodúcela (swipe), gestiona el store de tarjetas y emula "
+            "Visa por NFC contactless."
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color:#8b949e")
+
+        # -- tarjeta activa: show / play / nfc visa --
+        show = QPushButton("Mostrar (show)")
+        show.clicked.connect(lambda: self.win.magspoof_show())
+        play = QPushButton("Reproducir (play)")
+        play.clicked.connect(lambda: self.win.magspoof_play())
+        nfc = QPushButton("Emular Visa (NFC)")
+        nfc.clicked.connect(lambda: self.win.magspoof_nfc_visa())
+        arow = QHBoxLayout()
+        arow.addWidget(show)
+        arow.addWidget(play)
+        arow.addWidget(nfc)
+        arow.addStretch(1)
+        self._magspoof_table = self._kv_table()
+        active = QGroupBox("Tarjeta activa")
+        al = QVBoxLayout(active)
+        al.addLayout(arow)
+        al.addWidget(self._magspoof_table, 1)
+
+        # -- store persistente: list / select / add --
+        lst = QPushButton("Listar (card list)")
+        lst.clicked.connect(lambda: self.win.magspoof_card_list())
+        self._card_name = QComboBox()
+        self._card_name.setEditable(True)
+        self._card_name.setMinimumWidth(160)
+        sel = QPushButton("Seleccionar")
+        sel.clicked.connect(
+            lambda: self.win.magspoof_card_select(self._card_name.currentText().strip())
+        )
+        srow = QHBoxLayout()
+        srow.addWidget(lst)
+        srow.addWidget(QLabel("Tarjeta"))
+        srow.addWidget(self._card_name)
+        srow.addWidget(sel)
+        srow.addStretch(1)
+
+        self._cards_table = QTableWidget(0, 2)
+        self._cards_table.setHorizontalHeaderLabels(["Tarjeta", "Datos"])
+        self._cards_table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.Stretch
+        )
+        self._cards_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._cards_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._cards_table.verticalHeader().setVisible(False)
+
+        self._add_name = QLineEdit()
+        self._add_name.setPlaceholderText("nombre")
+        self._add_name.setFixedWidth(120)
+        self._add_t1 = QLineEdit()
+        self._add_t1.setPlaceholderText("Track 1 (%B…?)")
+        self._add_t2 = QLineEdit()
+        self._add_t2.setPlaceholderText("Track 2 (;…?)")
+        add = QPushButton("Agregar (card add)")
+        add.clicked.connect(
+            lambda: self.win.magspoof_card_add(
+                self._add_name.text().strip(),
+                self._add_t1.text().strip(),
+                self._add_t2.text().strip(),
+            )
+        )
+        frow = QHBoxLayout()
+        frow.addWidget(QLabel("Nombre"))
+        frow.addWidget(self._add_name)
+        frow.addWidget(self._add_t1, 1)
+        frow.addWidget(self._add_t2, 1)
+        frow.addWidget(add)
+
+        store = QGroupBox("Tarjetas guardadas")
+        sl = QVBoxLayout(store)
+        sl.addLayout(srow)
+        sl.addWidget(self._cards_table, 1)
+        sl.addLayout(frow)
+
+        lay = QVBoxLayout(w)
+        lay.addWidget(hint)
+        lay.addWidget(active, 1)
+        lay.addWidget(store, 1)
+        return w
+
+    def show_magspoof(self, data) -> None:
+        """Pinta `magspoof show --json` (t1/t2/btn + `analysis` aplanado)."""
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        data = data or {}
+        flat = {k: v for k, v in data.items() if k != "analysis"}
+        for k, v in (data.get("analysis") or {}).items():
+            flat[f"analysis.{k}"] = v
+        self._fill_kv(self._magspoof_table, flat)
+
+    def show_cards(self, cards) -> None:
+        """Pinta `magspoof card list --json` (una fila por tarjeta) y puebla el
+        combo de selección con los nombres."""
+        cards = cards if isinstance(cards, list) else [cards] if cards else []
+        self._cards_table.setRowCount(len(cards))
+        names: list[str] = []
+        for i, c in enumerate(cards):
+            name = str(c.get("name", "")) if isinstance(c, dict) else str(c)
+            names.append(name)
+            rest = (
+                {k: v for k, v in c.items() if k != "name"}
+                if isinstance(c, dict)
+                else {}
+            )
+            self._cards_table.setItem(i, 0, QTableWidgetItem(name))
+            self._cards_table.setItem(
+                i, 1, QTableWidgetItem(", ".join(f"{k}={v}" for k, v in rest.items()))
+            )
+        cur = self._card_name.currentText()
+        self._card_name.clear()
+        self._card_name.addItems([n for n in names if n])
+        if cur:
+            self._card_name.setEditText(cur)
 
     def _kv_table(self) -> QTableWidget:
         """Tabla Campo/Valor genérica (las claves del JSON varían por firmware)."""
