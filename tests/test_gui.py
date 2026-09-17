@@ -385,7 +385,12 @@ def test_firmware_subtabs_and_status_gating(win):
     assert [fp._sub.tabText(i) for i in range(fp._sub.count())] == [
         "Dispositivo",
         "Flashear",
+        "Tags",
+        "Readers",
     ]
+    # los sub-tabs gated (Tags/Readers) arrancan deshabilitados (sin caps)
+    tags_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Tags")
+    assert not fp._sub.isTabEnabled(tags_idx)
     # un sub-tab ficticio que exige 'mifare' arranca deshabilitado (sin caps)
     dummy = QWidget()
     idx = fp._sub.addTab(dummy, "Mifare")
@@ -403,6 +408,33 @@ def test_firmware_subtabs_and_status_gating(win):
     assert fp._l_name.text() == "MifareClassic"
     assert "mifare" in fp._l_caps.text()
     assert fp._sub.isTabEnabled(idx)
+
+
+def test_firmware_tags_readers_render(win):
+    """Los sub-tabs Tags/Readers se habilitan por capacidad y `show_tag`/
+    `show_reader` pintan el JSON (un objeto) en la tabla Campo/Valor."""
+    fp = win.firmware_panel
+    tags_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Tags")
+    readers_idx = next(
+        i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Readers"
+    )
+    fp.set_status(
+        {"name": "DetectTags", "capabilities": ["tags", "readers", "identify"]}
+    )
+    assert fp._sub.isTabEnabled(tags_idx)
+    assert fp._sub.isTabEnabled(readers_idx)
+
+    fp.show_tag({"uid": "041A2B3C", "tech": "NFC-A", "protocol": "T2T", "sak": None})
+    assert fp._tags_table.rowCount() == 4
+    assert fp._tags_table.item(0, 0).text() == "uid"
+    assert fp._tags_table.item(0, 1).text() == "041A2B3C"
+    # None se muestra como guion, no como "None"
+    assert fp._tags_table.item(3, 1).text() == "—"
+
+    # readers_read puede devolver una lista → toma el primer objeto
+    fp.show_reader([{"aid": None, "label": "emv-payment"}])
+    assert fp._readers_table.rowCount() == 2
+    assert fp._readers_table.item(1, 1).text() == "emv-payment"
 
 
 def test_charges_and_poc_construct(win):
