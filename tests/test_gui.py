@@ -336,7 +336,9 @@ def test_explorer_show_dump_builds_tree(win):
     assert any("SFI 1" in x for x in labels)
 
 
-def test_all_eleven_tabs(win):
+def test_top_level_tabs(win):
+    # ADR-001: el panel único "BomberCat" se abre en un Tab por firmware
+    # (Dispositivo/Tags/Readers/Magspoof) dentro del grupo HARDWARE.
     tabs = win.tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
         "Inicio",
@@ -348,7 +350,10 @@ def test_all_eleven_tabs(win):
         "Cobros",
         "PoC",
         "Intercept",
-        "BomberCat",
+        "Dispositivo",
+        "Tags",
+        "Readers",
+        "Magspoof",
         "Fuzzing",
     ]
 
@@ -368,84 +373,82 @@ def test_intercept_apply_and_toggle(win):
 
 
 def test_firmware_lists_sketches(win):
-    win.firmware_panel.reload()
+    win.fw_device.reload()
     names = [
-        win.firmware_panel._sketch.itemText(i)
-        for i in range(win.firmware_panel._sketch.count())
+        win.fw_device._sketch.itemText(i) for i in range(win.fw_device._sketch.count())
     ]
     assert any("EMVyBomberCat" in n for n in names)
 
 
-def test_firmware_subtabs_and_status_gating(win):
-    """El panel BomberCat tiene sub-tabs Dispositivo/Flashear; `set_status`
-    pinta la cabecera y habilita los sub-tabs 'gated' por capacidad."""
-    from PySide6.QtWidgets import QWidget
+def test_firmware_device_status_and_gating_broadcast(win):
+    """ADR-001: cada firmware es un panel propio. El control-plane (Dispositivo)
+    está siempre habilitado; los paneles gated arrancan deshabilitados y el
+    broadcast de `set_status` de `MainWindow` los habilita según capacidad."""
+    # El control-plane no tiene capacidad → siempre habilitado.
+    assert win.fw_device.capability is None
+    assert win.fw_device.isEnabled()
+    # Los paneles gated arrancan deshabilitados (sin caps).
+    assert not win.fw_tags.isEnabled()
+    assert not win.fw_readers.isEnabled()
+    assert not win.fw_magspoof.isEnabled()
 
-    fp = win.firmware_panel
-    assert [fp._sub.tabText(i) for i in range(fp._sub.count())] == [
-        "Dispositivo",
-        "Flashear",
-        "Tags",
-        "Readers",
-        "Magspoof",
-    ]
-    # los sub-tabs gated (Tags/Readers) arrancan deshabilitados (sin caps)
-    tags_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Tags")
-    assert not fp._sub.isTabEnabled(tags_idx)
-    # un sub-tab ficticio que exige 'mifare' arranca deshabilitado (sin caps)
-    dummy = QWidget()
-    idx = fp._sub.addTab(dummy, "Mifare")
-    fp.register_gated("mifare", dummy)
-    assert not fp._sub.isTabEnabled(idx)
-    # tras leer el estado con la capacidad presente, se habilita
-    fp.set_status(
+    # El broadcast de MainWindow re-gatea TODOS los paneles a la vez.
+    win._on_device_status(
         {
-            "name": "MifareClassic",
+            "name": "DetectTags",
             "version": "1.0",
             "detected": "handshake (certain)",
-            "capabilities": ["mifare", "monitor", "identify"],
+            "capabilities": ["tags", "readers", "identify"],
         }
     )
-    assert fp._l_name.text() == "MifareClassic"
-    assert "mifare" in fp._l_caps.text()
-    assert fp._sub.isTabEnabled(idx)
+    # La cabecera del control-plane se pinta.
+    assert win.fw_device._l_name.text() == "DetectTags"
+    assert "tags" in win.fw_device._l_caps.text()
+    # Solo los paneles cuya capacidad está presente quedan habilitados.
+    assert win.fw_tags.isEnabled()
+    assert win.fw_readers.isEnabled()
+    assert not win.fw_magspoof.isEnabled()
+
+
+def test_firmware_port_is_shared(win):
+    """El puerto serie es único: lo posee el panel Dispositivo y `firmware_port`
+    de MainWindow lo expone al resto de paneles."""
+    win.fw_device._port.setText(" /dev/ttyACM0 ")
+    assert win.firmware_port() == "/dev/ttyACM0"
+    assert win.fw_tags.port() == "/dev/ttyACM0"
+    assert win.fw_magspoof.port() == "/dev/ttyACM0"
 
 
 def test_firmware_tags_readers_render(win):
-    """Los sub-tabs Tags/Readers se habilitan por capacidad y `show_tag`/
-    `show_reader` pintan el JSON (un objeto) en la tabla Campo/Valor."""
-    fp = win.firmware_panel
-    tags_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Tags")
-    readers_idx = next(
-        i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Readers"
-    )
-    fp.set_status(
-        {"name": "DetectTags", "capabilities": ["tags", "readers", "identify"]}
-    )
-    assert fp._sub.isTabEnabled(tags_idx)
-    assert fp._sub.isTabEnabled(readers_idx)
+    """`show_tag`/`show_reader` pintan el JSON (un objeto) en la tabla Campo/Valor."""
+    win.fw_tags.set_status({"capabilities": ["tags"]})
+    win.fw_readers.set_status({"capabilities": ["readers"]})
+    assert win.fw_tags.isEnabled()
+    assert win.fw_readers.isEnabled()
 
-    fp.show_tag({"uid": "041A2B3C", "tech": "NFC-A", "protocol": "T2T", "sak": None})
-    assert fp._tags_table.rowCount() == 4
-    assert fp._tags_table.item(0, 0).text() == "uid"
-    assert fp._tags_table.item(0, 1).text() == "041A2B3C"
+    win.fw_tags.show_tag(
+        {"uid": "041A2B3C", "tech": "NFC-A", "protocol": "T2T", "sak": None}
+    )
+    t = win.fw_tags._table
+    assert t.rowCount() == 4
+    assert t.item(0, 0).text() == "uid"
+    assert t.item(0, 1).text() == "041A2B3C"
     # None se muestra como guion, no como "None"
-    assert fp._tags_table.item(3, 1).text() == "—"
+    assert t.item(3, 1).text() == "—"
 
     # readers_read puede devolver una lista → toma el primer objeto
-    fp.show_reader([{"aid": None, "label": "emv-payment"}])
-    assert fp._readers_table.rowCount() == 2
-    assert fp._readers_table.item(1, 1).text() == "emv-payment"
+    win.fw_readers.show_reader([{"aid": None, "label": "emv-payment"}])
+    assert win.fw_readers._table.rowCount() == 2
+    assert win.fw_readers._table.item(1, 1).text() == "emv-payment"
 
 
 def test_firmware_magspoof_render(win):
-    """El sub-tab Magspoof se habilita por capacidad; `show_magspoof` aplana
+    """El panel Magspoof se habilita por capacidad; `show_magspoof` aplana
     el `analysis` y `show_cards` puebla la tabla + el combo de nombres."""
-    fp = win.firmware_panel
-    ms_idx = next(i for i in range(fp._sub.count()) if fp._sub.tabText(i) == "Magspoof")
-    assert not fp._sub.isTabEnabled(ms_idx)  # gated: arranca deshabilitado
+    fp = win.fw_magspoof
+    assert not fp.isEnabled()  # gated: arranca deshabilitado
     fp.set_status({"name": "magspoof", "capabilities": ["magspoof", "identify"]})
-    assert fp._sub.isTabEnabled(ms_idx)
+    assert fp.isEnabled()
 
     # show --json: t1/t2/btn planos + analysis.* aplanado
     fp.show_magspoof(
@@ -457,8 +460,8 @@ def test_firmware_magspoof_render(win):
         }
     )
     rows = {
-        fp._magspoof_table.item(i, 0).text(): fp._magspoof_table.item(i, 1).text()
-        for i in range(fp._magspoof_table.rowCount())
+        fp._table.item(i, 0).text(): fp._table.item(i, 1).text()
+        for i in range(fp._table.rowCount())
     }
     assert rows["t1"] == "%B4111...?"
     assert rows["btn"] == "—"  # None → guion
