@@ -338,7 +338,7 @@ def test_explorer_show_dump_builds_tree(win):
 
 def test_top_level_tabs(win):
     # ADR-001: el panel único "BomberCat" se abre en un Tab por firmware
-    # (Dispositivo/Tags/Readers/Magspoof) dentro del grupo HARDWARE.
+    # (Dispositivo/Tags/Readers/Magspoof/Mifare) dentro del grupo HARDWARE.
     tabs = win.tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
         "Inicio",
@@ -354,6 +354,7 @@ def test_top_level_tabs(win):
         "Tags",
         "Readers",
         "Magspoof",
+        "Mifare",
         "Fuzzing",
     ]
 
@@ -474,6 +475,51 @@ def test_firmware_magspoof_render(win):
     assert "t2=;4111...?" in fp._cards_table.item(0, 1).text()
     names = [fp._card_name.itemText(i) for i in range(fp._card_name.count())]
     assert names == ["visa", "amex"]
+
+
+def test_firmware_mifare_render(win):
+    """El panel Mifare se habilita por capacidad; `show_keys` pinta las claves
+    por defecto y `show_dump` resume el volcado (uid + nº de sectores)."""
+    fp = win.fw_mifare
+    assert fp.capability == "mifare"
+    assert not fp.isEnabled()  # gated: arranca deshabilitado
+    fp.set_status({"name": "MifareClassic", "capabilities": ["mifare", "identify"]})
+    assert fp.isEnabled()
+
+    fp.show_keys(
+        [
+            {"name": "default", "key": "FFFFFFFFFFFF"},
+            {"name": "nxp", "key": "A0A1A2A3A4A5"},
+        ]
+    )
+    assert fp._keys_table.rowCount() == 2
+    assert fp._keys_table.item(0, 1).text() == "FFFFFFFFFFFF"
+
+    fp.show_dump({"uid": "DEADBEEF", "sectors": [{}, {}, {}]})
+    rows = {
+        fp._dump_table.item(i, 0).text(): fp._dump_table.item(i, 1).text()
+        for i in range(fp._dump_table.rowCount())
+    }
+    assert rows["uid"] == "DEADBEEF"
+    assert rows["sectores"] == "3"
+
+
+def test_firmware_mifare_dumps_combo(win, tmp_path, monkeypatch):
+    """`mifare_reload_dumps` puebla el combo con los JSON `mifare-*.json` del
+    proyecto activo (artifacts/)."""
+    from emvy.project import store
+
+    art = tmp_path / "artifacts"
+    art.mkdir()
+    (art / "mifare-20260917-101010.json").write_text("{}")
+    (art / "otro.json").write_text("{}")  # no `mifare-*` → se ignora
+    proj = type("P", (), {"artifacts_dir": art})()
+    monkeypatch.setattr(store, "active_project", lambda: proj)
+
+    win.mifare_reload_dumps()
+    combo = win.fw_mifare._dumps
+    names = [combo.itemText(i) for i in range(combo.count())]
+    assert names == ["mifare-20260917-101010.json"]
 
 
 def test_charges_and_poc_construct(win):

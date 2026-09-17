@@ -196,3 +196,87 @@ def test_magspoof_card_add_omits_empty_tracks(monkeypatch):
 def test_magspoof_show_returns_dict(monkeypatch):
     monkeypatch.setattr(bt, "run_json", lambda args, timeout=None: {"t1": "x"})
     assert bt.magspoof_show() == {"t1": "x"}
+
+
+# ---------------------------------------------------------------------------
+# Mifare (MifareClassic): wrappers finos del grupo `tags mifare` del vendor.
+# Probamos la construcción de args y el parseo (keys JSONL, dump dict)
+# monkeypatcheando `run_capture`/`run_json`, sin subproceso ni hardware.
+# ---------------------------------------------------------------------------
+def test_mifare_keys_returns_list(monkeypatch):
+    # `keys --json` emite un objeto JSON por clave (JSONL), como `card list`.
+    monkeypatch.setattr(
+        bt,
+        "run_capture",
+        lambda args, timeout=None: _CP(
+            '{"name": "FFFFFFFFFFFF", "key": "FFFFFFFFFFFF"}\n'
+            '{"name": "A0A1A2A3A4A5", "key": "A0A1A2A3A4A5"}\n'
+        ),
+    )
+    keys = bt.mifare_keys()
+    assert [k["name"] for k in keys] == ["FFFFFFFFFFFF", "A0A1A2A3A4A5"]
+
+
+def test_mifare_check_builds_args(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.mifare_check("/tmp/k.keys", sectors=40, keys=["extra.dic"], port="/dev/ttyACM0")
+    assert seen["args"] == [
+        "tags",
+        "mifare",
+        "check",
+        "--output-keys",
+        "/tmp/k.keys",
+        "--sectors",
+        "40",
+        "--keys",
+        "extra.dic",
+        "--force",
+        "-p",
+        "/dev/ttyACM0",
+    ]
+
+
+def test_mifare_dump_builds_args_and_returns_dict(monkeypatch):
+    seen = {}
+
+    def fake(args, timeout=None):
+        seen["args"] = args
+        return {"uid": "DEADBEEF", "sectors": [{}, {}]}
+
+    monkeypatch.setattr(bt, "run_json", fake)
+    data = bt.mifare_dump("/tmp/k.keys", "/tmp/d.json", sectors=16)
+    assert data["uid"] == "DEADBEEF"
+    assert seen["args"] == [
+        "tags",
+        "mifare",
+        "dump",
+        "--keys-file",
+        "/tmp/k.keys",
+        "--out",
+        "/tmp/d.json",
+        "--sectors",
+        "16",
+        "--json",
+        "--force",
+    ]
+
+
+def test_mifare_restore_always_passes_yes(monkeypatch):
+    # Sin TTY en el subproceso, `restore` DEBE llevar `--yes` o se colgaría
+    # esperando la confirmación interactiva del bloque 0.
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.mifare_restore("/tmp/d.json")
+    assert seen["args"] == [
+        "tags",
+        "mifare",
+        "restore",
+        "--dump",
+        "/tmp/d.json",
+        "--yes",
+    ]
