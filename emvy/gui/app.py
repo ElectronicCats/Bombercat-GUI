@@ -14,6 +14,7 @@ dock inferior por las señales `apdu_event`/`wire_event`.
 from __future__ import annotations
 
 import sys
+import time
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QFont
@@ -44,6 +45,7 @@ from .panels.explorer import ExplorerPanel
 from .panels.firmware import (
     DevicePanel,
     MagspoofPanel,
+    MifarePanel,
     TagsPanel,
 )
 from .panels.firmware import ReadersPanel as FwReadersPanel
@@ -116,11 +118,13 @@ class MainWindow(QMainWindow):
         self.fw_tags = TagsPanel(self)
         self.fw_readers = FwReadersPanel(self)
         self.fw_magspoof = MagspoofPanel(self)
+        self.fw_mifare = MifarePanel(self)
         self.firmware_panels = [
             self.fw_device,
             self.fw_tags,
             self.fw_readers,
             self.fw_magspoof,
+            self.fw_mifare,
         ]
         self.fuzz_panel = FuzzPanel(self)
         self.tabs = QTabWidget()
@@ -137,6 +141,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.fw_tags, "Tags")
         self.tabs.addTab(self.fw_readers, "Readers")
         self.tabs.addTab(self.fw_magspoof, "Magspoof")
+        self.tabs.addTab(self.fw_mifare, "Mifare")
         self.tabs.addTab(self.fuzz_panel, "Fuzzing")
         # Navegación por **barra lateral** (más limpia que 11 pestañas arriba):
         # el QTabWidget conserva las páginas (y `self.tabs` sigue siendo la API)
@@ -183,6 +188,7 @@ class MainWindow(QMainWindow):
             "Tags",
             "Readers",
             "Magspoof",
+            "Mifare",
             "Fuzzing",
         }
     )
@@ -215,6 +221,7 @@ class MainWindow(QMainWindow):
                 ("Tags", "nfc"),
                 ("Readers", "search"),
                 ("Magspoof", "credit-card"),
+                ("Mifare", "square"),
             ),
         ),
     )
@@ -1123,6 +1130,91 @@ class MainWindow(QMainWindow):
             port=self.firmware_port(),
             on_result=lambda r: self.fw_magspoof.log_result(r),
             on_error=lambda m: self.notify.emit(f"magspoof: {m}"),
+        )
+
+    # -- Mifare (MifareClassic) --------------------------------------------
+    def mifare_keys(self) -> None:
+        """Lista las claves por defecto del firmware (`tags mifare keys`)."""
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_mifare.log("→ tags mifare keys…")
+        submit(
+            self.pool,
+            bt.mifare_keys,
+            port=self.firmware_port(),
+            on_result=self._on_mifare_keys,
+            on_error=lambda m: self.notify.emit(f"mifare: {m}"),
+        )
+
+    def _on_mifare_keys(self, keys) -> None:
+        self.fw_mifare.show_keys(keys)
+        n = len(keys) if isinstance(keys, list) else "?"
+        self.fw_mifare.log(f"  claves por defecto: {n}")
+
+    def mifare_dump(self, sectors: int) -> None:
+        """Recupera las claves de la tarjeta y la vuelca a un JSON en el proyecto
+        activo (`check --output-keys` → `dump --keys-file --out`). Encadena ambos
+        subcomandos en un solo worker; los ficheros van a `<proyecto>/artifacts/`."""
+        proj = store.active_project()
+        if proj is None:
+            self.notify.emit("Mifare: activa un proyecto para guardar el dump.")
+            return
+        from ..integrations import bombercat_tools as bt
+
+        art = proj.artifacts_dir
+        art.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        keyfile = art / f"mifare-{stamp}.keys"
+        out_json = art / f"mifare-{stamp}.json"
+        port = self.firmware_port()
+        self.fw_mifare.log(
+            f"→ mifare check + dump ({sectors} sectores) → artifacts/{out_json.name}…"
+        )
+
+        def _run():
+            bt.mifare_check(keyfile, sectors=sectors, port=port)
+            return bt.mifare_dump(keyfile, out_json, sectors=sectors, port=port)
+
+        submit(
+            self.pool,
+            _run,
+            on_result=lambda d: self._on_mifare_dump(d, out_json),
+            on_error=lambda m: self.notify.emit(f"mifare: {m}"),
+        )
+
+    def _on_mifare_dump(self, data, out_json) -> None:
+        self.fw_mifare.show_dump(data)
+        self.fw_mifare.log(f"  dump guardado: artifacts/{out_json.name}")
+        self.mifare_reload_dumps()
+
+    def mifare_reload_dumps(self) -> None:
+        """Puebla el combo de dumps restaurables con los JSON de artifacts/."""
+        proj = store.active_project()
+        names: list[str] = []
+        if proj is not None and proj.artifacts_dir.is_dir():
+            names = sorted(p.name for p in proj.artifacts_dir.glob("mifare-*.json"))
+        self.fw_mifare.set_dumps(names)
+
+    def mifare_restore(self, name: str) -> None:
+        """Escribe un dump JSON de artifacts/ de vuelta a la tarjeta (`restore`)."""
+        proj = store.active_project()
+        if proj is None:
+            self.notify.emit("Mifare: activa un proyecto con el dump a restaurar.")
+            return
+        from ..integrations import bombercat_tools as bt
+
+        path = proj.artifacts_dir / name
+        if not path.is_file():
+            self.notify.emit(f"Mifare: no existe el dump «{name}».")
+            return
+        self.fw_mifare.log(f"→ mifare restore ← artifacts/{name}…")
+        submit(
+            self.pool,
+            bt.mifare_restore,
+            path,
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_mifare.log_result(r),
+            on_error=lambda m: self.notify.emit(f"mifare: {m}"),
         )
 
 

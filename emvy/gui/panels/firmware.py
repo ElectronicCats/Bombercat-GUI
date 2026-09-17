@@ -525,3 +525,149 @@ class MagspoofPanel(BaseFirmwarePanel):
         self._card_name.addItems([n for n in names if n])
         if cur:
             self._card_name.setEditText(cur)
+
+
+class MifarePanel(BaseFirmwarePanel):
+    """MifareClassic (gated:mifare): recuperación de claves + volcado/restauración.
+
+    Flujo guiado en tres pasos, con ficheros intermedios en `<proyecto>/artifacts/`:
+    **Claves** (diccionario por defecto) → **Recuperar+Volcar** (check → keyfile →
+    dump → JSON) → **Restaurar** (escribe un dump de vuelta a la tarjeta). El dump
+    es un JSON de tarjeta Mifare (uid + bloques por sector), NO un CardDump EMV, así
+    que se guarda como artefacto del proyecto, no como captura del Explorador.
+    """
+
+    capability = "mifare"
+    needs_image = "MifareClassic"
+
+    def __init__(self, win) -> None:
+        super().__init__(win)
+        lay = QVBoxLayout(self)
+        lay.addWidget(self._gate_hint())
+        lay.addWidget(
+            self._hint(
+                "Mifare Classic (MifareClassic): acerca una tarjeta y el firmware "
+                "abre la sesión solo. «Recuperar y volcar» prueba el diccionario de "
+                "claves contra cada sector, guarda las recuperadas y vuelca la "
+                "tarjeta a un JSON en artifacts/. «Restaurar» escribe un dump de "
+                "vuelta a una tarjeta reescribible."
+            )
+        )
+        lay.addWidget(self._build_dump_group())
+        lay.addWidget(self._build_restore_group(), 1)
+        lay.addWidget(self._log, 1)
+
+    # -- grupo recuperación + volcado --------------------------------------
+    def _build_dump_group(self) -> QGroupBox:
+        box = QGroupBox("Recuperar claves y volcar")
+        v = QVBoxLayout(box)
+
+        self._sectors = QSpinBox()
+        self._sectors.setRange(1, 40)
+        self._sectors.setValue(16)
+        self._sectors.setToolTip("16 = tarjeta de 1K; 40 = 4K.")
+        keys = QPushButton("Ver claves por defecto")
+        keys.clicked.connect(lambda: self.win.mifare_keys())
+        dump = QPushButton("Recuperar y volcar")
+        dump.setToolTip(
+            "check → recupera las claves de cada sector → dump → JSON en "
+            "artifacts/. Requiere un proyecto activo."
+        )
+        dump.clicked.connect(lambda: self.win.mifare_dump(self._sectors.value()))
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Sectores"))
+        row.addWidget(self._sectors)
+        row.addWidget(keys)
+        row.addWidget(dump)
+        row.addStretch(1)
+        v.addLayout(row)
+
+        # tabla de claves por defecto (nombre → clave)
+        self._keys_table = QTableWidget(0, 2)
+        self._keys_table.setHorizontalHeaderLabels(["Clave", "Valor"])
+        self._keys_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self._keys_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._keys_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._keys_table.verticalHeader().setVisible(False)
+        v.addWidget(self._keys_table)
+
+        # resumen del último dump (uid + nº de sectores)
+        self._dump_table = self._kv_table()
+        v.addWidget(self._dump_table)
+        return box
+
+    # -- grupo restauración -------------------------------------------------
+    def _build_restore_group(self) -> QGroupBox:
+        box = QGroupBox("Restaurar")
+        v = QVBoxLayout(box)
+        self._dumps = QComboBox()
+        self._dumps.setMinimumWidth(220)
+        rel = QPushButton("Recargar dumps")
+        rel.clicked.connect(self.reload_dumps)
+        restore = QPushButton("Restaurar a la tarjeta")
+        restore.setToolTip(
+            "Escribe el dump seleccionado de vuelta a una tarjeta Mifare "
+            "reescribible. No reescribe el bloque 0 (UID)."
+        )
+        restore.clicked.connect(self._do_restore)
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Dump"))
+        row.addWidget(self._dumps, 1)
+        row.addWidget(rel)
+        row.addWidget(restore)
+        v.addLayout(row)
+        v.addWidget(
+            self._hint(
+                "Los dumps son los JSON de artifacts/ generados por «Recuperar y "
+                "volcar». Restaurar sobrescribe los bloques de datos y trailers "
+                "(claves + access bits) de la tarjeta."
+            )
+        )
+        return box
+
+    # -- renderizadores -----------------------------------------------------
+    def show_keys(self, keys) -> None:
+        """Pinta `mifare keys --json` (una fila por clave por defecto)."""
+        keys = keys if isinstance(keys, list) else [keys] if keys else []
+        self._keys_table.setRowCount(len(keys))
+        for i, k in enumerate(keys):
+            name = str(k.get("name", "")) if isinstance(k, dict) else str(k)
+            val = str(k.get("key", "")) if isinstance(k, dict) else ""
+            self._keys_table.setItem(i, 0, QTableWidgetItem(name))
+            self._keys_table.setItem(i, 1, QTableWidgetItem(val))
+
+    def show_dump(self, data) -> None:
+        """Resume el JSON de `mifare dump` (uid + nº de sectores leídos)."""
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        data = data or {}
+        sectors = data.get("sectors") or data.get("sector_results") or []
+        summary = {
+            "uid": data.get("uid"),
+            "sectores": len(sectors) if isinstance(sectors, (list, dict)) else sectors,
+        }
+        self._fill_kv(self._dump_table, summary)
+
+    # -- dumps guardados (artifacts/) --------------------------------------
+    def set_dumps(self, names: list[str]) -> None:
+        """Puebla el combo de dumps restaurables (nombres de fichero)."""
+        cur = self._dumps.currentData()
+        self._dumps.clear()
+        for n in names:
+            self._dumps.addItem(n, n)
+        if not names:
+            self._dumps.addItem("(sin dumps en artifacts/)", "")
+        if cur:
+            i = self._dumps.findData(cur)
+            if i >= 0:
+                self._dumps.setCurrentIndex(i)
+
+    def reload_dumps(self) -> None:
+        self.win.mifare_reload_dumps()
+
+    def _do_restore(self) -> None:
+        name = self._dumps.currentData()
+        if not name:
+            self.win.notify.emit("Mifare: no hay dump seleccionado.")
+            return
+        self.win.mifare_restore(name)

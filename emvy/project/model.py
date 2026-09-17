@@ -75,6 +75,10 @@ class Project:
     def logs_dir(self) -> Path:
         return self.path / "logs"
 
+    @property
+    def artifacts_dir(self) -> Path:
+        return self.path / "artifacts"
+
     def manifest(self) -> dict:
         return {
             "name": self.name,

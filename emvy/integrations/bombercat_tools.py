@@ -469,6 +469,118 @@ def magspoof_nfc_visa(port: str | None = None, timeout: float = 30):
 
 
 # ---------------------------------------------------------------------------
+# Mifare Classic (imagen MifareClassic.uf2) — recuperación de claves + dump
+# ---------------------------------------------------------------------------
+# El grupo `tags mifare` del CLI del vendor conversa con el REPL del firmware
+# MifareClassic (v1.3.0). Flujo típico: `keys` (claves por defecto) → `check`
+# (prueba el diccionario contra cada sector y escribe las claves recuperadas a
+# un fichero `sector:keyA:keyB`) → `dump` (usa ese fichero para volcar la
+# tarjeta a JSON) → `restore` (escribe el dump de vuelta). Los ficheros
+# intermedios (keyfile, dump JSON) los gestiona la GUI en `<proyecto>/artifacts`.
+#
+# Verificado por `--help` (v1.3.0): `keys` ofrece `--json` (JSONL, un objeto por
+# clave, como `magspoof card list`); `check`/`dump`/`restore` producen ficheros
+# — `check` con `--output-keys FILE`, `dump` con `--keys-file`/`--out`, `restore`
+# con `--dump`. `dump --json` emite el volcado en stdout. `restore` pediría
+# confirmación interactiva al escribir el bloque 0; como el subproceso NO tiene
+# TTY, pasamos SIEMPRE `--yes` para que no se cuelgue esperando en stdin.
+
+
+def mifare_keys(port: str | None = None, timeout: float = 20) -> list[dict]:
+    """Claves por defecto integradas en el firmware (`tags mifare keys --json`).
+
+    Emite un objeto JSON por clave (JSONL) → `[{"name": .., "key": ..}, …]`;
+    por eso NO usa `run_json` (JSONL, no un único documento). No requiere tarjeta."""
+    cp = run_capture(
+        ["tags", "mifare", "keys", "--json"] + _port_args(port), timeout=timeout
+    )
+    return [o for o in _extract_json(cp.stdout) if isinstance(o, dict)]
+
+
+def mifare_check(
+    sector_keys_out,
+    *,
+    sectors: int = 16,
+    keys: list | None = None,
+    force: bool = True,
+    port: str | None = None,
+    timeout: float = 120,
+):
+    """Recupera las claves de la tarjeta y las escribe a `sector_keys_out`
+    (`tags mifare check --output-keys FILE`), el fichero `sector:keyA:keyB` que
+    consume `mifare_dump`. `keys` son diccionarios extra (`--keys FILE`, repetible);
+    `--force` sobrescribe el fichero si existe. Devuelve `CompletedProcess`
+    (volcar con `log_result`)."""
+    args = [
+        "tags",
+        "mifare",
+        "check",
+        "--output-keys",
+        str(sector_keys_out),
+        "--sectors",
+        str(sectors),
+    ]
+    for k in keys or []:
+        args += ["--keys", str(k)]
+    if force:
+        args.append("--force")
+    return run_capture(args + _port_args(port), timeout=timeout)
+
+
+def mifare_dump(
+    keys_file,
+    out_json,
+    *,
+    sectors: int = 16,
+    force: bool = True,
+    port: str | None = None,
+    timeout: float = 180,
+) -> dict:
+    """Vuelca la tarjeta a JSON canónico usando el fichero de claves de `check`
+    (`tags mifare dump --keys-file FILE --out FILE --json`). Escribe `out_json`
+    y devuelve el mismo volcado como `dict` (uid + bloques por sector)."""
+    args = [
+        "tags",
+        "mifare",
+        "dump",
+        "--keys-file",
+        str(keys_file),
+        "--out",
+        str(out_json),
+        "--sectors",
+        str(sectors),
+        "--json",
+    ]
+    if force:
+        args.append("--force")
+    data = run_json(args + _port_args(port), timeout=timeout)
+    return data[0] if isinstance(data, list) else data
+
+
+def mifare_restore(
+    dump_json,
+    *,
+    sectors: int | None = None,
+    write_block0: bool = False,
+    skip_trailers: bool = False,
+    port: str | None = None,
+    timeout: float = 180,
+):
+    """Escribe un dump JSON de vuelta a la tarjeta (`tags mifare restore --dump
+    FILE --yes`). `write_block0` reescribe el bloque 0 (UID/BCC/SAK, solo tarjetas
+    "magic"); `skip_trailers` omite los trailers de sector. Siempre pasa `--yes`
+    (sin TTY en el subproceso). Devuelve `CompletedProcess`."""
+    args = ["tags", "mifare", "restore", "--dump", str(dump_json), "--yes"]
+    if sectors is not None:
+        args += ["--sectors", str(sectors)]
+    if write_block0:
+        args.append("--write-block0")
+    if skip_trailers:
+        args.append("--skip-trailers")
+    return run_capture(args + _port_args(port), timeout=timeout)
+
+
+# ---------------------------------------------------------------------------
 # setup-env (bombercat-tools >= v1.3.0): reglas udev + membresía de grupos
 # ---------------------------------------------------------------------------
 def setup_env_passthrough() -> int:
