@@ -53,7 +53,7 @@ def locate() -> Path:
     if not (root / "bombercat.py").exists():
         raise BombercatToolsError(
             f"No encuentro bombercat-tools en {root}.\n"
-            "Vendorízalo (o define EMVY_BOMBERCAT_TOOLS) y corre 'emvy bombercat setup'."
+            "Vendorízalo (o define EMVY_BOMBERCAT_TOOLS) y corre 'cardsec bombercat setup'."
         )
     return root
 
@@ -753,7 +753,7 @@ def setup_env_passthrough() -> int:
     """Ejecuta `bombercat setup-env` heredando la terminal (para la CLI).
 
     El comando necesita root y NO pide contraseña por sí mismo: se corre con
-    `sudo emvy bombercat setup-env`. Si no es root, imprime el `sudo …` exacto.
+    `sudo cardsec bombercat setup-env`. Si no es root, imprime el `sudo …` exacto.
     """
     return run_passthrough(["setup-env"])
 

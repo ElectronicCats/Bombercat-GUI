@@ -1,4 +1,4 @@
-"""Generación de plantillas de plugin de PoC (`emvy poc new`)."""
+"""Generación de plantillas de plugin de PoC (`cardsec poc new`)."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ TEMPLATE = '''\
 Plugin del proyecto (se carga desde <proyecto>/pocs/). Uso autorizado del
 engagement. Documenta la autorización en la metadata.
 """
-from emvy.poc import poc, Severity, Status
+from cardsec.poc import poc, Severity, Status
 # Helpers reutilizables disponibles:
-#   from emvy.payments import EmvCard, iso8583, cryptogram
+#   from cardsec.payments import EmvCard, iso8583, cryptogram
 #   ctx.http()  -> cliente HTTP con evidencia (solo-lectura salvo --allow-write)
 #   ctx.card    -> EmvCard capturada (si se pasó --card)
 #   ctx.var("nombre")  -> variable del proyecto
@@ -46,7 +46,7 @@ def scaffold_poc(
     pocs_dir: Path, poc_id: str, title: str = "", template: str | None = None
 ) -> Path:
     """Crea `<pocs_dir>/<id>.py`. Con `template`, usa una plantilla genérica
-    (ver `emvy.poc.templates`); si no, la plantilla de ejemplo por defecto."""
+    (ver `cardsec.poc.templates`); si no, la plantilla de ejemplo por defecto."""
     pocs_dir.mkdir(parents=True, exist_ok=True)
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in poc_id)
     path = pocs_dir / f"{safe}.py"

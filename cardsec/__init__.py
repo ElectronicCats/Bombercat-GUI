@@ -3,17 +3,17 @@ bancarias (chip EMV, NFC/contactless y banda magnética) vía múltiples lectore
 
 Arquitectura por capas:
 
-    emvy.core      — núcleo PURO (apdu, tlv, tags, aids, atr, emv, track, search)
-    emvy.readers   — capa de lectores (PC/SC, NFC, MSR) con `Transceiver`
-    emvy.session   — captura/volcado de tarjeta sobre `send`
-    emvy.project   — proyectos + variables de entorno (perfil terminal + libres)
-    emvy.tui       — interfaz TUI (Textual)
-    emvy.cli       — CLI para scripting
+    cardsec.core      — núcleo PURO (apdu, tlv, tags, aids, atr, emv, track, search)
+    cardsec.readers   — capa de lectores (PC/SC, NFC, MSR) con `Transceiver`
+    cardsec.session   — captura/volcado de tarjeta sobre `send`
+    cardsec.project   — proyectos + variables de entorno (perfil terminal + libres)
+    cardsec.tui       — interfaz TUI (Textual)
+    cardsec.cli       — CLI para scripting
 
 Uso rápido como librería:
 
-    from emvy.readers import registry
-    from emvy.core import emv
+    from cardsec.readers import registry
+    from cardsec.core import emv
 
     dev = registry.list_all_devices()[0]
     with registry.open_device(dev) as rdr:

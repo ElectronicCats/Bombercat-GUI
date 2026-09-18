@@ -143,7 +143,7 @@ class PocContext:
         if not val:
             raise PocError(
                 f"Falta la variable requerida {name!r} en el proyecto "
-                f"(añádela con: emvy var set {name} <valor>)."
+                f"(añádela con: cardsec var set {name} <valor>)."
             )
         return val
 

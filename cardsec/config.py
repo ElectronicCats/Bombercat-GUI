@@ -41,7 +41,7 @@ def state_file() -> Path:
 
 
 def repo_root() -> Path:
-    """Raíz del repositorio EMVyController (padre del paquete `emvy`).
+    """Raíz del repositorio EMVyController (padre del paquete `cardsec`).
 
     Empaquetado (PyInstaller/AppImage): apunta a la carpeta de datos del bundle
     (`sys._MEIPASS`), donde va incluido `firmware/`. Así el compilado/flasheo de

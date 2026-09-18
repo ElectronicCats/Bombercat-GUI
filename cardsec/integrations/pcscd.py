@@ -1,5 +1,5 @@
 """Gestión de `pcscd.socket` (systemd) para que el backend PC/SC funcione sin
-pasos manuales: `emvy` lo activa al arrancar y lo apaga al salir — **solo si
+pasos manuales: `cardsec` lo activa al arrancar y lo apaga al salir — **solo si
 fue él quien lo activó** (si ya estaba activo por otra razón, no lo toca).
 
 Efecto de sistema aislado (subprocess `systemctl`). En muchos entornos Linux

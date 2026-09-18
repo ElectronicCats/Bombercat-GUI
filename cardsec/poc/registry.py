@@ -99,7 +99,7 @@ def _pocs_dir(project) -> Path:
 
 
 def _import_file(path: Path) -> None:
-    mod_name = f"emvy_poc_plugin_{path.stem}"
+    mod_name = f"cardsec_poc_plugin_{path.stem}"
     spec = importlib.util.spec_from_file_location(mod_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"no se pudo cargar {path}")

@@ -3,7 +3,7 @@ integrados). Los PoCs específicos del cliente viven en `<proyecto>/pocs/*.py`.
 
 Ejemplo de plugin:
 
-    from emvy.poc import poc, Severity, Status
+    from cardsec.poc import poc, Severity, Status
 
     @poc(id="mi-poc", title="...", category="api", severity=Severity.HIGH,
          authorization="Prueba autorizada — cliente X")

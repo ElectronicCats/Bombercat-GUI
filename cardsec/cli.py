@@ -3,7 +3,7 @@
 
 Interfaz delgada: resuelve el lector con `readers.registry`, toma el perfil de
 terminal del proyecto activo (o el por defecto) y delega en `core`/`session`.
-Para la interfaz interactiva rica usa `emvy tui`.
+Para la interfaz interactiva rica usa `cardsec tui`.
 """
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def cmd_readers(args) -> int:
         print(
             c(
                 "  El lector de chip no aparecerá. Usa el venv: "
-                ".venv/bin/python ./emvyctl.py readers",
+                ".venv/bin/python ./cardsecctl.py readers",
                 "grey",
             )
         )
@@ -729,7 +729,7 @@ def cmd_project(args) -> int:
         xdg = store.list_projects()
         path_projs = store.list_path_projects()
         if not xdg and not path_projs and not active_rp:
-            print("Sin proyectos. Crea uno con: emvy project new <nombre>")
+            print("Sin proyectos. Crea uno con: cardsec project new <nombre>")
             return 0
         if xdg:
             print(c("Proyectos (XDG):", "bold"))
@@ -830,7 +830,7 @@ def cmd_project(args) -> int:
 def _require_project():
     proj = store.active_project()
     if not proj:
-        raise ReaderError("No hay proyecto activo. Usa 'emvy project use <nombre>'.")
+        raise ReaderError("No hay proyecto activo. Usa 'cardsec project use <nombre>'.")
     return proj
 
 
@@ -843,7 +843,7 @@ def cmd_var(args) -> int:
         for p in profilesmod.list_profiles():
             print(f"  {c(p.id, 'cyan'):<24} {p.title}")
             print(f"    {c(p.description, 'grey')}")
-        print("Uso: emvy var apply <id>")
+        print("Uso: cardsec var apply <id>")
         return 0
 
     proj = _require_project()
@@ -919,7 +919,7 @@ def cmd_tui(args) -> int:
         if "textual" in str(e).lower() or e.name == "textual":
             print(c("La TUI requiere Textual.", "red"))
             print("Instálalo con:  uv pip install --python .venv textual")
-            print("Mientras tanto puedes usar la CLI o 'emvy shell'.")
+            print("Mientras tanto puedes usar la CLI o 'cardsec shell'.")
             return 1
         raise
     return run_tui()
@@ -931,7 +931,7 @@ def cmd_gui(args) -> int:
     except ModuleNotFoundError as e:
         if "PySide6" in str(e) or getattr(e, "name", "") == "PySide6":
             print(c("La GUI requiere PySide6.", "red"))
-            print("Instálalo con:  uv pip install --python .venv 'emvyctl[gui]'")
+            print("Instálalo con:  uv pip install --python .venv 'cardsec[gui]'")
             print("               (o:  uv pip install --python .venv PySide6)")
             return 1
         raise
@@ -975,7 +975,7 @@ def cmd_shell(args) -> int:
     try:
         while True:
             try:
-                line = input(c("emvy> ", "cyan", "bold")).strip()
+                line = input(c("cardsec> ", "cyan", "bold")).strip()
             except EOFError:
                 break
             if not line:
@@ -1239,7 +1239,10 @@ def cmd_bombercat(args) -> int:
             )
         )
         print(
-            c("Ahora: emvy bombercat emv-emulate --ram (acerca el terminal).", "grey")
+            c(
+                "Ahora: cardsec bombercat emv-emulate --ram (acerca el terminal).",
+                "grey",
+            )
         )
         return 0
     if args.action == "emv-emulate":
@@ -1322,22 +1325,24 @@ def cmd_bombercat_bridge(args) -> int:
             return bctools.status(port)
         if action == "setup-env":
             # bombercat-tools >= v1.3.0: instala reglas udev y añade al usuario a
-            # dialout/plugdev. Necesita root: `sudo emvy bombercat setup-env`.
+            # dialout/plugdev. Necesita root: `sudo cardsec bombercat setup-env`.
             return bctools.setup_env_passthrough()
         if action == "tools":
             rest = list(args.args or [])
             if rest and rest[0] == "--":
                 rest = rest[1:]
             if not rest:
-                print("uso: emvy bombercat tools -- <args del framework>")
+                print("uso: cardsec bombercat tools -- <args del framework>")
                 return 1
             return bctools.run_passthrough(rest)
         if action == "fw":
             if args.op == "list":
                 return bctools.fw_list()
             if not args.name:
-                print(c("Indica el firmware: emvy bombercat fw flash <NOMBRE>", "red"))
-                print("Ver disponibles: emvy bombercat fw list")
+                print(
+                    c("Indica el firmware: cardsec bombercat fw flash <NOMBRE>", "red")
+                )
+                print("Ver disponibles: cardsec bombercat fw list")
                 return 1
             print(
                 c(
@@ -1422,12 +1427,12 @@ def cmd_poc(args) -> int:
         print(c("Plantillas genéricas de PoC:", "bold"))
         for t in list_templates():
             print(f"  · {c(t, 'cyan')}")
-        print("Uso: emvy poc new <id> --template <nombre>")
+        print("Uso: cardsec poc new <id> --template <nombre>")
         return 0
 
     proj = store.active_project()
     if not proj:
-        print(c("No hay proyecto activo. Usa 'emvy project use <nombre>'.", "red"))
+        print(c("No hay proyecto activo. Usa 'cardsec project use <nombre>'.", "red"))
         return 1
 
     if args.action == "new":
@@ -1441,7 +1446,7 @@ def cmd_poc(args) -> int:
             print(c(str(e), "red"))
             return 1
         print(c(f"Plugin de PoC creado: {path}", "green"))
-        print("Edítalo y ejecútalo con: emvy poc run " + args.id)
+        print("Edítalo y ejecútalo con: cardsec poc run " + args.id)
         return 0
 
     _load_project_pocs(proj)
@@ -1449,7 +1454,7 @@ def cmd_poc(args) -> int:
     if args.action == "list":
         pocs = pocmod.list_pocs()
         if not pocs:
-            print(f"Sin PoCs en {proj.pocs_dir}. Crea uno con: emvy poc new <id>")
+            print(f"Sin PoCs en {proj.pocs_dir}. Crea uno con: cardsec poc new <id>")
             return 0
         print(c(f"PoCs del proyecto {proj.name} ({len(pocs)}):", "bold"))
         for p in pocs:
@@ -1482,7 +1487,7 @@ def cmd_poc(args) -> int:
     if args.action == "run":
         p = pocmod.get(args.id)
         if not p:
-            print(c(f"No existe el PoC {args.id!r}. Usa 'emvy poc list'.", "red"))
+            print(c(f"No existe el PoC {args.id!r}. Usa 'cardsec poc list'.", "red"))
             return 1
         card = None
         if args.card:
@@ -1523,7 +1528,7 @@ def cmd_poc(args) -> int:
 # ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="emvyctl",
+        prog="cardsec",
         description="EMVyController — suite de pruebas de seguridad para tarjetas bancarias.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

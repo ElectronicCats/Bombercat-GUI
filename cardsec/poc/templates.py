@@ -4,7 +4,7 @@ Cada plantilla es un plugin `@poc` que lee la configuración del switch y del
 terminal desde variables del proyecto (`ctx.var`), así que el mismo PoC sirve para
 todos los engagements: solo cambias las variables (switch_host, switch_port, TID,
 MID, MCC, TPDU, TLS…). Se materializan en `<proyecto>/pocs/` con
-`emvy poc new <id> --template <nombre>`.
+`cardsec poc new <id> --template <nombre>`.
 
 Variables reconocidas (todas opcionales salvo destino):
   switch_host, switch_port, switch_tls(0/1), tpdu(hex), switch_header_len,
@@ -18,8 +18,8 @@ _SIGNON = '''\
 """PoC genérico: sign-on de red 0800/0810 (verifica conectividad al switch).
 Configura: switch_host, switch_port, switch_tls, tpdu. Autorización: documenta el alcance.
 """
-from emvy.poc import poc, Severity, Status
-from emvy.payments import SwitchConfig, switch
+from cardsec.poc import poc, Severity, Status
+from cardsec.payments import SwitchConfig, switch
 
 
 @poc(id="{id}", title="Switch sign-on 0800", category="switch",
@@ -41,8 +41,8 @@ _PURCHASE = '''\
 Requiere --card (EmvCard) y las variables del switch/terminal. Respeta --dry-run.
 Autorización: prueba controlada con tarjeta propia/de laboratorio.
 """
-from emvy.poc import poc, Severity, Status
-from emvy.payments import SwitchConfig, switch
+from cardsec.poc import poc, Severity, Status
+from cardsec.payments import SwitchConfig, switch
 
 
 @poc(id="{id}", title="Autorización EMV 0200 (switch)", category="switch",
@@ -72,8 +72,8 @@ _REVERSAL = '''\
 """PoC genérico: reverso 0400→0410 referenciando una transacción previa.
 Config: switch_* + variables 'rrn' y 'stan' (o pásalas con --var). Respeta --dry-run.
 """
-from emvy.poc import poc, Severity, Status
-from emvy.payments import SwitchConfig, switch
+from cardsec.poc import poc, Severity, Status
+from cardsec.payments import SwitchConfig, switch
 
 
 @poc(id="{id}", title="Reverso 0400 (switch)", category="switch",
