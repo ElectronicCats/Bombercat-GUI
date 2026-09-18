@@ -96,7 +96,7 @@ class DashboardPanel(QWidget):
         for text, ic, fn in (
             ("Lectores", "plug", lambda: self._go("Lectores")),
             ("Capturar", "search", self._capture_now),
-            ("Emular / Editor", "zap", lambda: self._go("Fuzzing")),
+            ("Emular / Editor", "zap", lambda: self._go("Emulación")),
             ("Cobros", "credit-card", lambda: self._go("Cobros")),
             ("PoC", "flask", lambda: self._go("PoC")),
         ):
@@ -181,8 +181,8 @@ class DashboardPanel(QWidget):
         else:
             self._set_next(
                 "Tarjeta capturada. Explórala, emúlala o busca flags.",
-                "Ir a Fuzzing",
-                lambda: self._go("Fuzzing"),
+                "Ir a Emulación",
+                lambda: self._go("Emulación"),
             )
 
         # capturas del proyecto (recientes primero)

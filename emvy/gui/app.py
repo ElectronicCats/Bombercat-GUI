@@ -50,7 +50,12 @@ from .panels.firmware import (
     TagsPanel,
 )
 from .panels.firmware import ReadersPanel as FwReadersPanel
-from .panels.fuzz import FuzzPanel
+from .panels.fuzz import (
+    CardEditorPanel,
+    EmulationPanel,
+    EmvRecordPanel,
+    MagfuzzPanel,
+)
 from .panels.intercept import InterceptPanel
 from .panels.poc import PocPanel
 from .panels.projects import ProjectsPanel
@@ -131,7 +136,10 @@ class MainWindow(QMainWindow):
             self.fw_mifare,
             self.fw_relay,
         ]
-        self.fuzz_panel = FuzzPanel(self)
+        self.card_editor_panel = CardEditorPanel(self)
+        self.emulation_panel = EmulationPanel(self)
+        self.emv_record_panel = EmvRecordPanel(self)
+        self.magfuzz_panel = MagfuzzPanel(self)
         self.tabs = QTabWidget()
         self.tabs.addTab(self.dashboard_panel, "Inicio")
         self.tabs.addTab(self.projects_panel, "Proyectos")
@@ -140,7 +148,11 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.explorer_panel, "Explorador")
         self.tabs.addTab(self.flags_panel, "Flags")
         self.tabs.addTab(self.iso_panel, "ISO 8583")
+        self.tabs.addTab(self.card_editor_panel, "Editor de tarjeta")
+        self.tabs.addTab(self.emulation_panel, "Emulación")
+        self.tabs.addTab(self.emv_record_panel, "Registro EMV")
         self.tabs.addTab(self.write_panel, "Escritura")
+        self.tabs.addTab(self.magfuzz_panel, "Banda (fuzz)")
         self.tabs.addTab(self.charges_panel, "Cobros")
         self.tabs.addTab(self.poc_panel, "PoC")
         self.tabs.addTab(self.intercept_panel, "Intercept")
@@ -150,7 +162,6 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.fw_magspoof, "Magspoof")
         self.tabs.addTab(self.fw_mifare, "Mifare")
         self.tabs.addTab(self.fw_relay, "Relay")
-        self.tabs.addTab(self.fuzz_panel, "Fuzzing")
         # Navegación por **barra lateral** (más limpia que 11 pestañas arriba):
         # el QTabWidget conserva las páginas (y `self.tabs` sigue siendo la API)
         # pero su barra de pestañas se oculta y se conduce desde la lista lateral.
@@ -188,7 +199,11 @@ class MainWindow(QMainWindow):
         {
             "Lectores",
             "Explorador",
+            "Editor de tarjeta",
+            "Emulación",
+            "Registro EMV",
             "Escritura",
+            "Banda (fuzz)",
             "Cobros",
             "PoC",
             "Intercept",
@@ -198,7 +213,6 @@ class MainWindow(QMainWindow):
             "Magspoof",
             "Mifare",
             "Relay",
-            "Fuzzing",
         }
     )
 
@@ -214,12 +228,21 @@ class MainWindow(QMainWindow):
             ),
         ),
         (
-            "TARJETA",
+            "ANÁLISIS",
             (
                 ("Explorador", "search"),
                 ("Flags", "search"),
                 ("ISO 8583", "credit-card"),
+            ),
+        ),
+        (
+            "EMULACIÓN",
+            (
+                ("Editor de tarjeta", "credit-card"),
+                ("Emulación", "zap"),
+                ("Registro EMV", "download"),
                 ("Escritura", "wrench"),
+                ("Banda (fuzz)", "play"),
             ),
         ),
         (
@@ -228,7 +251,6 @@ class MainWindow(QMainWindow):
                 ("Cobros", "credit-card"),
                 ("PoC", "flask"),
                 ("Intercept", "shield"),
-                ("Fuzzing", "zap"),
             ),
         ),
         (
@@ -349,7 +371,7 @@ class MainWindow(QMainWindow):
                 pass
         # el combo de capturas del fuzz depende del proyecto activo
         try:
-            self.fuzz_panel._reload_captures()
+            self.emulation_panel._reload_captures()
         except Exception:
             pass
         self._update_status()
@@ -643,10 +665,10 @@ class MainWindow(QMainWindow):
         )
 
     def _fill_card_editor(self, card) -> None:
-        """Vuelca la tarjeta al Editor de tarjeta EMV de la pestaña Fuzzing (para
-        que se llene solo al escanear). Best-effort: no rompe si el panel no está."""
+        """Vuelca la tarjeta al panel Editor de tarjeta EMV (para que se llene
+        solo al escanear). Best-effort: no rompe si el panel no está."""
         try:
-            self.fuzz_panel._ed_populate(card)
+            self.card_editor_panel._ed_populate(card)
         except Exception:  # noqa: BLE001
             pass
 

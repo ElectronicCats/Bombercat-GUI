@@ -85,7 +85,8 @@ QListWidget#nav::item:disabled {{        /* cabeceras de grupo */
 /* ---- área de contenido (la barra lateral navega; sin barra de pestañas) */
 QTabWidget::pane {{ border: none; background-color: {BG}; padding: 8px 10px; }}
 QTabBar {{ qproperty-drawBase: 0; }}
-/* sub-pestañas internas (Herramientas, Fuzzing) sí muestran su barra */
+/* estilo de barra de pestañas, por si algún widget la usa localmente
+   (ADR-002: ningún Tab de nivel superior anida QTabWidget hoy) */
 QTabBar::tab {{
     background: transparent; color: {MUTED};
     padding: 8px 16px; margin-right: 2px;

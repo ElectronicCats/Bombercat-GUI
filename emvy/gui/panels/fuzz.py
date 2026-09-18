@@ -1,10 +1,12 @@
-"""Panel Fuzzing (GUI): tres carriles para probar terminales/lectores/POS.
+"""Paneles Fuzzing (GUI): Tabs de nivel superior para probar terminales/lectores/POS
+(ADR-002 — cada carril es su propio Tab, ya no sub-tabs de un "Fuzzing" contenedor).
 
-  * **Banda magnética** → BomberCat magspoof.
-  * **Registro EMV** → UPDATE RECORD en una tarjeta de prueba reescribible.
-  * **NDEF** → emula un tag NFC Type 4; la fuente puede ser una **plantilla**
-    malformada, una **tarjeta de prueba** o una **captura guardada** (sus datos
-    presentados como NDEF — no es emulación EMV funcional, ver `core.ndef`).
+  * **Editor de tarjeta** (`CardEditorPanel`) → escanear/editar/emular una tarjeta EMV.
+  * **Emulación** (`EmulationPanel`) → NFC (NDEF: plantilla/tarjeta de prueba/captura)
+    o EMV (perfilar terminal) vía BomberCat.
+  * **Registro EMV** (`EmvRecordPanel`) → UPDATE RECORD en una tarjeta de prueba
+    reescribible.
+  * **Banda (fuzz)** (`MagfuzzPanel`) → BomberCat magspoof con pistas mutadas.
 
 Cada valor es editable antes de disparar.
 """
@@ -15,12 +17,10 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFormLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -33,33 +33,29 @@ from ..icons import icon
 from ..theme import ACCENT_FG
 
 
-class FuzzPanel(QWidget):
+def _warn() -> QLabel:
+    lbl = QLabel(
+        "⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
+        "reacciona un lector real. Solo hardware propio o autorizado."
+    )
+    lbl.setWordWrap(True)
+    lbl.setStyleSheet("color:#e3b341")
+    return lbl
+
+
+def _desc() -> QLabel:
+    lbl = QLabel("")
+    lbl.setWordWrap(True)
+    lbl.setStyleSheet("color:#8b949e")
+    return lbl
+
+
+class MagfuzzPanel(QWidget):
+    """Banda magnética · magspoof (BomberCat)."""
+
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win
-        lay = QVBoxLayout(self)
-        warn = QLabel(
-            "⚠ Genera datos de tarjeta/NFC fuera de norma para observar cómo "
-            "reacciona un lector real. Solo hardware propio o autorizado."
-        )
-        warn.setWordWrap(True)
-        warn.setStyleSheet("color:#e3b341")
-        lay.addWidget(warn)
-        # Sub-pestañas: una herramienta enfocada a la vez (menos ruido que apilar
-        # los cuatro paneles). Los widgets/IDs no cambian.
-        sub = QTabWidget()
-        sub.addTab(self._card_editor(), "Editor de tarjeta")
-        sub.addTab(self._ndef_lane(), "Emulación NFC/EMV")
-        sub.addTab(self._emv_lane(), "Registro EMV")
-        sub.addTab(self._track_lane(), "Banda magnética")
-        lay.addWidget(sub, 1)
-        self._gen_track()
-        self._gen_emv()
-        self._gen_ndef()
-
-    # -- banda magnética ---------------------------------------------------
-    def _track_lane(self) -> QGroupBox:
-        box = QGroupBox("Banda magnética · magspoof (BomberCat)")
         self._track_tpl = QComboBox()
         for t in cardfuzz.track_templates():
             self._track_tpl.addItem(t.title, t.id)
@@ -77,12 +73,14 @@ class FuzzPanel(QWidget):
         top.addWidget(self._track_tpl, 1)
         top.addWidget(gen)
         top.addWidget(send)
-        v = QVBoxLayout(box)
-        v.addLayout(top)
-        v.addWidget(self._track_desc)
-        v.addWidget(self._track1)
-        v.addWidget(self._track2)
-        return box
+        lay = QVBoxLayout(self)
+        lay.addWidget(_warn())
+        lay.addLayout(top)
+        lay.addWidget(self._track_desc)
+        lay.addWidget(self._track1)
+        lay.addWidget(self._track2)
+        lay.addStretch(1)
+        self._gen_track()
 
     def _gen_track(self) -> None:
         t = cardfuzz.get_track_template(
@@ -102,9 +100,13 @@ class FuzzPanel(QWidget):
             return
         self.win.emit_magspoof(t1, t2)
 
-    # -- registro EMV ------------------------------------------------------
-    def _emv_lane(self) -> QGroupBox:
-        box = QGroupBox("Registro EMV · escribir en tarjeta de prueba")
+
+class EmvRecordPanel(QWidget):
+    """Registro EMV · escribir en tarjeta de prueba."""
+
+    def __init__(self, win) -> None:
+        super().__init__()
+        self.win = win
         self._emv_tpl = QComboBox()
         for t in cardfuzz.emv_templates():
             self._emv_tpl.addItem(t.title, t.id)
@@ -130,12 +132,14 @@ class FuzzPanel(QWidget):
         bottom.addWidget(self._emv_rec)
         bottom.addWidget(write)
         bottom.addStretch(1)
-        v = QVBoxLayout(box)
-        v.addLayout(top)
-        v.addWidget(self._emv_desc)
-        v.addWidget(self._emv_hex)
-        v.addLayout(bottom)
-        return box
+        lay = QVBoxLayout(self)
+        lay.addWidget(_warn())
+        lay.addLayout(top)
+        lay.addWidget(self._emv_desc)
+        lay.addWidget(self._emv_hex)
+        lay.addLayout(bottom)
+        lay.addStretch(1)
+        self._gen_emv()
 
     def _gen_emv(self) -> None:
         t = cardfuzz.get_emv_template(
@@ -158,9 +162,13 @@ class FuzzPanel(QWidget):
             return
         self.win.write_record(sfi, rec, data)
 
-    # -- Emulación (NFC/NDEF o EMV, según la Fuente) -----------------------
-    def _ndef_lane(self) -> QGroupBox:
-        box = QGroupBox("Emular (BomberCat) · la Fuente decide NFC o EMV")
+
+class EmulationPanel(QWidget):
+    """Emular (BomberCat) · la Fuente decide NFC (NDEF) o EMV (perfilar terminal)."""
+
+    def __init__(self, win) -> None:
+        super().__init__()
+        self.win = win
         # Cada fuente lleva su MODO: las NFC emulan un tag NDEF a un lector; la
         # EMV emula una tarjeta de pago a un terminal (perfilarlo). Un solo botón.
         self._ndef_src = QComboBox()
@@ -226,13 +234,15 @@ class FuzzPanel(QWidget):
             "Escanea una tarjeta a memoria/RAM y elígela como fuente para reemularla. "
             "Detener para la emulación; Reboot reinicia la placa."
         )
-        v = QVBoxLayout(box)
-        v.addLayout(top)
-        v.addWidget(self._emv_scan)
-        v.addWidget(self._ndef_desc)
-        v.addWidget(self._ndef_hex)
-        v.addWidget(hint)
-        return box
+        lay = QVBoxLayout(self)
+        lay.addWidget(_warn())
+        lay.addLayout(top)
+        lay.addWidget(self._emv_scan)
+        lay.addWidget(self._ndef_desc)
+        lay.addWidget(self._ndef_hex)
+        lay.addWidget(hint)
+        lay.addStretch(1)
+        self._gen_ndef()
 
     def _ndef_src_changed(self) -> None:
         src = self._ndef_src.currentData()
@@ -381,9 +391,13 @@ class FuzzPanel(QWidget):
     def _reboot(self) -> None:
         self.win.reboot_bombercat()
 
-    # -- Editor de tarjeta EMV (escanear → editar → emular) ----------------
-    def _card_editor(self) -> QGroupBox:
-        box = QGroupBox("Editor de tarjeta EMV · escanear, editar y emular")
+
+class CardEditorPanel(QWidget):
+    """Editor de tarjeta EMV · escanear, editar y emular."""
+
+    def __init__(self, win) -> None:
+        super().__init__()
+        self.win = win
         self._ed_disc = ""  # discrecional del track2 original (se preserva)
 
         # fila de carga: de dónde traer la tarjeta al editor
@@ -451,12 +465,13 @@ class FuzzPanel(QWidget):
             "pulsa «Emular tarjeta editada». El Track2 se regenera desde PAN/caducidad/servicio "
             "(o edítalo a mano). Emula inyectando los datos editados al firmware (EMUEMV:)."
         )
-        v = QVBoxLayout(box)
-        v.addLayout(top)
-        v.addLayout(form)
-        v.addLayout(btns)
-        v.addWidget(hint)
-        return box
+        lay = QVBoxLayout(self)
+        lay.addWidget(_warn())
+        lay.addLayout(top)
+        lay.addLayout(form)
+        lay.addLayout(btns)
+        lay.addWidget(hint)
+        lay.addStretch(1)
 
     def _ed_src_changed(self) -> None:
         is_cap = self._ed_src.currentData() == "capture"
@@ -551,10 +566,3 @@ class FuzzPanel(QWidget):
             track2=self._ed_t2.text().strip(),
         )
         self.win.emit_emv(card=card)
-
-
-def _desc() -> QLabel:
-    lbl = QLabel("")
-    lbl.setWordWrap(True)
-    lbl.setStyleSheet("color:#8b949e")
-    return lbl
