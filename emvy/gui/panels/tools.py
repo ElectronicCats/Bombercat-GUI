@@ -1,4 +1,4 @@
-"""Panel Herramientas (GUI): sub-pestañas Flags, ISO 8583 y Escritura.
+"""Paneles Flags, ISO 8583 y Escritura (GUI) — Tabs de nivel superior (ADR-002).
 
 Reutiliza `core.search`, `payments.iso8583`/`iso_host` y `core.cardwrite`
 (igual que la TUI). La consola cruda del dock inferior es aparte (transporte).
@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -40,27 +39,7 @@ def _log() -> QPlainTextEdit:
     return w
 
 
-class ToolsPanel(QTabWidget):
-    def __init__(self, win) -> None:
-        super().__init__()
-        self.win = win
-        self.flags = _FlagsTool(win)
-        self.iso = _IsoTool(win)
-        self.write = _WriteTool(win)
-        self.addTab(self.flags, "Flags")
-        self.addTab(self.iso, "ISO 8583")
-        self.addTab(self.write, "Escritura")
-
-    # reexpuestos para MainWindow (resultados de workers)
-    def log_write(self, op, resp) -> None:
-        self.write.log_result(op, resp)
-        self.setCurrentWidget(self.write)
-
-    def iso_response(self, resp) -> None:
-        self.iso.show_response(resp)
-
-
-class _FlagsTool(QWidget):
+class FlagsPanel(QWidget):
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win
@@ -109,7 +88,7 @@ class _FlagsTool(QWidget):
             )
 
 
-class _IsoTool(QWidget):
+class IsoPanel(QWidget):
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win
@@ -237,7 +216,7 @@ _OPS = [
 ]
 
 
-class _WriteTool(QWidget):
+class WritePanel(QWidget):
     def __init__(self, win) -> None:
         super().__init__()
         self.win = win

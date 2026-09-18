@@ -55,7 +55,7 @@ from .panels.intercept import InterceptPanel
 from .panels.poc import PocPanel
 from .panels.projects import ProjectsPanel
 from .panels.readers import ReadersPanel
-from .panels.tools import ToolsPanel
+from .panels.tools import FlagsPanel, IsoPanel, WritePanel
 from .panels.variables import VariablesPanel
 from .worker import submit
 
@@ -108,7 +108,9 @@ class MainWindow(QMainWindow):
         self.variables_panel = VariablesPanel(self)
         self.readers_panel = ReadersPanel(self)
         self.explorer_panel = ExplorerPanel(self)
-        self.tools_panel = ToolsPanel(self)
+        self.flags_panel = FlagsPanel(self)
+        self.iso_panel = IsoPanel(self)
+        self.write_panel = WritePanel(self)
         self.charges_panel = ChargesPanel(self)
         self.poc_panel = PocPanel(self)
         self.intercept_panel = InterceptPanel(self)
@@ -136,7 +138,9 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.variables_panel, "Variables")
         self.tabs.addTab(self.readers_panel, "Lectores")
         self.tabs.addTab(self.explorer_panel, "Explorador")
-        self.tabs.addTab(self.tools_panel, "Herramientas")
+        self.tabs.addTab(self.flags_panel, "Flags")
+        self.tabs.addTab(self.iso_panel, "ISO 8583")
+        self.tabs.addTab(self.write_panel, "Escritura")
         self.tabs.addTab(self.charges_panel, "Cobros")
         self.tabs.addTab(self.poc_panel, "PoC")
         self.tabs.addTab(self.intercept_panel, "Intercept")
@@ -184,7 +188,7 @@ class MainWindow(QMainWindow):
         {
             "Lectores",
             "Explorador",
-            "Herramientas",
+            "Escritura",
             "Cobros",
             "PoC",
             "Intercept",
@@ -209,7 +213,15 @@ class MainWindow(QMainWindow):
                 ("Lectores", "plug"),
             ),
         ),
-        ("TARJETA", (("Explorador", "search"), ("Herramientas", "wrench"))),
+        (
+            "TARJETA",
+            (
+                ("Explorador", "search"),
+                ("Flags", "search"),
+                ("ISO 8583", "credit-card"),
+                ("Escritura", "wrench"),
+            ),
+        ),
         (
             "OPERACIONES",
             (
@@ -725,7 +737,7 @@ class MainWindow(QMainWindow):
             raise ValueError(op)
 
         def _ok(r):
-            self.tools_panel.log_write(op, r)
+            self.write_panel.log_result(op, r)
             self.notify.emit(
                 f"{op.upper()} → SW {r.sw_hex} {cardwrite.write_status(r.sw)}"
             )
@@ -744,7 +756,7 @@ class MainWindow(QMainWindow):
         submit(
             self.pool,
             lambda: iso_host.send_message(host, port, data, header=header),
-            on_result=lambda r: self.tools_panel.iso_response(r),
+            on_result=lambda r: self.iso_panel.show_response(r),
             on_error=lambda m: self.notify.emit(f"ISO 8583: {m}"),
         )
 
