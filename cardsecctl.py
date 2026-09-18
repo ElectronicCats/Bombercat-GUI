@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Punto de entrada de conveniencia. La CLI vive en `emvy.cli`."""
+"""Punto de entrada de conveniencia. La CLI vive en `cardsec.cli`."""
 import sys
 
-from emvy.cli import main
+from cardsec.cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

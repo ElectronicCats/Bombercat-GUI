@@ -1,4 +1,4 @@
-"""Hace importable el paquete `emvy` durante los tests (sin instalar)."""
+"""Hace importable el paquete `cardsec` durante los tests (sin instalar)."""
 
 import os
 import sys
@@ -12,8 +12,8 @@ import pytest  # noqa: E402
 
 @pytest.fixture(autouse=True)
 def _no_real_systemctl(monkeypatch):
-    """`emvy.cli.main()` arranca/apaga pcscd.socket automáticamente (ver
-    `emvy.integrations.pcscd`); ningún test debe tocar el systemd real de la
+    """`cardsec.cli.main()` arranca/apaga pcscd.socket automáticamente (ver
+    `cardsec.integrations.pcscd`); ningún test debe tocar el systemd real de la
     máquina que corre la suite. Intercepta solo las llamadas a `systemctl`
     (simulando "inactivo", sin efecto real) y deja pasar todo lo demás — así
     no interfiere con otros usos de `subprocess.run` (arduino-cli, etc.), ni
