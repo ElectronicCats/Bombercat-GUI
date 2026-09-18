@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle(f"EMVy Controller {__version__} {__release__}")
+        self.setWindowTitle(f"Bombercat GUI {__version__} {__release__}")
         self.resize(1120, 760)
 
         # -- estado de sesión ----------------------------------------------
