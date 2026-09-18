@@ -92,7 +92,7 @@ def test_explorer_assign_and_save(win, tmp_path):
 
 
 def test_fuzz_ndef_template_source(win):
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     fz._ndef_src.setCurrentIndex(0)  # Plantilla
     fz._ndef_tpl.setCurrentIndex(fz._ndef_tpl.findData("invalid-tnf"))
     fz._gen_ndef()
@@ -102,7 +102,7 @@ def test_fuzz_ndef_template_source(win):
 
 
 def test_fuzz_ndef_test_card_source(win):
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     fz._ndef_src.setCurrentIndex(fz._ndef_src.findData("test"))
     fz._gen_ndef()
     dec = ndef.parse_records(bytes.fromhex(fz._ndef_hex.text()))[0].decoded()
@@ -131,7 +131,7 @@ def test_fuzz_ndef_capture_source(win):
     )
     store.save_capture(store.active_project(), "cap1", dump.to_json())
 
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     fz._ndef_src.setCurrentIndex(fz._ndef_src.findData("capture"))
     fz._reload_captures()
     fz._ndef_cap.setCurrentIndex(0)
@@ -141,16 +141,17 @@ def test_fuzz_ndef_capture_source(win):
 
 
 def test_fuzz_track_and_emv_generate(win):
-    fz = win.fuzz_panel
-    fz._gen_track()
-    assert fz._track1.text().startswith("%B")
-    fz._gen_emv()
-    assert all(ch in "0123456789ABCDEFabcdef" for ch in fz._emv_hex.text())
+    mag = win.magfuzz_panel
+    mag._gen_track()
+    assert mag._track1.text().startswith("%B")
+    rec = win.emv_record_panel
+    rec._gen_emv()
+    assert all(ch in "0123456789ABCDEFabcdef" for ch in rec._emv_hex.text())
 
 
 def test_fuzz_emit_dispatches_by_source(win):
     """El botón único 'Emular' elige NFC o EMV según el MODO de la Fuente."""
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     calls = []
     win.emit_emv = lambda card=None: calls.append(("emv",))  # stubs: sin hardware
     win.emit_ndef = lambda h: calls.append(("ndef", h))
@@ -189,7 +190,7 @@ def test_fuzz_emv_source_uses_capture(win):
     )
     store.save_capture(store.active_project(), "mc1", dump.to_json())
 
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     cards = []
     win.emit_emv = lambda card=None: cards.append(card)
     fz._ndef_src.setCurrentIndex(
@@ -208,7 +209,7 @@ def test_fuzz_emv_ram_sources(win):
     '(en memoria de la app)' → emit_emv(card=self._scanned_card)."""
     from emvy.payments import EmvCard
 
-    fz = win.fuzz_panel
+    fz = win.emulation_panel
     calls = []
     win.emit_emv = lambda card=None, from_ram=False: calls.append((card, from_ram))
     fz._ndef_src.setCurrentIndex(
@@ -257,7 +258,7 @@ def test_card_editor_load_edit_emulate(win):
     )
     store.save_capture(store.active_project(), "v1", dump.to_json())
 
-    fz = win.fuzz_panel
+    fz = win.card_editor_panel
     cards = []
     win.emit_emv = lambda card=None, from_ram=False: cards.append(card)
     # AUTO-LLENADO: al elegir 'captura' se carga sola la primera (sin pulsar nada)
@@ -283,7 +284,7 @@ def test_card_editor_autofills_on_scan(win):
         track2="5555444433332222D27122010000000F",
     )
     win._fill_card_editor(card)
-    fz = win.fuzz_panel
+    fz = win.card_editor_panel
     assert fz._ed_pan.text() == "5555444433332222"
     assert fz._ed_exp.text() == "2712" and fz._ed_aid.text() == "A0000000041010"
     assert fz._ed_t2.text().startswith("5555444433332222D2712")
@@ -345,7 +346,11 @@ def test_top_level_tabs(win):
         "Explorador",
         "Flags",
         "ISO 8583",
+        "Editor de tarjeta",
+        "Emulación",
+        "Registro EMV",
         "Escritura",
+        "Banda (fuzz)",
         "Cobros",
         "PoC",
         "Intercept",
@@ -355,7 +360,6 @@ def test_top_level_tabs(win):
         "Magspoof",
         "Mifare",
         "Relay",
-        "Fuzzing",
     ]
 
 
