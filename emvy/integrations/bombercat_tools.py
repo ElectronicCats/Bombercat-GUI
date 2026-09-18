@@ -320,9 +320,12 @@ def readers_read(timeout: int = 20):
 # `bombercat status` NO ofrece `--json` (verificado en v1.3.0): solo imprime una
 # tabla rich con name/version/detected/capabilities. La parseamos igual que
 # `parse_fw_names` hace con `flash --list` (filas que empiezan por `│`).
-def parse_status(text: str) -> dict:
-    """Extrae {name, version, detected, capabilities:[...]} de la tabla de
-    `bombercat status`. Puro/testeable contra salida canned."""
+def _table_rows(text: str) -> dict[str, str]:
+    """Genérico: extrae pares clave/valor de una tabla rich de **2 columnas**
+    (Campo/Valor), tolerando continuación de celda (rich parte el valor en
+    varias líneas cuando no cabe en el ancho de la tabla). Reutilizado por
+    `parse_status`, `parse_relay_config` y `parse_relay_status` — todas son la
+    misma forma de tabla (`bombercat status`/`relay config show`/`relay status`)."""
     fields: dict[str, str] = {}
     last: str | None = None
     for line in text.splitlines():
@@ -338,6 +341,13 @@ def parse_status(text: str) -> dict:
             last = key
         elif last:  # continuación: rich partió el valor en varias líneas
             fields[last] = f"{fields[last]} {val}".strip()
+    return fields
+
+
+def parse_status(text: str) -> dict:
+    """Extrae {name, version, detected, capabilities:[...]} de la tabla de
+    `bombercat status`. Puro/testeable contra salida canned."""
+    fields = _table_rows(text)
     caps = [
         c.strip()
         for c in fields.get("capabilities", "").split(",")
@@ -578,6 +588,162 @@ def mifare_restore(
     if skip_trailers:
         args.append("--skip-trailers")
     return run_capture(args + _port_args(port), timeout=timeout)
+
+
+# ---------------------------------------------------------------------------
+# Relay NFCGate (imagen NFCGate.uf2) — config + run/stop/status + captura pcap
+# ---------------------------------------------------------------------------
+# El grupo `relay` del CLI del vendor configura y arranca un relay APDU sobre
+# WiFi/TCP contra un `nfcgate-server`; `capture` toca el mismo tap para volcar
+# los APDUs relayados a pcap. Verificado por `--help`/lectura de
+# `modules/nfcgate/cli.py` y `modules/capture/cli.py` (v1.3.0): NINGÚN
+# subcomando de este grupo ofrece `--json` (`config show`/`status` imprimen
+# tablas rich de 2 columnas, iguales en forma a la de `status` → reusan
+# `_table_rows`); `config wifi`/`config nfcgate`/`run`/`stop` solo confirman en
+# texto. `monitor` y `capture start` son streaming SIN FIN (hasta Ctrl-C o que
+# el firmware corte el link) — no encajan en el patrón `run_capture(timeout=…)`
+# de las demás capacidades; ver `capture_run` más abajo para cómo se acota.
+
+
+def parse_relay_config(text: str) -> dict:
+    """`relay config show` → {fw, role, ssid, server, port, session, state}."""
+    fields = _table_rows(text)
+    return {
+        k: fields.get(k, "")
+        for k in ("fw", "role", "ssid", "server", "port", "session", "state")
+    }
+
+
+def relay_config_show(port: str | None = None, timeout: float = 20) -> dict:
+    """Configuración actual del relay (`relay config show`)."""
+    cp = run_capture(["relay", "config", "show"] + _port_args(port), timeout=timeout)
+    return parse_relay_config(cp.stdout)
+
+
+def relay_config_wifi(
+    ssid: str,
+    password: str = "",
+    *,
+    save: bool = True,
+    port: str | None = None,
+    timeout: float = 20,
+):
+    """Fija las credenciales WiFi (`relay config wifi --ssid --password`)."""
+    args = ["relay", "config", "wifi", "--ssid", ssid, "--password", password]
+    args.append("--save" if save else "--no-save")
+    return run_capture(args + _port_args(port), timeout=timeout)
+
+
+def relay_config_nfcgate(
+    server: str,
+    session: int,
+    role: str,
+    *,
+    save: bool = True,
+    port: str | None = None,
+    timeout: float = 20,
+):
+    """Fija servidor/sesión/rol (`relay config nfcgate --server --session --role`).
+    `role` es `"reader"` (lee una tarjeta física) o `"card"` (la emula a un
+    terminal); `session` 1..255 debe coincidir en ambos peers."""
+    args = [
+        "relay",
+        "config",
+        "nfcgate",
+        "--server",
+        server,
+        "--session",
+        str(session),
+        "--role",
+        role,
+    ]
+    args.append("--save" if save else "--no-save")
+    return run_capture(args + _port_args(port), timeout=timeout)
+
+
+def parse_relay_status(text: str) -> dict:
+    """`relay status` → {state, link_connected, peer_present, relayed}."""
+    fields = _table_rows(text)
+
+    def yn(v: str) -> bool:
+        return v.strip().lower() == "yes"
+
+    return {
+        "state": fields.get("state", ""),
+        "link_connected": yn(fields.get("link connected", "")),
+        "peer_present": yn(fields.get("peer present", "")),
+        "relayed": fields.get("APDU pairs relayed", "0"),
+    }
+
+
+def relay_status(port: str | None = None, timeout: float = 20) -> dict:
+    """Estado en vivo del relay (`relay status`)."""
+    cp = run_capture(["relay", "status"] + _port_args(port), timeout=timeout)
+    return parse_relay_status(cp.stdout)
+
+
+# `run` es bloqueante EN EL PROPIO CLI del vendor: acepta el arranque y sondea
+# `status` internamente hasta 'relaying'/'error' o su propio presupuesto
+# (~45 s, ver `_RUN_BRINGUP_TIMEOUT` en modules/nfcgate/cli.py). El timeout por
+# defecto de `run_capture` le da margen para agotar ese presupuesto solo.
+def relay_run(port: str | None = None, timeout: float = 55):
+    """Arranca el relay y espera a que llegue a 'relaying' (o falle)."""
+    return run_capture(["relay", "run"] + _port_args(port), timeout=timeout)
+
+
+def relay_stop(port: str | None = None, timeout: float = 20):
+    """Detiene el relay (`relay stop`)."""
+    return run_capture(["relay", "stop"] + _port_args(port), timeout=timeout)
+
+
+def capture_stop(port: str | None = None, timeout: float = 15):
+    """Desarma el tap de captura (`capture stop`) — idempotente: sirve tanto
+    para pararlo a mano como para limpiar un tap dejado armado por
+    `capture_run` tras matar el subproceso al agotar su duración."""
+    return run_capture(["capture", "stop"] + _port_args(port), timeout=timeout)
+
+
+def capture_run(
+    output,
+    *,
+    duration: float = 30,
+    force: bool = True,
+    strict: bool = False,
+    port: str | None = None,
+) -> tuple[subprocess.CompletedProcess, bool]:
+    """Captura los APDUs relayados a un fichero `.pcap` durante `duration`
+    segundos (`capture start -o FILE`).
+
+    El comando del vendor no tiene noción de duración — corre hasta Ctrl-C o
+    que el link caiga — así que la acotamos con el propio timeout de
+    `subprocess.run`: al vencer, `TimeoutExpired` trae en `.stdout`/`.stderr`
+    lo que el proceso alcanzó a escribir antes de matarlo (`subprocess.run` lo
+    recolecta en su `except` antes de re-lanzar). Un `kill()` duro salta el
+    `finally` de `capture start` (que desarma el tap con `capture off`), así
+    que **siempre** se llama a `capture_stop` después, gane o pierda la
+    carrera contra la duración — es una operación idempotente en el firmware.
+
+    Devuelve `(CompletedProcess, timed_out)`: `timed_out=True` si se alcanzó
+    la duración (la captura seguía activa); `False` si el propio comando
+    terminó antes (p.ej. el link se perdió) dentro del plazo."""
+    args = ["capture", "start", "-o", str(output)]
+    if force:
+        args.append("--force")
+    if strict:
+        args.append("--strict")
+    args += _port_args(port)
+    try:
+        cp = run_capture(args, timeout=duration)
+        timed_out = False
+    except subprocess.TimeoutExpired as e:
+        cp = subprocess.CompletedProcess(e.cmd, -1, e.stdout or "", e.stderr or "")
+        timed_out = True
+    finally:
+        try:
+            capture_stop(port=port)
+        except Exception:
+            pass  # best-effort: si ya se desarmó solo, no es un error
+    return cp, timed_out
 
 
 # ---------------------------------------------------------------------------

@@ -24,6 +24,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QGroupBox,
     QHBoxLayout,
@@ -671,3 +672,176 @@ class MifarePanel(BaseFirmwarePanel):
             self.win.notify.emit("Mifare: no hay dump seleccionado.")
             return
         self.win.mifare_restore(name)
+
+
+class RelayPanel(BaseFirmwarePanel):
+    """NFCGate (gated:relay): configura y arranca el relay APDU sobre WiFi/TCP
+    contra un `nfcgate-server`, y captura los APDUs relayados a `.pcap`.
+
+    Es **control-plane**: no habla APDUs por serie con la placa (la relaya
+    directamente el firmware sobre WiFi entre los dos peers), así que aquí
+    solo se configura, arranca/detiene y se observa el estado — más la
+    captura, que sí toca la serie (un tap sobre los eventos `:apdu` del
+    firmware). El relay necesita **dos** placas NFCGate (una `reader`, una
+    `card`) y un `nfcgate-server` alcanzable por ambas.
+    """
+
+    capability = "relay"
+    needs_image = "NFCGate"
+
+    def __init__(self, win) -> None:
+        super().__init__(win)
+        lay = QVBoxLayout(self)
+        lay.addWidget(self._gate_hint())
+        lay.addWidget(
+            self._hint(
+                "Relay NFCGate: relaya APDUs entre un lector y una tarjeta a "
+                "través de un nfcgate-server. Necesita DOS placas NFCGate (una "
+                "en rol «reader», otra en «card») configuradas contra el mismo "
+                "servidor y sesión. Control-plane: no hay tráfico APDU por "
+                "serie salvo al capturar."
+            )
+        )
+        lay.addWidget(self._build_config_group())
+        lay.addWidget(self._build_run_group())
+        lay.addWidget(self._build_capture_group())
+        lay.addWidget(self._log, 1)
+
+    # -- grupo configuración (WiFi + nfcgate-server/sesión/rol) -------------
+    def _build_config_group(self) -> QGroupBox:
+        box = QGroupBox("Configuración (persistida en flash)")
+        v = QVBoxLayout(box)
+
+        self._ssid = QLineEdit()
+        self._ssid.setPlaceholderText("SSID")
+        self._password = QLineEdit()
+        self._password.setPlaceholderText("contraseña (vacío = red abierta)")
+        self._password.setEchoMode(QLineEdit.Password)
+        self._wifi_save = QCheckBox("Guardar")
+        self._wifi_save.setChecked(True)
+        wifi_btn = QPushButton("Aplicar WiFi")
+        wifi_btn.clicked.connect(self._do_config_wifi)
+        wrow = QHBoxLayout()
+        wrow.addWidget(QLabel("WiFi"))
+        wrow.addWidget(self._ssid, 1)
+        wrow.addWidget(self._password, 1)
+        wrow.addWidget(self._wifi_save)
+        wrow.addWidget(wifi_btn)
+        v.addLayout(wrow)
+
+        self._server = QLineEdit()
+        self._server.setPlaceholderText("nfcgate-server: host[:puerto]")
+        self._session = QSpinBox()
+        self._session.setRange(1, 255)
+        self._session.setValue(1)
+        self._role = QComboBox()
+        self._role.addItem("reader (lee una tarjeta física)", "reader")
+        self._role.addItem("card (la emula a un terminal)", "card")
+        self._nfcgate_save = QCheckBox("Guardar")
+        self._nfcgate_save.setChecked(True)
+        nfc_btn = QPushButton("Aplicar NFCGate")
+        nfc_btn.clicked.connect(self._do_config_nfcgate)
+        nrow = QHBoxLayout()
+        nrow.addWidget(QLabel("Servidor"))
+        nrow.addWidget(self._server, 1)
+        nrow.addWidget(QLabel("Sesión"))
+        nrow.addWidget(self._session)
+        nrow.addWidget(self._role)
+        nrow.addWidget(self._nfcgate_save)
+        nrow.addWidget(nfc_btn)
+        v.addLayout(nrow)
+
+        show = QPushButton("Ver configuración (config show)")
+        show.clicked.connect(lambda: self.win.relay_config_show())
+        srow = QHBoxLayout()
+        srow.addWidget(show)
+        srow.addStretch(1)
+        v.addLayout(srow)
+
+        self._config_table = self._kv_table()
+        v.addWidget(self._config_table)
+        return box
+
+    # -- grupo arranque/parada + estado en vivo -----------------------------
+    def _build_run_group(self) -> QGroupBox:
+        box = QGroupBox("Relay")
+        v = QVBoxLayout(box)
+
+        run = QPushButton("Iniciar (run)")
+        run.setToolTip(
+            "Asocia WiFi, conecta al servidor y arranca la sesión. Puede "
+            "tardar hasta ~45 s en llegar a 'relaying'."
+        )
+        run.clicked.connect(lambda: self.win.relay_run())
+        stop = QPushButton("Detener (stop)")
+        stop.clicked.connect(lambda: self.win.relay_stop())
+        status = QPushButton("Actualizar estado")
+        status.clicked.connect(lambda: self.win.relay_status())
+        row = QHBoxLayout()
+        row.addWidget(run)
+        row.addWidget(stop)
+        row.addWidget(status)
+        row.addStretch(1)
+        v.addLayout(row)
+
+        self._status_table = self._kv_table()
+        v.addWidget(self._status_table)
+        return box
+
+    # -- grupo captura a pcap -------------------------------------------------
+    def _build_capture_group(self) -> QGroupBox:
+        box = QGroupBox("Capturar APDUs relayados (pcap)")
+        v = QVBoxLayout(box)
+        self._duration = QSpinBox()
+        self._duration.setRange(5, 600)
+        self._duration.setValue(30)
+        self._duration.setSuffix(" s")
+        cap = QPushButton("Capturar a artifacts/")
+        cap.setToolTip(
+            "Arma el tap, escribe un .pcap en el proyecto activo durante la "
+            "duración indicada y lo desarma. El relay debe estar corriendo."
+        )
+        cap.clicked.connect(lambda: self.win.relay_capture(self._duration.value()))
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Duración"))
+        row.addWidget(self._duration)
+        row.addWidget(cap)
+        row.addStretch(1)
+        v.addLayout(row)
+        v.addWidget(
+            self._hint(
+                "El comando del vendor captura sin límite (hasta Ctrl-C); aquí "
+                "se acota a la duración elegida y siempre se desarma el tap al "
+                "terminar. Wireshark en vivo (-ws) queda fuera de la GUI."
+            )
+        )
+        return box
+
+    # -- renderizadores -------------------------------------------------------
+    def show_config(self, data: dict) -> None:
+        self._fill_kv(self._config_table, data or {})
+
+    def show_status(self, data: dict) -> None:
+        self._fill_kv(self._status_table, data or {})
+
+    # -- disparadores -----------------------------------------------------
+    def _do_config_wifi(self) -> None:
+        ssid = self._ssid.text().strip()
+        if not ssid:
+            self.win.notify.emit("Relay: indica el SSID.")
+            return
+        self.win.relay_config_wifi(
+            ssid, self._password.text(), save=self._wifi_save.isChecked()
+        )
+
+    def _do_config_nfcgate(self) -> None:
+        server = self._server.text().strip()
+        if not server:
+            self.win.notify.emit("Relay: indica el nfcgate-server (host[:puerto]).")
+            return
+        self.win.relay_config_nfcgate(
+            server,
+            self._session.value(),
+            self._role.currentData(),
+            save=self._nfcgate_save.isChecked(),
+        )

@@ -46,6 +46,7 @@ from .panels.firmware import (
     DevicePanel,
     MagspoofPanel,
     MifarePanel,
+    RelayPanel,
     TagsPanel,
 )
 from .panels.firmware import ReadersPanel as FwReadersPanel
@@ -119,12 +120,14 @@ class MainWindow(QMainWindow):
         self.fw_readers = FwReadersPanel(self)
         self.fw_magspoof = MagspoofPanel(self)
         self.fw_mifare = MifarePanel(self)
+        self.fw_relay = RelayPanel(self)
         self.firmware_panels = [
             self.fw_device,
             self.fw_tags,
             self.fw_readers,
             self.fw_magspoof,
             self.fw_mifare,
+            self.fw_relay,
         ]
         self.fuzz_panel = FuzzPanel(self)
         self.tabs = QTabWidget()
@@ -142,6 +145,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.fw_readers, "Readers")
         self.tabs.addTab(self.fw_magspoof, "Magspoof")
         self.tabs.addTab(self.fw_mifare, "Mifare")
+        self.tabs.addTab(self.fw_relay, "Relay")
         self.tabs.addTab(self.fuzz_panel, "Fuzzing")
         # Navegación por **barra lateral** (más limpia que 11 pestañas arriba):
         # el QTabWidget conserva las páginas (y `self.tabs` sigue siendo la API)
@@ -189,6 +193,7 @@ class MainWindow(QMainWindow):
             "Readers",
             "Magspoof",
             "Mifare",
+            "Relay",
             "Fuzzing",
         }
     )
@@ -222,6 +227,7 @@ class MainWindow(QMainWindow):
                 ("Readers", "search"),
                 ("Magspoof", "credit-card"),
                 ("Mifare", "square"),
+                ("Relay", "shield"),
             ),
         ),
     )
@@ -1216,6 +1222,134 @@ class MainWindow(QMainWindow):
             on_result=lambda r: self.fw_mifare.log_result(r),
             on_error=lambda m: self.notify.emit(f"mifare: {m}"),
         )
+
+    # -- Relay NFCGate (bombercat-tools) ------------------------------------
+    def relay_config_wifi(self, ssid: str, password: str, *, save: bool) -> None:
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_relay.log(f"→ relay config wifi --ssid {ssid}…")
+        submit(
+            self.pool,
+            bt.relay_config_wifi,
+            ssid,
+            password,
+            save=save,
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_relay.log_result(r),
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def relay_config_nfcgate(
+        self, server: str, session: int, role: str, *, save: bool
+    ) -> None:
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_relay.log(
+            f"→ relay config nfcgate --server {server} --session {session} "
+            f"--role {role}…"
+        )
+        submit(
+            self.pool,
+            bt.relay_config_nfcgate,
+            server,
+            session,
+            role,
+            save=save,
+            port=self.firmware_port(),
+            on_result=lambda r: self.fw_relay.log_result(r),
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def relay_config_show(self) -> None:
+        """Configuración actual del relay (`relay config show`) → tabla."""
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_relay.log("→ relay config show…")
+        submit(
+            self.pool,
+            bt.relay_config_show,
+            port=self.firmware_port(),
+            on_result=self.fw_relay.show_config,
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def relay_run(self) -> None:
+        """Arranca el relay (`relay run`); puede tardar hasta ~45 s en llegar
+        a 'relaying' — el propio CLI del vendor sondea el estado por dentro."""
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_relay.log("→ relay run (puede tardar hasta ~45 s)…")
+        submit(
+            self.pool,
+            bt.relay_run,
+            port=self.firmware_port(),
+            on_result=self._on_relay_run,
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def _on_relay_run(self, res) -> None:
+        self.fw_relay.log_result(res)
+        self.relay_status()  # refresca el estado tras arrancar
+
+    def relay_stop(self) -> None:
+        from ..integrations import bombercat_tools as bt
+
+        self.fw_relay.log("→ relay stop…")
+        submit(
+            self.pool,
+            bt.relay_stop,
+            port=self.firmware_port(),
+            on_result=self._on_relay_stop,
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def _on_relay_stop(self, res) -> None:
+        self.fw_relay.log_result(res)
+        self.relay_status()
+
+    def relay_status(self) -> None:
+        """Estado en vivo del relay (`relay status`) → tabla."""
+        from ..integrations import bombercat_tools as bt
+
+        submit(
+            self.pool,
+            bt.relay_status,
+            port=self.firmware_port(),
+            on_result=self.fw_relay.show_status,
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def relay_capture(self, duration: int) -> None:
+        """Captura los APDUs relayados a un `.pcap` en el proyecto activo
+        durante `duration` segundos (`capture start` acotado; ver
+        `bombercat_tools.capture_run`)."""
+        proj = store.active_project()
+        if proj is None:
+            self.notify.emit("Relay: activa un proyecto para guardar la captura.")
+            return
+        from ..integrations import bombercat_tools as bt
+
+        art = proj.artifacts_dir
+        art.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        out_pcap = art / f"relay-{stamp}.pcap"
+        port = self.firmware_port()
+        self.fw_relay.log(f"→ capturando {duration}s → artifacts/{out_pcap.name}…")
+        submit(
+            self.pool,
+            bt.capture_run,
+            out_pcap,
+            duration=duration,
+            port=port,
+            on_result=lambda r: self._on_relay_capture(r, out_pcap),
+            on_error=lambda m: self.notify.emit(f"relay: {m}"),
+        )
+
+    def _on_relay_capture(self, result, out_pcap) -> None:
+        cp, timed_out = result
+        self.fw_relay.log_result(cp)
+        reason = "duración agotada" if timed_out else "el link terminó solo"
+        self.fw_relay.log(f"  captura guardada: artifacts/{out_pcap.name} ({reason})")
 
 
 def _harden_qt_env() -> None:
