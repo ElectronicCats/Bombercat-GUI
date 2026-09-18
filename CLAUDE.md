@@ -75,7 +75,7 @@ emvy/
 ├── gui/         ── interfaz GUI de escritorio (PySide6/Qt) — frontend nativo alternativo a la TUI
 │   ├── app.py       MainWindow: estado de sesión + orquestación de hardware por señales Qt; run_gui()
 │   ├── worker.py    submit()/Worker(QRunnable): operaciones de hardware fuera del hilo GUI, con progreso por señales (mantiene vivos los workers en `_ACTIVE` + `setAutoDelete(False)`: si no, el pool los auto-borra y las señales `result`/`error` en cola se pierden)
-│   └── panels/      dashboard, projects, variables, readers, explorer (árbol TLV + inspector), tools (Flags/ISO8583/Escritura), charges (Cobros), poc, intercept, firmware (BomberCat), fuzz (emulación: Fuente decide NFC-NDEF [plantilla/tarjeta-de-prueba/captura] o EMV [perfilar terminal]), console (consola cruda: TX/RX completo + Exportar/Guardar en proyecto)
+│   └── panels/      dashboard, projects, variables, readers, explorer (árbol TLV + inspector), tools.py (Flags/ISO 8583/Escritura — 3 Tabs de nivel superior, ADR-002; ya no un `ToolsPanel` contenedor), charges (Cobros), poc, intercept, firmware (BomberCat, **un panel/Tab de nivel superior por firmware** —ADR-001—: **Dispositivo** [control-plane, siempre activo: status→firmware+capacidades vía bombercat-tools, identificar LED, permisos udev, flasheo de imágenes .uf2 oficiales por `bombercat flash` + sección dev arduino-cli; **posee el puerto serie único** que el resto lee vía `MainWindow.firmware_port()`] · **Tags** [gated:tags, `tags read --json`→tabla Campo/Valor: UID/tech/modelo] · **Readers** [gated:readers, `readers read --json`→primer APDU del terminal] · **Magspoof** [gated:magspoof, banda magnética: `magspoof show --json`→tabla (t1/t2/btn+analysis), `play`/`nfc visa`, store `card list/add/select`] · **Mifare** [gated:mifare, MifareClassic: `tags mifare keys`→tabla de claves por defecto, «Recuperar y volcar» encadena `check --output-keys`→`dump --keys-file --out --json` guardando keyfile+JSON en `<proyecto>/artifacts/`, «Restaurar» reescribe un dump (`restore --dump --yes`); el JSON es de tarjeta Mifare (uid+sectores), NO un CardDump EMV → artefacto, no captura] · **Relay** [gated:relay, NFCGate — control-plane, sin APDUs por serie salvo al capturar: config WiFi (`relay config wifi --ssid --password`) + nfcgate-server/sesión/rol (`relay config nfcgate --server --session --role reader|card`), «Ver configuración»→tabla (`relay config show`), Iniciar/Detener (`relay run`/`stop`, `run` puede tardar ~45s) + «Actualizar estado»→tabla (`relay status`), y «Capturar a artifacts/» que arma el tap y vuelca a `.pcap` con `capture start -o` **acotado por duración** (el comando del vendor no tiene límite propio; se corta con el timeout del subproceso y siempre se desarma después con `capture stop`, idempotente) guardando en `<proyecto>/artifacts/relay-*.pcap`]; cada panel hereda de `BaseFirmwarePanel` y se auto-gatea por capacidad en `set_status`; `MainWindow._on_device_status` hace **broadcast** de `set_status` a `firmware_panels` tras cada status/flasheo), fuzz.py (`CardEditorPanel`/`EmulationPanel`/`EmvRecordPanel`/`MagfuzzPanel` — 4 Tabs de nivel superior, ADR-002; ya no un `FuzzPanel` contenedor con sub-pestañas: Emulación decide NFC-NDEF [plantilla/tarjeta-de-prueba/captura] o EMV [perfilar terminal] con un único botón "Emular"), console (consola cruda: TX/RX completo + Exportar/Guardar en proyecto)
 ├── cli.py       ── CLI (argparse) sobre todo lo anterior
 ├── config.py    ── rutas XDG (datos/config); repo_root() = sys._MEIPASS al empaquetar (PyInstaller)
 └── term.py      ── color ANSI para la CLI (presentación)
@@ -190,22 +190,24 @@ uv pip install --python .venv 'emvyctl[gui]'   # o: PySide6
 ./emvyctl.py gui      # o: emvy gui
 ```
 Frontend **nativo** alternativo a la TUI (para quien prefiere ventana de escritorio). Reutiliza el
-mismo núcleo puro; `emvy/gui/`. **Paridad de pestañas con la TUI**: **Inicio** (estado + proyectos
+mismo núcleo puro; `emvy/gui/`. **Paridad de pestañas con la TUI**, todas Tabs de nivel superior
+(ADR-001/ADR-002 — ningún Tab anida un `QTabWidget` interno): **Inicio** (estado + proyectos
 recientes + acciones rápidas), **Proyectos**, **Variables** (+perfiles), **Lectores**, **Explorador**
 (capturar → árbol TLV con inspector: copiar hex/ASCII, asignar a variable, guardar captura),
-**Herramientas** (sub-tabs Flags · ISO 8583 · Escritura), **Cobros** (switch ISO 8583), **PoC**
-(runner del proyecto), **Intercept** (reglas MITM; `active_send` las envuelve al activar), **BomberCat**
-(compilar/subir firmware con arduino-cli) y **Fuzzing** (banda/EMV/NDEF + emulación). En el carril de
-emulación un **único botón "Emular"** decide **NFC o EMV según la Fuente**: `NFC · plantilla NDEF (fuzz)`,
-`NFC · tarjeta de prueba (NDEF)`, `NFC · captura (NDEF)` → emula un tag NDEF a un lector; `EMV · tarjeta
-de pago (perfilar terminal)` → emula una tarjeta EMV a un terminal — con el selector de captura elige
-presentar los **datos reales** de una captura o la Visa de prueba fija (ver §9). Además un **Editor de
-tarjeta EMV** (`FuzzPanel._card_editor`): carga una tarjeta (escanear→memoria, escanear→RAM del BomberCat,
-o una captura guardada), muestra los campos **editables** (PAN, caducidad, cód. servicio, AID, titular,
-Track2), regenera el Track2 desde PAN/caducidad/servicio (`core.track.build_track2_emv`, inverso de
-`parse_track2_emv`) y emula la tarjeta **editada** (`emit_emv(card)` → `EMUEMV:` con los datos nuevos).
-Botones
-**Detener**/**Reboot** compartidos. Un **dock inferior "Consola cruda"** siempre visible muestra **todo lo
+**Flags** / **ISO 8583** (`panels/tools.py::FlagsPanel/IsoPanel`), **Editor de tarjeta** / **Emulación**
+/ **Registro EMV** / **Escritura** / **Banda (fuzz)** (`panels/fuzz.py::CardEditorPanel/EmulationPanel/
+EmvRecordPanel/…`, `panels/tools.py::WritePanel`), **Cobros** (switch ISO 8583), **PoC** (runner del
+proyecto), **Intercept** (reglas MITM; `active_send` las envuelve al activar) y **BomberCat**
+(compilar/subir firmware con arduino-cli). En **Emulación** un **único botón "Emular"** decide **NFC o
+EMV según la Fuente**: `NFC · plantilla NDEF (fuzz)`, `NFC · tarjeta de prueba (NDEF)`, `NFC · captura
+(NDEF)` → emula un tag NDEF a un lector; `EMV · tarjeta de pago (perfilar terminal)` → emula una tarjeta
+EMV a un terminal — con el selector de captura elige presentar los **datos reales** de una captura o la
+Visa de prueba fija (ver §9). El **Editor de tarjeta** (`CardEditorPanel`): carga una tarjeta
+(escanear→memoria, escanear→RAM del BomberCat, o una captura guardada), muestra los campos **editables**
+(PAN, caducidad, cód. servicio, AID, titular, Track2), regenera el Track2 desde PAN/caducidad/servicio
+(`core.track.build_track2_emv`, inverso de `parse_track2_emv`) y emula la tarjeta **editada**
+(`emit_emv(card)` → `EMUEMV:` con los datos nuevos). Botones
+**Detener**/**Reboot** (en **Emulación**). Un **dock inferior "Consola cruda"** siempre visible muestra **todo lo
 que se envía y se recibe en crudo** (APDU completo + status word, y el transporte serie del BomberCat) vía
 las señales `apdu_event`/`wire_event`, permite enviar un APDU a mano, y **exportar** todo el volcado a un
 archivo (**Exportar…**) o **guardar en el proyecto** (**Guardar en proyecto** → `<proy>/logs/` vía
@@ -213,23 +215,24 @@ archivo (**Exportar…**) o **guardar en el proyecto** (**Guardar en proyecto** 
 operaciones de hardware corren en un `QThreadPool` (`gui/worker.py`) para no congelar la ventana; el
 resultado/traza vuelve por señales Qt. Verificable headless con `QT_QPA_PLATFORM=offscreen` +
 `QWidget.grab()` (ver `tests/test_gui.py`). **Navegación por barra lateral** (`MainWindow._build_sidebar`):
-un `QListWidget#nav` agrupado (SESIÓN/TARJETA/OPERACIONES/HARDWARE) con iconos SVG conduce un `QTabWidget`
-con la barra de pestañas oculta (`self.tabs` sigue siendo la API; `_nav_to_tab` mapea fila→pestaña) — más
-limpio que 11 pestañas arriba. La pestaña **PoC** es ahora un **IDE integrado** (`panels/poc.py`, paridad
+un `QListWidget#nav` agrupado (SESIÓN/ANÁLISIS/EMULACIÓN/OPERACIONES/HARDWARE — `_NAV_GROUPS`) con
+iconos SVG conduce un `QTabWidget` con la barra de pestañas oculta (`self.tabs` sigue siendo la API;
+`_nav_to_tab` mapea fila→pestaña) — más limpio que apilar todas las pestañas arriba. La pestaña **PoC**
+es ahora un **IDE integrado** (`panels/poc.py`, paridad
 con la TUI): explorador de `pocs/*.py`, editor de código con **resaltado Python** (`_PyHighlighter`), crear
 desde plantilla, Guardar/Eliminar, y **Ejecutar al vuelo** eligiendo la fuente de la tarjeta (sesión o
 captura guardada) con dry-run/allow-write (`run_poc(capture_name=…)`), panel de referencia de `ctx` y salida.
 
 **UX (limpieza contextual)**: la **consola cruda** (dock inferior) solo se muestra en las pestañas con
-tráfico de hardware (`MainWindow._CONSOLE_TABS`: Lectores/Explorador/Herramientas/Cobros/PoC/Intercept/
-BomberCat/Fuzzing) y se **oculta** en Inicio/Proyectos/Variables (vía `currentChanged`→`_on_tab_changed`).
+tráfico de hardware (`MainWindow._CONSOLE_TABS`: Lectores/Explorador/Editor de tarjeta/Emulación/
+Registro EMV/Escritura/Banda (fuzz)/Cobros/PoC/Intercept/BomberCat) y se **oculta** en
+Inicio/Proyectos/Variables/Flags/ISO 8583 (vía `currentChanged`→`_on_tab_changed`).
 La pestaña **Inicio** es un **centro de operaciones**: tarjetas de estado (proyecto/lector/tarjeta),
 "siguiente paso" como **botón de acción** contextual, **capturas del proyecto** (doble clic → abre en el
-Explorador), lista de proyectos (doble clic → activar) y accesos rápidos. La pestaña **Fuzzing** agrupa sus
-herramientas en **sub-pestañas** (Editor de tarjeta · Emulación NFC/EMV · Registro EMV · Banda magnética)
-para no apilar todo — los widgets/IDs no cambian. **Iconografía SVG** (estilo Lucide, sin emojis) vía
+Explorador), lista de proyectos (doble clic → activar) y accesos rápidos. **Iconografía SVG** (estilo
+Lucide, sin emojis) vía
 `emvy/gui/icons.py::icon(name, color, size)` (renderiza SVG inline → `QIcon` con `QtSvg`, sin ficheros):
-iconos en las 11 pestañas principales (`MainWindow._apply_tab_icons`) y en los CTAs (Emular/Detener/Reboot,
+iconos en la barra lateral (`_NAV_GROUPS`) y en los CTAs (Emular/Detener/Reboot,
 accesos rápidos de Inicio). En la **TUI** el "siguiente paso" del Inicio es también un **botón de acción**
 (`#dash-next-btn` → `build_model().next_action`) además del atajo de teclado.
 
@@ -515,7 +518,7 @@ Integración por USB serie (`emvy/readers/bombercat.py`), cuatro modos según el
   `setContent()` sirve los bytes crudos (para un hex sin `addRecord`, `updateHeaderFlags()` es no-op →
   el payload malformado se presenta tal cual). Backend: `bombercat.ndef_emulate(device, ndef_hex,
   timeout=None, on_line=..., stop=...)` (manda `STOP` cuando `stop()` es True o vence `timeout`).
-  UI: pestaña **Fuzzing** (TUI/GUI) con botones **Detener** y **Reboot**; el log colorea RX/TX/MSG-SENT.
+  UI: pestaña **Fuzzing** (TUI) / **Emulación** (GUI) con botones **Detener** y **Reboot**; el log colorea RX/TX/MSG-SENT.
   Emulación EMV **como tag NDEF** no aplica aquí; para perfilar terminales EMV ver el punto siguiente.
 - **Emulación de TARJETA EMV (perfilar/fuzzear terminales)** — firmware `EMVyBomberCat`, comando
   `EMUEMV`: reusa el mismo motor pumped (`gEmuMode=1`) pero, en vez de la máquina T4T, responde el flujo
@@ -536,7 +539,7 @@ Integración por USB serie (`emvy/readers/bombercat.py`), cuatro modos según el
   a un POS real, éste pedía PPSE + AID de pago (no NDEF) y recibía `6A82` en bucle — este modo lo hace
   avanzar. Los TLV canned se validan con `core.tlv` en los tests. Backend: `bombercat.emv_emulate(device,
   card=None, from_ram=False, timeout=None, on_line=, stop=)`; CLI `emvy bombercat emv-emulate
-  [--card cap.json] [--ram]`; en la pestaña Fuzzing (GUI) la Fuente `EMV · tarjeta de pago` (ver más abajo).
+  [--card cap.json] [--ram]`; en la pestaña Emulación (GUI) la Fuente `EMV · tarjeta de pago` (ver más abajo).
   **Escanear → RAM → reemular**: `CARDSCAN` (firmware) lee una tarjeta por NFC y la guarda en la **RAM del
   firmware** (`EMU:SCANNED`); `EMUEMV:RAM` la reemula — flujo on-device sin PC ni archivos, hasta reiniciar.
   Backend `bombercat.card_scan_to_ram(device)` + `emv_emulate(from_ram=True)`; CLI `emvy bombercat cardscan`.
@@ -556,7 +559,7 @@ Integración por USB serie (`emvy/readers/bombercat.py`), cuatro modos según el
   `NVIC_SystemReset()` para salir de un estado atascado (p.ej. emulación colgada) sin desconectar la
   placa. El USB CDC se re-enumera, así que **hay que reconectar** el lector después. Backend:
   `bombercat.reboot(device)` (reintenta abrir el puerto si está ocupado); CLI `emvy bombercat reboot`;
-  botón **Reboot** en la pestaña Fuzzing (suelta el lector conectado tras el reset).
+  botón **Reboot** en la pestaña Fuzzing (TUI) / Emulación (GUI) (suelta el lector conectado tras el reset).
 - **Relay NFC** — `emvy bombercat cmd <linea>` (el relay completo usa el coordinador MQTT
   `scripts/cordinator.py` del repo upstream `ElectronicCats/BomberCat`).
 
@@ -596,7 +599,7 @@ tarjeta fuera de lo normal. Genera **plantillas** (base + mutaciones) de:
   fuera de norma para ver cómo lo parsea un lector/POS/teléfono. La emulación es
   **observable** (el firmware reporta cada APDU del lector: qué app/fichero
   selecciona y qué offset lee) y **cancelable** (botón **Detener** en la pestaña
-  Fuzzing, o `STOP`); el botón **Reboot** reinicia la placa si algo se atasca
+  Fuzzing (TUI) / Emulación (GUI), o `STOP`); el botón **Reboot** reinicia la placa si algo se atasca
   (ver §9, "Emulación NDEF observable" y "Reinicio del MCU").
 
 Las plantillas aceptan overrides (`pan`/`name`/`expiry`/`service_code` para
@@ -692,9 +695,14 @@ DetectTags, DetectReaders, magspoof, WiFiWebServer…). Está **vendorizado** en
   Para la **TUI** (que no hereda stdout) hay variantes que **capturan**: `fw_list_names()` (parsea la
   tabla de `flash --list`), `flash_capture()`, `devices_text()`, `status_text()` — las usa la pestaña
   **BomberCat**. Ruta configurable con `EMVY_BOMBERCAT_TOOLS`.
-- **Fuentes alternas** (`emvy/integrations/firmware_sources.py`): agrega fuentes GitHub (`owner/repo`,
-  toma los `.uf2` del último release vía API) o URL directa; descarga a `<data>/firmware_cache/` y
-  limpia. Persistencia en `<config>/firmware_sources.json`. **Compilación propia**
+- **Fuentes alternas** (`emvy/integrations/firmware_sources.py`): agrega fuentes GitHub (`owner/repo`)
+  o URL directa; descarga a `<data>/firmware_cache/` y limpia. El CRUD de fuentes, la URL directa y la
+  caché son locales; para el tipo **github** la descarga del release se **delega** al `ReleaseCache` de
+  `bombercat-tools` (`vendor/bombercat-tools/modules/firmware/releases.py`), ejecutado por subprocess
+  contra su venv aislado (vía `bombercat_tools.locate()/ensure_venv()`) — así reusa su descargador
+  endurecido (checksum, límite de tamaño, stripping del token en redirects) sin arrastrar sus deps
+  (`rich`/`certifi`) al venv de EMVy. `download_source()`/`cached_firmwares()`/`clean_cache()` no
+  cambian de firma. Persistencia en `<config>/firmware_sources.json`. **Compilación propia**
   (`emvy/integrations/arduino.py`): `list_sketches()` (carpetas de `firmware/` con `.ino`) +
   `compile_sketch()` (usa el `build.sh` del sketch o `arduino-cli compile --output-dir build`) +
   `upload_sketch()`. **Importante**: el FQBN `bombercat` sube por **picotool**
