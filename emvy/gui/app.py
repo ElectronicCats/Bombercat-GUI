@@ -162,9 +162,10 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.fw_magspoof, "Magspoof")
         self.tabs.addTab(self.fw_mifare, "Mifare")
         self.tabs.addTab(self.fw_relay, "Relay")
-        # Navegación por **barra lateral** (más limpia que 11 pestañas arriba):
-        # el QTabWidget conserva las páginas (y `self.tabs` sigue siendo la API)
-        # pero su barra de pestañas se oculta y se conduce desde la lista lateral.
+        # Navegación por **barra lateral** (más limpia que todas las pestañas
+        # arriba): el QTabWidget conserva las páginas (y `self.tabs` sigue
+        # siendo la API) pero su barra de pestañas se oculta y se conduce
+        # desde la lista lateral.
         self.tabs.tabBar().hide()
         self.nav = self._build_sidebar()
         central = QWidget()
@@ -231,7 +232,7 @@ class MainWindow(QMainWindow):
             "ANÁLISIS",
             (
                 ("Explorador", "search"),
-                ("Flags", "search"),
+                ("Flags", "flag"),
                 ("ISO 8583", "credit-card"),
             ),
         ),
