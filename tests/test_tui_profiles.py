@@ -17,8 +17,8 @@ def test_apply_profile_from_variables_tab(xdg):
 
     from textual.widgets import Select
 
-    from emvy.project import env, store
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import env, store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         store.create_project("lab")

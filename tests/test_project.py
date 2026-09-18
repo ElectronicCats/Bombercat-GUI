@@ -2,8 +2,8 @@
 
 import pytest
 
-from emvy.project import env, store
-from emvy.project.model import Variable
+from cardsec.project import env, store
+from cardsec.project.model import Variable
 
 
 # --- variables: CRUD puro + encoders ---------------------------------------
@@ -162,7 +162,7 @@ def test_import_rejects_non_project(tmp_path, xdg):
 def test_engagements_dirs_env(monkeypatch, tmp_path):
     import os
 
-    from emvy import config
+    from cardsec import config
 
     monkeypatch.setenv(
         "EMVY_ENGAGEMENTS", str(tmp_path / "a") + os.pathsep + str(tmp_path / "b")

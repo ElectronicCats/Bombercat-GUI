@@ -1,8 +1,8 @@
-"""Tests de emvy.payments: EmvCard, ISO 8583 y análisis de criptograma."""
+"""Tests de cardsec.payments: EmvCard, ISO 8583 y análisis de criptograma."""
 
-from emvy.core import tlv
-from emvy.core.hexutil import from_hex
-from emvy.payments import EmvCard, cryptogram, iso8583
+from cardsec.core import tlv
+from cardsec.core.hexutil import from_hex
+from cardsec.payments import EmvCard, cryptogram, iso8583
 
 _BC_JSON = {
     "ok": True,
@@ -28,7 +28,7 @@ def test_emvcard_from_bombercat():
 
 
 def test_emvcard_from_dump_recovers_crypto():
-    from emvy.session import from_bombercat
+    from cardsec.session import from_bombercat
 
     dump = from_bombercat(_BC_JSON)
     c = EmvCard.from_dump(dump)
@@ -130,7 +130,7 @@ def test_iso_host_send_recv():
     import socket
     import threading
 
-    from emvy.payments import iso_host
+    from cardsec.payments import iso_host
 
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.bind(("127.0.0.1", 0))

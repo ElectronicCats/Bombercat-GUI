@@ -2,7 +2,7 @@
 magnética, registros EMV y NDEF (emulación NFC). Cada mutación se verifica
 contra los propios decodificadores del proyecto, no a ciegas."""
 
-from emvy.core import cardfuzz, cvm, emvbits, ndef, tlv
+from cardsec.core import cardfuzz, cvm, emvbits, ndef, tlv
 
 
 # --- Luhn --------------------------------------------------------------

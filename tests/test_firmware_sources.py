@@ -17,7 +17,7 @@ def fw_env(tmp_path, monkeypatch):
 
 
 def test_sources_crud(fw_env):
-    from emvy.integrations import firmware_sources as fs
+    from cardsec.integrations import firmware_sources as fs
 
     a = fs.add_source("owner/repo")
     b = fs.add_source("https://x.org/y/mine.uf2")
@@ -34,7 +34,7 @@ def test_sources_crud(fw_env):
 
 def test_download_url_source_and_clean(fw_env, monkeypatch):
     """Fuente 'url': descarga directa local (urllib), sin bombercat-tools."""
-    from emvy.integrations import firmware_sources as fs
+    from cardsec.integrations import firmware_sources as fs
 
     def fake_urlopen(req, timeout=0):
         return io.BytesIO(b"UF2BYTES")
@@ -57,8 +57,8 @@ def test_download_url_source_and_clean(fw_env, monkeypatch):
 def test_download_github_delegates_to_bombercat_tools(fw_env, monkeypatch):
     """Fuente 'github': delega en el ReleaseCache de bombercat-tools por
     subprocess; el .uf2 baja al cache anidado por tag y clean_cache lo limpia."""
-    from emvy.integrations import bombercat_tools as bt
-    from emvy.integrations import firmware_sources as fs
+    from cardsec.integrations import bombercat_tools as bt
+    from cardsec.integrations import firmware_sources as fs
 
     # No se listan assets aquí: el release lo resuelve bombercat-tools.
     src = fs.add_source("owner/repo")
@@ -88,8 +88,8 @@ def test_download_github_delegates_to_bombercat_tools(fw_env, monkeypatch):
 
 
 def test_download_github_surfaces_failure(fw_env, monkeypatch):
-    from emvy.integrations import bombercat_tools as bt
-    from emvy.integrations import firmware_sources as fs
+    from cardsec.integrations import bombercat_tools as bt
+    from cardsec.integrations import firmware_sources as fs
 
     src = fs.add_source("owner/repo")
     monkeypatch.setattr(bt, "locate", lambda: fw_env)
@@ -104,10 +104,10 @@ def test_download_github_surfaces_failure(fw_env, monkeypatch):
 
 
 def test_list_sketches_and_compile(monkeypatch, tmp_path):
-    from emvy.integrations import arduino as ard
+    from cardsec.integrations import arduino as ard
 
     assert any(
-        p.name == "EMVyBomberCat" for p in ard.list_sketches()
+        p.name == "bombercat_multitool" for p in ard.list_sketches()
     )  # sketch del repo
 
     called = {}
@@ -128,7 +128,7 @@ def test_list_sketches_and_compile(monkeypatch, tmp_path):
 def test_upload_sketch_uses_picotool_not_uf2(monkeypatch, tmp_path):
     """El FQBN 'bombercat' sube por picotool (arduino-cli upload), no por .uf2:
     verifica que upload_sketch() nunca invoca el flasher de bombercat-tools."""
-    from emvy.integrations import arduino as ard
+    from cardsec.integrations import arduino as ard
 
     called = {}
 
@@ -162,7 +162,7 @@ def test_compile_and_upload_resolve_relative_sketch_dir(monkeypatch, tmp_path):
     """Regresión: compile_sketch()/upload_sketch() reciben `cwd=sketch_dir`, así
     que una ruta RELATIVA a build.sh se reinterpretaría mal (relativa al propio
     sketch_dir, no al cwd del llamador) si no se resuelve a absoluta primero."""
-    from emvy.integrations import arduino as ard
+    from cardsec.integrations import arduino as ard
 
     sk = tmp_path / "relsk"
     sk.mkdir()

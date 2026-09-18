@@ -1,8 +1,8 @@
 """Tests del escaneo crudo (lee cualquier tarjeta ISO 7816) y su integración en
 el scanner (capture_card) cuando no hay app EMV."""
 
-from emvy.core import rawscan
-from emvy.core.apdu import (
+from cardsec.core import rawscan
+from cardsec.core.apdu import (
     INS_GET_DATA,
     INS_READ_BINARY,
     INS_READ_RECORD,
@@ -10,8 +10,8 @@ from emvy.core.apdu import (
     APDU,
     Response,
 )
-from emvy.core.hexutil import from_hex
-from emvy.session import capture_card
+from cardsec.core.hexutil import from_hex
+from cardsec.session import capture_card
 
 
 def _send_with_app():

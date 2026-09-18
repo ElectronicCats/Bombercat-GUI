@@ -1,8 +1,8 @@
 """Tests de las primitivas de escritura en tarjeta (APDU + cardwrite)."""
 
-from emvy.core import apdu, cardwrite
-from emvy.core.apdu import Response
-from emvy.core.hexutil import from_hex
+from cardsec.core import apdu, cardwrite
+from cardsec.core.apdu import Response
+from cardsec.core.hexutil import from_hex
 
 
 def test_write_apdu_constructors():

@@ -1,8 +1,8 @@
 """Tests del núcleo puro (sin hardware): TLV, DOL, APDU, ATR, AID, track, search."""
 
-from emvy.core import apdu, atr, search, tlv, track
-from emvy.core.aids import rid_scheme
-from emvy.core.hexutil import from_hex, to_hex
+from cardsec.core import apdu, atr, search, tlv, track
+from cardsec.core.aids import rid_scheme
+from cardsec.core.hexutil import from_hex, to_hex
 
 
 # --- TLV --------------------------------------------------------------------

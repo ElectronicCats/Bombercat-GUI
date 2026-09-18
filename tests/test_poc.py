@@ -4,9 +4,9 @@ import types
 
 import pytest
 
-from emvy import poc as pk
-from emvy.poc.http import PocHttp
-from emvy.poc.model import PocContext, PocError
+from cardsec import poc as pk
+from cardsec.poc.http import PocHttp
+from cardsec.poc.model import PocContext, PocError
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def project(tmp_path):
 
 
 PLUGIN = """
-from emvy.poc import poc, Severity, Status
+from cardsec.poc import poc, Severity, Status
 @poc(id="demo", title="Demo", category="api", severity=Severity.HIGH, authorization="lab")
 def run(ctx):
     ctx.save_evidence("nota.txt", "hola")

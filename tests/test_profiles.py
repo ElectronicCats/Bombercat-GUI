@@ -2,9 +2,9 @@
 
 import pytest
 
-from emvy.core import emvbits
-from emvy.core.hexutil import from_hex
-from emvy.project import env, profiles
+from cardsec.core import emvbits
+from cardsec.core.hexutil import from_hex
+from cardsec.project import env, profiles
 
 
 def test_list_and_get():

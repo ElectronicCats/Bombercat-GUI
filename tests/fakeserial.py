@@ -1,8 +1,8 @@
 """Serial falso que emula el firmware BomberCat (passthrough APDU + EMV JSON),
-para probar el backend `emvy.readers.bombercat` sin hardware.
+para probar el backend `cardsec.readers.bombercat` sin hardware.
 
 `install()` inyecta un módulo `serial` falso en sys.modules, de modo que
-`emvy.readers.bombercat` lo use tal cual (import perezoso).
+`cardsec.readers.bombercat` lo use tal cual (import perezoso).
 """
 
 from __future__ import annotations
@@ -11,8 +11,8 @@ import json
 import sys
 import types
 
-from emvy.core import apdu
-from emvy.core.hexutil import from_hex, to_hex
+from cardsec.core import apdu
+from cardsec.core.hexutil import from_hex, to_hex
 from fakecard import AID, TRACK2, build_fake_card
 
 _EMV_JSON = {

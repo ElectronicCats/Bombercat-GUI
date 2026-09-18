@@ -1,10 +1,10 @@
 """Tests de la gestión de pcscd.socket (arranque/apagado automático) y su
-integración en `emvy.cli.main`. `subprocess.run` va mockeado: nunca debe tocar
+integración en `cardsec.cli.main`. `subprocess.run` va mockeado: nunca debe tocar
 el pcscd real de la máquina que corre los tests."""
 
 import subprocess
 
-from emvy.integrations import pcscd
+from cardsec.integrations import pcscd
 
 
 def _fake_run(states: dict):
@@ -78,9 +78,9 @@ def test_never_raises_on_timeout(monkeypatch):
     assert pcscd.start() is False
 
 
-# --- integración en emvy.cli.main ------------------------------------------
+# --- integración en cardsec.cli.main ---------------------------------------
 def test_cli_main_starts_and_stops_when_it_was_inactive(monkeypatch):
-    from emvy import cli
+    from cardsec import cli
 
     calls = []
     monkeypatch.setattr(
@@ -95,7 +95,7 @@ def test_cli_main_starts_and_stops_when_it_was_inactive(monkeypatch):
 
 
 def test_cli_main_does_not_stop_when_it_was_already_active(monkeypatch):
-    from emvy import cli
+    from cardsec import cli
 
     calls = []
     monkeypatch.setattr(
@@ -110,7 +110,7 @@ def test_cli_main_does_not_stop_when_it_was_already_active(monkeypatch):
 
 
 def test_cli_main_stops_even_if_command_raises(monkeypatch):
-    from emvy import cli
+    from cardsec import cli
 
     calls = []
     monkeypatch.setattr(

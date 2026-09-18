@@ -2,9 +2,9 @@
 
 from fakecard import AID, FLAG, build_fake_card
 
-from emvy.core import emv
-from emvy.core.hexutil import from_hex
-from emvy.session import capture_card, find_flags
+from cardsec.core import emv
+from cardsec.core.hexutil import from_hex
+from cardsec.session import capture_card, find_flags
 
 
 def test_discover_select_gpo_afl():
@@ -46,7 +46,7 @@ def test_gpo_format2_qvsdc_extracts_cardholder():
     """En contactless Visa (qVSDC) los datos de la tarjeta (57/5F24/5F20) vienen
     DENTRO del GPO (template 77), sin registros. _parse_gpo debe guardarlos en
     gpo_tlvs para que el titular/track2 se extraigan igual."""
-    from emvy.session.model import app_to_dict
+    from cardsec.session.model import app_to_dict
 
     gpo = from_hex(
         "77"

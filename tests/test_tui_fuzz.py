@@ -11,8 +11,8 @@ def test_fuzz_tab_generate_and_write():
 
     from textual.widgets import Input, Select
 
-    from emvy.core.apdu import Response
-    from emvy.tui.app import EmvyApp
+    from cardsec.core.apdu import Response
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -55,7 +55,7 @@ def test_fuzz_tab_magspoof(monkeypatch):
 
     sys.path.insert(0, "tests")
     import fakeserial
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     fakeserial.install()
     try:
@@ -83,7 +83,7 @@ def test_fuzz_tab_ndef(monkeypatch):
     sys.path.insert(0, "tests")
     import fakeserial
     from textual.widgets import Input, Select
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     fakeserial.install()
     try:

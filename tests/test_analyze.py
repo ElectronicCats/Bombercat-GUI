@@ -4,8 +4,8 @@
 import hashlib
 import random
 
-from emvy.core import analyze, cvm, emvbits, oda, tlv
-from emvy.core.hexutil import from_hex, to_hex
+from cardsec.core import analyze, cvm, emvbits, oda, tlv
+from cardsec.core.hexutil import from_hex, to_hex
 
 
 # --- bits -------------------------------------------------------------------

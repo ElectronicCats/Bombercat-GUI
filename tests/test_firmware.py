@@ -3,7 +3,7 @@
 
 import pytest
 
-from emvy.integrations import bombercat_tools as bt
+from cardsec.integrations import bombercat_tools as bt
 
 
 def test_parse_fw_names():
@@ -29,7 +29,7 @@ def test_firmware_tab_list_and_flash(monkeypatch):
     from types import SimpleNamespace
 
     from textual.widgets import ListView
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     # mockear el adaptador (sin subprocess real)
     monkeypatch.setattr(bt, "locate", lambda: Path("/vendor/bombercat-tools"))
@@ -70,8 +70,8 @@ def test_compile_and_flash_uses_upload_not_uf2_flasher(monkeypatch):
     from pathlib import Path
     from types import SimpleNamespace
 
-    from emvy.integrations import arduino as ard
-    from emvy.tui.app import EmvyApp
+    from cardsec.integrations import arduino as ard
+    from cardsec.tui.app import EmvyApp
 
     calls = {"compile": 0, "upload": 0, "flash_capture": 0}
     monkeypatch.setattr(ard, "arduino_cli_available", lambda: True)

@@ -1,6 +1,6 @@
 """Tests del parseo NDEF puro (core.ndef): registros Texto/URI y TLV contenedor."""
 
-from emvy.core import ndef
+from cardsec.core import ndef
 
 
 def test_parse_text_record():

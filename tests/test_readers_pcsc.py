@@ -14,8 +14,8 @@ import smartcard.System as pcsc_system  # noqa: E402
 from smartcard.CardConnection import CardConnection  # noqa: E402
 from smartcard.Exceptions import CardConnectionException, NoCardException  # noqa: E402
 
-from emvy.readers import pcsc  # noqa: E402
-from emvy.readers.types import ReaderError  # noqa: E402
+from cardsec.readers import pcsc  # noqa: E402
+from cardsec.readers.types import ReaderError  # noqa: E402
 
 READER_NAME = "Rocketek CR336-C [CCID Interface] 00 00"
 

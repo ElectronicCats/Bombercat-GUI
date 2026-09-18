@@ -18,11 +18,11 @@ def test_intercept_tab_and_active_send(xdg):
 
     from textual.widgets import Checkbox, TextArea
 
-    from emvy.core import intercept as ic
-    from emvy.core import tlv
-    from emvy.core.apdu import APDU, Response
-    from emvy.core.hexutil import from_hex
-    from emvy.tui.app import EmvyApp
+    from cardsec.core import intercept as ic
+    from cardsec.core import tlv
+    from cardsec.core.apdu import APDU, Response
+    from cardsec.core.hexutil import from_hex
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -74,7 +74,7 @@ def test_iso8583_tab_build(xdg):
 
     from textual.widgets import Input
 
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()

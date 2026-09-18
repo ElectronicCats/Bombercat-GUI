@@ -13,9 +13,9 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from emvy.core import cardfuzz, ndef  # noqa: E402
-from emvy.core.hexutil import to_hex  # noqa: E402
-from emvy.session.model import CardDump  # noqa: E402
+from cardsec.core import cardfuzz, ndef  # noqa: E402
+from cardsec.core.hexutil import to_hex  # noqa: E402
+from cardsec.session.model import CardDump  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +30,7 @@ def qapp():
 def win(qapp, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    from emvy.gui.app import MainWindow
+    from cardsec.gui.app import MainWindow
 
     w = MainWindow()
     yield w
@@ -49,8 +49,8 @@ def test_tools_panels_and_iso_build(win):
 
 
 def test_explorer_assign_and_save(win, tmp_path):
-    from emvy.project import env, store
-    from emvy.session.model import CardDump
+    from cardsec.project import env, store
+    from cardsec.session.model import CardDump
 
     store.create_project("lab")
     store.set_active("lab")
@@ -110,7 +110,7 @@ def test_fuzz_ndef_test_card_source(win):
 
 
 def test_fuzz_ndef_capture_source(win):
-    from emvy.project import store
+    from cardsec.project import store
 
     store.create_project("lab")
     store.set_active("lab")
@@ -169,7 +169,7 @@ def test_fuzz_emit_dispatches_by_source(win):
 def test_fuzz_emv_source_uses_capture(win):
     """La fuente 'EMV' usa el selector de captura: una captura → emit_emv(card)
     con sus datos; la 'tarjeta de prueba fija' → emit_emv(None)."""
-    from emvy.project import store
+    from cardsec.project import store
 
     store.create_project("emvlab")
     store.set_active("emvlab")
@@ -207,7 +207,7 @@ def test_fuzz_emv_source_uses_capture(win):
 def test_fuzz_emv_ram_sources(win):
     """Las fuentes EMV en RAM: '(en RAM del BomberCat)' → emit_emv(from_ram=True);
     '(en memoria de la app)' → emit_emv(card=self._scanned_card)."""
-    from emvy.payments import EmvCard
+    from cardsec.payments import EmvCard
 
     fz = win.emulation_panel
     calls = []
@@ -232,8 +232,8 @@ def test_fuzz_emv_ram_sources(win):
 def test_card_editor_load_edit_emulate(win):
     """El editor de tarjeta: cargar una captura, editar el PAN, y emular con el
     PAN nuevo + Track2 regenerado."""
-    from emvy.core import track
-    from emvy.project import store
+    from cardsec.core import track
+    from cardsec.project import store
 
     store.create_project("edlab")
     store.set_active("edlab")
@@ -275,7 +275,7 @@ def test_card_editor_load_edit_emulate(win):
 
 def test_card_editor_autofills_on_scan(win):
     """Al escanear, el editor se llena solo (win._fill_card_editor → _ed_populate)."""
-    from emvy.payments import EmvCard
+    from cardsec.payments import EmvCard
 
     card = EmvCard(
         pan="5555444433332222",
@@ -291,7 +291,7 @@ def test_card_editor_autofills_on_scan(win):
 
 
 def test_console_export_and_save_to_project(win, tmp_path):
-    from emvy.project import store
+    from cardsec.project import store
 
     store.create_project("loglab")
     store.set_active("loglab")
@@ -382,7 +382,7 @@ def test_firmware_lists_sketches(win):
     names = [
         win.fw_device._sketch.itemText(i) for i in range(win.fw_device._sketch.count())
     ]
-    assert any("EMVyBomberCat" in n for n in names)
+    assert any("bombercat_multitool" in n for n in names)
 
 
 def test_firmware_device_status_and_gating_broadcast(win):
@@ -513,7 +513,7 @@ def test_firmware_mifare_render(win):
 def test_firmware_mifare_dumps_combo(win, tmp_path, monkeypatch):
     """`mifare_reload_dumps` puebla el combo con los JSON `mifare-*.json` del
     proyecto activo (artifacts/)."""
-    from emvy.project import store
+    from cardsec.project import store
 
     art = tmp_path / "artifacts"
     art.mkdir()
@@ -577,7 +577,7 @@ def test_charges_and_poc_construct(win):
 
 def test_poc_ide_create_edit_save(win):
     """El IDE de PoCs: crear desde plantilla, cargar en el editor y guardar."""
-    from emvy.project import store
+    from cardsec.project import store
 
     store.create_project("poclab")
     store.set_active("poclab")
@@ -603,7 +603,7 @@ def test_worker_delivers_result(qapp):
     """El worker debe entregar `result` al hilo GUI (regresión: el pool
     auto-borraba el QRunnable y la señal en cola se perdía)."""
     from PySide6.QtCore import QEventLoop, QThreadPool, QTimer
-    from emvy.gui.worker import submit
+    from cardsec.gui.worker import submit
 
     pool = QThreadPool()
     got, loop = [], QEventLoop()
@@ -615,7 +615,7 @@ def test_worker_delivers_result(qapp):
 
 def test_worker_delivers_error(qapp):
     from PySide6.QtCore import QEventLoop, QThreadPool, QTimer
-    from emvy.gui.worker import submit
+    from cardsec.gui.worker import submit
 
     def boom():
         raise RuntimeError("fallo x")

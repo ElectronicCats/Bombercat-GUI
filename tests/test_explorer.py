@@ -16,7 +16,7 @@ def xdg(tmp_path, monkeypatch):
 
 
 def _fake_dump():
-    from emvy.session.model import CardDump
+    from cardsec.session.model import CardDump
 
     return CardDump(
         atr="3B00",
@@ -54,8 +54,8 @@ def test_explorer_copy_and_assign(xdg):
 
     from textual.widgets import Checkbox, Input, Tree
 
-    from emvy.project import env, store
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import env, store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         store.create_project("lab")
@@ -149,9 +149,9 @@ def test_explorer_analyze_button(xdg):
 
     from textual.widgets import Tree
 
-    from emvy.project import store
-    from emvy.session.model import CardDump
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import store
+    from cardsec.session.model import CardDump
+    from cardsec.tui.app import EmvyApp
 
     rec = "7012" + "82027C00" + "8E0C" + "00000000000000001F000103"
     dump = CardDump(
@@ -205,8 +205,8 @@ def test_explorer_save_destinations(xdg, tmp_path):
 
     from textual.widgets import Input, Select
 
-    from emvy.project import store
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         store.create_project("a")
@@ -243,9 +243,9 @@ def test_explorer_save_destinations(xdg, tmp_path):
 def test_explorer_save_capture_to_project(xdg):
     import asyncio
 
-    from emvy.project import store
-    from emvy.tui.app import EmvyApp
-    from emvy.tui.screens.explorer import ExplorerScreen
+    from cardsec.project import store
+    from cardsec.tui.app import EmvyApp
+    from cardsec.tui.screens.explorer import ExplorerScreen
 
     async def scenario():
         store.create_project("lab")
@@ -276,7 +276,7 @@ def test_explorer_save_capture_to_project(xdg):
 def test_explorer_assign_requires_project(xdg):
     import asyncio
 
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -301,8 +301,8 @@ def test_raw_button_uses_nfc_mode_for_bombercat(xdg):
     campo NFC de una tarjeta sostenida a mano)."""
     import asyncio
 
-    from emvy.readers.types import DeviceInfo
-    from emvy.tui.app import EmvyApp
+    from cardsec.readers.types import DeviceInfo
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -323,8 +323,8 @@ def test_raw_button_uses_nfc_mode_for_bombercat(xdg):
 def test_raw_button_uses_raw_flag_for_other_backends(xdg):
     import asyncio
 
-    from emvy.readers.types import DeviceInfo
-    from emvy.tui.app import EmvyApp
+    from cardsec.readers.types import DeviceInfo
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -345,8 +345,8 @@ def test_console_wire_and_banner_headless(xdg):
     del BomberCat) y banners de conexión sin reventar."""
     import asyncio
 
-    from emvy.readers.types import WireEvent
-    from emvy.tui.app import EmvyApp
+    from cardsec.readers.types import WireEvent
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -370,9 +370,9 @@ def test_on_dump_warns_when_bombercat_capture_empty(xdg):
     avisar con un mensaje explicativo, no un silencioso '0 apps, 0 blobs'."""
     import asyncio
 
-    from emvy.readers.types import DeviceInfo
-    from emvy.session.model import CardDump
-    from emvy.tui.app import EmvyApp
+    from cardsec.readers.types import DeviceInfo
+    from cardsec.session.model import CardDump
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()

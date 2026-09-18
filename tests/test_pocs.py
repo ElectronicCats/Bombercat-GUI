@@ -18,8 +18,8 @@ def test_poc_ide_lifecycle(xdg):
 
     from textual.widgets import Input, TextArea
 
-    from emvy.project import store
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         store.create_project("lab")
@@ -67,9 +67,9 @@ def test_poc_ide_lifecycle(xdg):
 def test_poc_run_dry_run_creates_run(xdg):
     import asyncio
 
-    from emvy.poc.scaffold import scaffold_poc
-    from emvy.project import store
-    from emvy.tui.app import EmvyApp
+    from cardsec.poc.scaffold import scaffold_poc
+    from cardsec.project import store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         proj = store.create_project("lab")

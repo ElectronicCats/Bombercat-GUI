@@ -29,9 +29,9 @@ def test_cobros_purchase_dry_run(xdg):
     import asyncio
 
     from textual.widgets import Checkbox, RichLog
-    from emvy.project import store
-    from emvy.session import from_bombercat
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import store
+    from cardsec.session import from_bombercat
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         store.create_project("lab")
@@ -60,8 +60,8 @@ def test_write_tab_sends(xdg):
     import asyncio
 
     from textual.widgets import Input, Select
-    from emvy.core.apdu import Response
-    from emvy.tui.app import EmvyApp
+    from cardsec.core.apdu import Response
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()

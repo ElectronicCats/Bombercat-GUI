@@ -6,8 +6,8 @@ red ni bootstrap en CI)."""
 
 import pytest
 
-from emvy import config
-from emvy.integrations import bombercat_tools as bt
+from cardsec import config
+from cardsec.integrations import bombercat_tools as bt
 
 _HAS_VENDOR = (config.bombercat_tools_dir() / "bombercat.py").exists()
 pytestmark = pytest.mark.skipif(

@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from emvy.core.hexutil import from_hex
-from emvy.payments import EmvCard, SwitchConfig, iso8583, switch
+from cardsec.core.hexutil import from_hex
+from cardsec.payments import EmvCard, SwitchConfig, iso8583, switch
 
 _BC = {
     "ok": True,
@@ -52,7 +52,7 @@ def test_build_purchase_has_f55_and_terminal():
     mti, fields = iso8583.parse(msg)
     assert mti == "0200"
     assert fields[41] == b"14400757"  # F41 TID
-    from emvy.core import tlv
+    from cardsec.core import tlv
 
     assert tlv.parse(fields[55]).find("9F26").value == from_hex(
         "D6F5B2E0E50B0F9C"
@@ -107,7 +107,7 @@ def test_response_helpers():
 
 # --- plantillas de PoC genéricas -------------------------------------------
 def test_template_scaffold_loads(tmp_path):
-    from emvy.poc import registry, scaffold, source_file
+    from cardsec.poc import registry, scaffold, source_file
 
     pocs = tmp_path / "pocs"
     scaffold.scaffold_poc(pocs, "auth-flow", template="iso8583-purchase")
@@ -120,12 +120,12 @@ def test_template_scaffold_loads(tmp_path):
 
 
 def test_all_templates_scaffold_and_load(tmp_path):
-    from emvy.poc import registry, templates
+    from cardsec.poc import registry, templates
 
     pocs = tmp_path / "pocs"
     for i, name in enumerate(templates.list_templates()):
         scaffold_id = f"t{i}"
-        from emvy.poc.scaffold import scaffold_poc
+        from cardsec.poc.scaffold import scaffold_poc
 
         scaffold_poc(pocs, scaffold_id, template=name)
     registry.clear()
@@ -137,7 +137,7 @@ def test_all_templates_scaffold_and_load(tmp_path):
 
 
 def test_render_unknown_template_raises():
-    from emvy.poc import templates
+    from cardsec.poc import templates
 
     with pytest.raises(KeyError):
         templates.render("no-existe", "x")

@@ -24,7 +24,7 @@ def xdg(tmp_path, monkeypatch):
 
 
 def _dump():
-    from emvy.session.model import CardDump
+    from cardsec.session.model import CardDump
 
     return CardDump(
         applications=[
@@ -75,8 +75,8 @@ def test_native_text_selection_and_copy():
 
 # --- CopyableDataTable: copiar fila -----------------------------------------
 def test_datatable_copy_row(xdg):
-    from emvy.tui.app import EmvyApp
-    from emvy.tui.widgets.copyable import CopyableDataTable
+    from cardsec.tui.app import EmvyApp
+    from cardsec.tui.widgets.copyable import CopyableDataTable
 
     async def scenario():
         app = EmvyApp()
@@ -100,8 +100,8 @@ def test_datatable_copy_row(xdg):
 
 
 def test_datatable_empty_skips(xdg):
-    from emvy.tui.app import EmvyApp
-    from emvy.tui.widgets.copyable import CopyableDataTable
+    from cardsec.tui.app import EmvyApp
+    from cardsec.tui.widgets.copyable import CopyableDataTable
 
     async def scenario():
         app = EmvyApp()
@@ -119,7 +119,7 @@ def test_datatable_empty_skips(xdg):
 
 # --- árbol del Explorador: copiar nodo --------------------------------------
 def test_tree_node_copy(xdg):
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -146,7 +146,7 @@ def test_tree_node_copy(xdg):
 
 
 def test_tree_copy_skips_without_selection(xdg):
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()
@@ -163,7 +163,7 @@ def test_tree_copy_skips_without_selection(xdg):
 def test_tree_copy_defers_to_text_selection(xdg, monkeypatch):
     """Si hay selección de texto en pantalla, Ctrl+C del árbol cede (SkipAction)
     para que la copie el manejador estándar en vez del nodo."""
-    from emvy.tui.app import EmvyApp
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()

@@ -7,8 +7,8 @@ PDOL que recibió el GPO, para verificar la construcción de DOL desde el perfil
 
 from __future__ import annotations
 
-from emvy.core import apdu, tlv
-from emvy.core.hexutil import from_hex, to_hex
+from cardsec.core import apdu, tlv
+from cardsec.core.hexutil import from_hex, to_hex
 
 AID = "A0000000041010"
 FLAG = "flag{emv_ctf_pwn}"

@@ -8,8 +8,8 @@ pytest.importorskip("textual")
 
 
 def test_help_modal_opens_and_closes():
-    from emvy.tui.app import EmvyApp
-    from emvy.tui.screens.help import HelpScreen
+    from cardsec.tui.app import EmvyApp
+    from cardsec.tui.screens.help import HelpScreen
 
     async def scenario():
         app = EmvyApp()
@@ -27,8 +27,8 @@ def test_help_modal_opens_and_closes():
 
 def test_help_action_is_idempotent():
     """Pulsar ? repetido no apila varias ayudas."""
-    from emvy.tui.app import EmvyApp
-    from emvy.tui.screens.help import HelpScreen
+    from cardsec.tui.app import EmvyApp
+    from cardsec.tui.screens.help import HelpScreen
 
     async def scenario():
         app = EmvyApp()

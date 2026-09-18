@@ -6,8 +6,8 @@ import pytest
 
 pytest.importorskip("textual")
 
-from emvy.tui.screens import dashboard as dash  # noqa: E402
-from emvy.tui.screens.dashboard import OK, OFF, build_model  # noqa: E402
+from cardsec.tui.screens import dashboard as dash  # noqa: E402
+from cardsec.tui.screens.dashboard import OK, OFF, build_model  # noqa: E402
 
 
 def _model(**kw):
@@ -101,10 +101,10 @@ def test_dashboard_headless_reacts_to_state(xdg):
 
     from textual.widgets import Static
 
-    from emvy.readers.types import Capability, DeviceInfo
-    from emvy.tui.app import EmvyApp
+    from cardsec.readers.types import Capability, DeviceInfo
+    from cardsec.tui.app import EmvyApp
 
-    from emvy.project import store
+    from cardsec.project import store
 
     def text_of(app, sid):
         return str(app.query_one("#" + sid, Static).render()).lower()
@@ -143,8 +143,8 @@ def test_dashboard_actions_headless(xdg):
 
     from textual.widgets import Input, TabbedContent
 
-    from emvy.project import store
-    from emvy.tui.app import EmvyApp
+    from cardsec.project import store
+    from cardsec.tui.app import EmvyApp
 
     async def scenario():
         app = EmvyApp()

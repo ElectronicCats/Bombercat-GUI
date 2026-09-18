@@ -13,7 +13,7 @@ def fake_serial():
 
 
 def test_list_devices(fake_serial):
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     devs = bombercat.list_devices()
     assert devs and devs[0].backend == "bombercat"
@@ -21,8 +21,8 @@ def test_list_devices(fake_serial):
 
 
 def test_read_emv_json(fake_serial):
-    from emvy.readers import bombercat
-    from emvy.session import from_bombercat
+    from cardsec.readers import bombercat
+    from cardsec.session import from_bombercat
 
     d = bombercat.read_emv(bombercat.list_devices()[0], amount_cents=500)
     assert d["aid"] == "A0000000031010" and d["arqc"]
@@ -33,8 +33,8 @@ def test_read_emv_json(fake_serial):
 
 
 def test_passthrough_transceive(fake_serial):
-    from emvy.core import emv
-    from emvy.readers import registry
+    from cardsec.core import emv
+    from cardsec.readers import registry
 
     dev = [d for d in registry.list_all_devices() if d.backend == "bombercat"][0]
     with registry.open_device(dev) as r:
@@ -49,7 +49,7 @@ def test_passthrough_transceive(fake_serial):
 def test_ndef_emulate_reports_reader_activity(fake_serial):
     """La emulación observable reporta CADA APDU del lector (SELECT app/CC/NDEF,
     READ off/len y la respuesta), no solo START/DONE — es la visibilidad nueva."""
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     dev = bombercat.list_devices()[0]
     lines = bombercat.ndef_emulate(dev, "D101125504656D7679", timeout=0.5)
@@ -63,7 +63,7 @@ def test_ndef_emulate_reports_reader_activity(fake_serial):
 
 def test_ndef_emulate_stop_callback(fake_serial):
     """`stop()` corta la emulación en cualquier momento (manda STOP → EMU:DONE)."""
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     dev = bombercat.list_devices()[0]
     seen = {"msg": False}
@@ -87,7 +87,7 @@ def test_ndef_emulate_stop_callback(fake_serial):
 def test_emv_emulate_profiles_terminal(fake_serial):
     """`emv_emulate` (EMUEMV) hace que el terminal avance y revela su config:
     PPSE → SELECT AID (con esquema) → GPO con el PDOL decodificado → GEN AC."""
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     dev = bombercat.list_devices()[0]
     seen = {"gpo": False}
@@ -112,8 +112,8 @@ def test_emv_emulate_profiles_terminal(fake_serial):
 def test_emv_emulate_injects_capture_data(fake_serial):
     """Con una captura, `emv_emulate` codifica AID/PAN/expiry/track2 y el firmware
     presenta ESE AID (no el Visa de prueba)."""
-    from emvy.payments import EmvCard
-    from emvy.readers import bombercat
+    from cardsec.payments import EmvCard
+    from cardsec.readers import bombercat
 
     card = EmvCard(
         pan="5555444433332222",
@@ -147,7 +147,7 @@ def test_emv_emulate_injects_capture_data(fake_serial):
 def test_card_scan_to_ram_and_emulate_from_ram(fake_serial):
     """Flujo on-device: CARDSCAN guarda la tarjeta en RAM del firmware y
     emv_emulate(from_ram=True) la reemula (EMUEMV:RAM) mostrando ese AID."""
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     dev = bombercat.list_devices()[0]
     info = bombercat.card_scan_to_ram(dev)
@@ -167,7 +167,7 @@ def test_card_scan_to_ram_and_emulate_from_ram(fake_serial):
 
 
 def test_cli_bombercat_cardscan(fake_serial, capsys):
-    from emvy.cli import main
+    from cardsec.cli import main
 
     rc = main(["bombercat", "cardscan"])
     assert rc == 0
@@ -177,8 +177,8 @@ def test_cli_bombercat_cardscan(fake_serial, capsys):
 def test_resolve_port_recovers_after_renumeration(fake_serial):
     """Un DeviceInfo con un puerto POSIX que ya no existe (típico tras reflashear
     el BomberCat: el USB CDC se re-enumera) se recupera al puerto presente."""
-    from emvy.readers import bombercat
-    from emvy.readers.types import Capability, DeviceInfo
+    from cardsec.readers import bombercat
+    from cardsec.readers.types import Capability, DeviceInfo
 
     stale = DeviceInfo(
         "bombercat",
@@ -191,7 +191,7 @@ def test_resolve_port_recovers_after_renumeration(fake_serial):
 
 def test_reboot(fake_serial):
     """`reboot()` manda REBOOT y el firmware confirma la línea."""
-    from emvy.readers import bombercat
+    from cardsec.readers import bombercat
 
     dev = bombercat.list_devices()[0]
     assert "REBOOT" in bombercat.reboot(dev)
@@ -199,14 +199,14 @@ def test_reboot(fake_serial):
 
 def test_cli_bombercat_emv_emulate_registered():
     """El verbo `bombercat emv-emulate` está registrado en el parser."""
-    from emvy.cli import build_parser
+    from cardsec.cli import build_parser
 
     args = build_parser().parse_args(["bombercat", "emv-emulate"])
     assert args.action == "emv-emulate"
 
 
 def test_cli_bombercat_reboot(fake_serial, capsys):
-    from emvy.cli import main
+    from cardsec.cli import main
 
     rc = main(["bombercat", "reboot"])
     assert rc == 0
@@ -216,8 +216,8 @@ def test_cli_bombercat_reboot(fake_serial, capsys):
 def test_passthrough_on_wire_reports_serial_lines(fake_serial):
     """`on_wire` debe recibir cada línea serie de bajo nivel (el handshake y el
     framing APDU:/RESP:), que es lo que se muestra en la consola en vivo."""
-    from emvy.core import emv
-    from emvy.readers import registry
+    from cardsec.core import emv
+    from cardsec.readers import registry
 
     wire: list = []
     dev = [d for d in registry.list_all_devices() if d.backend == "bombercat"][0]
@@ -246,7 +246,7 @@ def test_passthrough_on_wire_reports_serial_lines(fake_serial):
 # EMVy usa el mismo `Transceiver` que cualquier lector, así que dump/escritura/
 # análisis funcionan igual sobre el passthrough del firmware BomberCat.
 def test_cli_bombercat_dump_full(fake_serial, capsys):
-    from emvy.cli import main
+    from cardsec.cli import main
 
     rc = main(["bombercat", "dump"])
     assert rc == 0
@@ -256,7 +256,7 @@ def test_cli_bombercat_dump_full(fake_serial, capsys):
 
 
 def test_cli_bombercat_write_reaches_card(fake_serial, capsys):
-    from emvy.cli import main
+    from cardsec.cli import main
 
     # el fakecard no soporta PUT DATA -> 6A82, pero prueba que el byte-path
     # (CLI -> passthrough -> tarjeta) funciona de punta a punta sin excepción.
@@ -267,7 +267,7 @@ def test_cli_bombercat_write_reaches_card(fake_serial, capsys):
 
 
 def test_cli_bombercat_analyze(fake_serial, capsys):
-    from emvy.cli import main
+    from cardsec.cli import main
 
     rc = main(["bombercat", "analyze"])
     assert rc == 0

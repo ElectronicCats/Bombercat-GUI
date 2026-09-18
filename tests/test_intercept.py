@@ -1,10 +1,10 @@
 """Tests del interceptor de APDUs (Burp para EMV): parser de reglas, aplicación
 a comando/respuesta y el middleware de Transceiver."""
 
-from emvy.core import intercept as ic
-from emvy.core import tlv
-from emvy.core.apdu import APDU, Response
-from emvy.core.hexutil import from_hex
+from cardsec.core import intercept as ic
+from cardsec.core import tlv
+from cardsec.core.apdu import APDU, Response
+from cardsec.core.hexutil import from_hex
 
 
 def test_parse_rules_and_errors():
