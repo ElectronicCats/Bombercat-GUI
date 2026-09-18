@@ -280,3 +280,186 @@ def test_mifare_restore_always_passes_yes(monkeypatch):
         "/tmp/d.json",
         "--yes",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Relay NFCGate: `config show`/`status` parsean tablas rich de 2 columnas
+# (reusan `_table_rows`, como `parse_status`); `config wifi`/`config nfcgate`/
+# `run`/`stop` son wrappers finos que solo construyen args; `capture_run`
+# acota una captura sin fin con el timeout de subprocess y siempre desarma.
+# ---------------------------------------------------------------------------
+_RELAY_CONFIG_TABLE = (
+    "                   BomberCat @ /dev/ttyACM0\n"
+    "┌─────────┬─────────────────┐\n"
+    "│ fw      │ NFCGate         │\n"
+    "│ role    │ reader          │\n"
+    "│ ssid    │ MyNetwork       │\n"
+    "│ server  │ 192.168.1.10    │\n"
+    "│ port    │ 8080            │\n"
+    "│ session │ 7               │\n"
+    "│ state   │ idle            │\n"
+    "└─────────┴─────────────────┘\n"
+)
+
+
+def test_parse_relay_config_full_table():
+    cfg = bt.parse_relay_config(_RELAY_CONFIG_TABLE)
+    assert cfg == {
+        "fw": "NFCGate",
+        "role": "reader",
+        "ssid": "MyNetwork",
+        "server": "192.168.1.10",
+        "port": "8080",
+        "session": "7",
+        "state": "idle",
+    }
+
+
+def test_relay_config_show_returns_dict(monkeypatch):
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: _CP(_RELAY_CONFIG_TABLE)
+    )
+    cfg = bt.relay_config_show()
+    assert cfg["ssid"] == "MyNetwork" and cfg["state"] == "idle"
+
+
+_RELAY_STATUS_TABLE = (
+    "                Relay status @ /dev/ttyACM0\n"
+    "┌─────────────────────┬─────────┐\n"
+    "│ state                │ relaying │\n"
+    "│ link connected       │ yes      │\n"
+    "│ peer present         │ no       │\n"
+    "│ APDU pairs relayed   │ 42       │\n"
+    "└─────────────────────┴─────────┘\n"
+)
+
+
+def test_parse_relay_status_yes_no_and_counter():
+    st = bt.parse_relay_status(_RELAY_STATUS_TABLE)
+    assert st == {
+        "state": "relaying",
+        "link_connected": True,
+        "peer_present": False,
+        "relayed": "42",
+    }
+
+
+def test_relay_config_wifi_builds_args(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.relay_config_wifi("MyNetwork", "secret", port="/dev/ttyACM0")
+    assert seen["args"] == [
+        "relay",
+        "config",
+        "wifi",
+        "--ssid",
+        "MyNetwork",
+        "--password",
+        "secret",
+        "--save",
+        "-p",
+        "/dev/ttyACM0",
+    ]
+
+
+def test_relay_config_wifi_no_save(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.relay_config_wifi("MyNetwork", save=False)
+    assert seen["args"] == [
+        "relay",
+        "config",
+        "wifi",
+        "--ssid",
+        "MyNetwork",
+        "--password",
+        "",
+        "--no-save",
+    ]
+
+
+def test_relay_config_nfcgate_builds_args(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.setdefault("args", args)
+    )
+    bt.relay_config_nfcgate("host:1234", 7, "card", save=False)
+    assert seen["args"] == [
+        "relay",
+        "config",
+        "nfcgate",
+        "--server",
+        "host:1234",
+        "--session",
+        "7",
+        "--role",
+        "card",
+        "--no-save",
+    ]
+
+
+def test_relay_run_and_stop_pass_through(monkeypatch):
+    seen = []
+    monkeypatch.setattr(
+        bt, "run_capture", lambda args, timeout=None: seen.append(args) or _CP()
+    )
+    bt.relay_run(port="/dev/ttyACM0")
+    bt.relay_stop(port="/dev/ttyACM0")
+    assert seen == [
+        ["relay", "run", "-p", "/dev/ttyACM0"],
+        ["relay", "stop", "-p", "/dev/ttyACM0"],
+    ]
+
+
+def test_capture_run_completes_within_duration(monkeypatch):
+    # El comando terminó solo (link caído) antes del plazo: sin timeout.
+    calls = []
+
+    def fake_run_capture(args, timeout=None):
+        calls.append(args)
+        return _CP("link ended after 3 APDU frame(s)")
+
+    monkeypatch.setattr(bt, "run_capture", fake_run_capture)
+    cp, timed_out = bt.capture_run("/tmp/out.pcap", duration=5)
+    assert not timed_out
+    assert cp.stdout == "link ended after 3 APDU frame(s)"
+    # capture_run llama a `capture start` y, siempre, a `capture stop` (idempotente).
+    assert calls == [
+        ["capture", "start", "-o", "/tmp/out.pcap", "--force"],
+        ["capture", "stop"],
+    ]
+
+
+def test_capture_run_times_out_and_always_disarms(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run_capture(args, timeout=None):
+        calls.append(args)
+        if args[:2] == ["capture", "start"]:
+            raise subprocess.TimeoutExpired(
+                cmd=args, timeout=timeout, output="two frames so far", stderr=""
+            )
+        return _CP()  # capture stop
+
+    monkeypatch.setattr(bt, "run_capture", fake_run_capture)
+    cp, timed_out = bt.capture_run("/tmp/out.pcap", duration=5, port="/dev/ttyACM0")
+    assert timed_out
+    assert cp.stdout == "two frames so far"
+    assert calls[0] == [
+        "capture",
+        "start",
+        "-o",
+        "/tmp/out.pcap",
+        "--force",
+        "-p",
+        "/dev/ttyACM0",
+    ]
+    # el disarm SIEMPRE corre tras el timeout, aunque el kill saltara el
+    # `finally` propio del comando del vendor.
+    assert calls[1] == ["capture", "stop", "-p", "/dev/ttyACM0"]

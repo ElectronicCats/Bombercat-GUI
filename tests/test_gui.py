@@ -338,7 +338,7 @@ def test_explorer_show_dump_builds_tree(win):
 
 def test_top_level_tabs(win):
     # ADR-001: el panel único "BomberCat" se abre en un Tab por firmware
-    # (Dispositivo/Tags/Readers/Magspoof/Mifare) dentro del grupo HARDWARE.
+    # (Dispositivo/Tags/Readers/Magspoof/Mifare/Relay) dentro del grupo HARDWARE.
     tabs = win.tabs
     assert [tabs.tabText(i) for i in range(tabs.count())] == [
         "Inicio",
@@ -355,6 +355,7 @@ def test_top_level_tabs(win):
         "Readers",
         "Magspoof",
         "Mifare",
+        "Relay",
         "Fuzzing",
     ]
 
@@ -392,6 +393,7 @@ def test_firmware_device_status_and_gating_broadcast(win):
     assert not win.fw_tags.isEnabled()
     assert not win.fw_readers.isEnabled()
     assert not win.fw_magspoof.isEnabled()
+    assert not win.fw_relay.isEnabled()
 
     # El broadcast de MainWindow re-gatea TODOS los paneles a la vez.
     win._on_device_status(
@@ -409,6 +411,7 @@ def test_firmware_device_status_and_gating_broadcast(win):
     assert win.fw_tags.isEnabled()
     assert win.fw_readers.isEnabled()
     assert not win.fw_magspoof.isEnabled()
+    assert not win.fw_relay.isEnabled()
 
 
 def test_firmware_port_is_shared(win):
@@ -520,6 +523,47 @@ def test_firmware_mifare_dumps_combo(win, tmp_path, monkeypatch):
     combo = win.fw_mifare._dumps
     names = [combo.itemText(i) for i in range(combo.count())]
     assert names == ["mifare-20260917-101010.json"]
+
+
+def test_firmware_relay_render(win):
+    """El panel Relay se habilita por capacidad; `show_config`/`show_status`
+    pintan las tablas Campo/Valor con el dict que devuelven los helpers."""
+    fp = win.fw_relay
+    assert fp.capability == "relay"
+    assert not fp.isEnabled()  # gated: arranca deshabilitado
+    fp.set_status({"name": "NFCGate", "capabilities": ["relay", "config", "capture"]})
+    assert fp.isEnabled()
+
+    fp.show_config(
+        {
+            "fw": "NFCGate",
+            "role": "reader",
+            "ssid": "MyNetwork",
+            "server": "192.168.1.10",
+            "port": "8080",
+            "session": "7",
+            "state": "idle",
+        }
+    )
+    rows = {
+        fp._config_table.item(i, 0).text(): fp._config_table.item(i, 1).text()
+        for i in range(fp._config_table.rowCount())
+    }
+    assert rows["ssid"] == "MyNetwork" and rows["state"] == "idle"
+
+    fp.show_status(
+        {
+            "state": "relaying",
+            "link_connected": True,
+            "peer_present": False,
+            "relayed": "42",
+        }
+    )
+    rows = {
+        fp._status_table.item(i, 0).text(): fp._status_table.item(i, 1).text()
+        for i in range(fp._status_table.rowCount())
+    }
+    assert rows["state"] == "relaying" and rows["relayed"] == "42"
 
 
 def test_charges_and_poc_construct(win):
