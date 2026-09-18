@@ -37,18 +37,15 @@ def win(qapp, tmp_path, monkeypatch):
     w.close()
 
 
-def test_tools_subtabs_and_iso_build(win):
-    tp = win.tools_panel
-    assert [tp.tabText(i) for i in range(tp.count())] == [
-        "Flags",
-        "ISO 8583",
-        "Escritura",
-    ]
-    tp.iso._de.setText("3")
-    tp.iso._val.setText("000000")
-    tp.iso._set()
-    tp.iso._build()
-    assert "Construido:" in tp.iso._log.toPlainText()
+def test_tools_panels_and_iso_build(win):
+    # ADR-002: Flags/ISO 8583/Escritura son Tabs de nivel superior (ya no
+    # sub-tabs de un "Herramientas" contenedor).
+    iso = win.iso_panel
+    iso._de.setText("3")
+    iso._val.setText("000000")
+    iso._set()
+    iso._build()
+    assert "Construido:" in iso._log.toPlainText()
 
 
 def test_explorer_assign_and_save(win, tmp_path):
@@ -346,7 +343,9 @@ def test_top_level_tabs(win):
         "Variables",
         "Lectores",
         "Explorador",
-        "Herramientas",
+        "Flags",
+        "ISO 8583",
+        "Escritura",
         "Cobros",
         "PoC",
         "Intercept",
