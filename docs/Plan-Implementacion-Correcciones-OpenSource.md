@@ -35,7 +35,7 @@ facilite— la capacidad de contribuir upstream** a `Glitchboi-sudo/EMVy_Control
 ### 1.2 Contexto verificado (no asumido)
 | Hecho | Valor | Implicación |
 |---|---|---|
-| `origin` | `ElectronicCats/Bombercat-GUI` | No es el padre declarado. |
+| `origin` | `ElectronicCats/EMVy_Controller` | Renombrado en GitHub (2026-09-18, antes `Bombercat-GUI`) para **conservar el nombre del padre** y reforzar la postura de fork-contribución (ADR-003). Distinto owner que el padre declarado. |
 | Padre declarado | `Glitchboi-sudo/EMVy_Controller` | Destino de los PRs upstream. |
 | Remote `upstream` | **no configurado** | Hoy no se puede sincronizar con el padre. |
 | Licencia | **AGPL-3.0-or-later**, `Copyright © 2026 glitchboi` | Obliga a conservar avisos de autoría y origen. |
@@ -321,7 +321,7 @@ Sesiones 6,7,8,9 (firmware) ── independientes entre sí
 |---|---|---|---|---|---|---|
 | 1 | D-CORE: fork vs hard-fork | Completado | ADR-003 escrito (§9): **fork-contribución**; D-0 = mantener `cardsec` en brazo de producto | Sí — desbloquea Sesiones 5/10/11 y fija la estrategia de divergencia mínima | Sí — decisión trazada como ADR + progress log | `main` ya estaba limpio (`emvy`); el rebrand vive solo en `feature/refactor` mezclado con trabajo aditivo → Sesión 5 pasa de "completar" a "aislar" el rebrand. Notificación a actores (ElectronicCats/Glitchboi) pendiente para el usuario. |
 | 2 | Cumplimiento AGPL y atribución | Completado | `NOTICE` creado (derivado de EMVy Controller/Glitchboi, AGPL-3.0, cadena de procedencia + fecha de mods) | Sí — cumple sección 5 AGPL y evita riesgo legal del estado híbrido | Sí — atribución intacta (29 refs), `authors=glitchboi` preservado | Coherencia de **nombre** (cardsec↔EMVy) se difiere a Sesión 5 (aislar rebrand) por ADR-003; `LICENSE` no traía línea de copyright del proyecto (vive en pyproject/README) → el `NOTICE` la hace explícita |
-| 3 | Configurar `upstream` + sync | Completado | `git remote add upstream` + fetch OK; sección "Sincronización con upstream" en CONTRIBUTING; clone URL corregida a `ElectronicCats/Bombercat-GUI` | Sí — habilita traer mejoras del padre y medir divergencia (desbloquea Sesión 10) | Sí — flujo documentado, divergencia base registrada | Base de divergencia: upstream/main tiene 11 commits que no están en HEAD; HEAD tiene 36 propios; **origin/main está 11 detrás y 0 delante de upstream/main**; upstream ya en `v0.6.0-beta` |
+| 3 | Configurar `upstream` + sync | Completado | `git remote add upstream` + fetch OK; sección "Sincronización con upstream" en CONTRIBUTING; clone URL corregida a `ElectronicCats/EMVy_Controller` | Sí — habilita traer mejoras del padre y medir divergencia (desbloquea Sesión 10) | Sí — flujo documentado, divergencia base registrada | Base de divergencia: upstream/main tiene 11 commits que no están en HEAD; HEAD tiene 36 propios; **origin/main está 11 detrás y 0 delante de upstream/main**; upstream ya en `v0.6.0-beta` |
 | 4 | Validar valor Objetivo 1 | Completado | Diff de O1 (ADR-002) aislado contra `upstream/main` en la línea aditiva `emvy` (worktree): `gui/app.py`+`panels/tools.py`+`panels/fuzz.py` (~1356/892) | Sí — consistencia UX real, separable como PR propio | Sí — 0 refs cardsec en la línea aditiva; diff limpio sobre `emvy/` | El diff O1 sólo es limpio en la línea aditiva (`emvy`); sobre `feature/refactor` el rename lo contamina → confirma la necesidad de la rama de contribución |
 | 5 | Destino del rebrand (Objetivo 2) | Completado | Rama `producto/cardsec` creada en HEAD (preserva rebrand); límite identificado (rebrand = 8 commits de tope `bfd7cb2..71dde03`; tip aditivo = `d130ae5`, `emvy` limpio); worktree de validación | Sí — aísla el rebrand sin perder el trabajo aditivo (fork-contribución, ADR-003) | Sí — no destructivo; `feature/refactor` está pusheada, force-push queda como decisión del usuario | Reescribir `feature/refactor` a `emvy` exige force-push (rama compartida) → NO ejecutado aquí; recomendación registrada abajo |
 | 6 | Matriz de compatibilidad | Completado | Tabla en README (§ Compatibilidad de versiones) + enlace desde CLAUDE.md §12 | Sí — hace explícito qué `bombercat-tools`/`.uf2` soporta cada release | Sí — coincide con `PINNED_TAG` (v1.3.0) y `git submodule status` | Solo docs; §12 tenía versiones obsoletas (tools v1.1.0.0 / fw v1.2.0.0) → corregidas al pin real |
@@ -354,7 +354,7 @@ Sesiones 6,7,8,9 (firmware) ── independientes entre sí
 ### Sesión 2 — Cumplimiento AGPL y atribución — ✅ Completado (2026-09-18)
 - **Cambios realizados:** nuevo archivo `NOTICE` en la raíz declarando el trabajo derivado de
   `Glitchboi-sudo/EMVy_Controller` (© 2026 glitchboi), la cadena de procedencia
-  (Glitchboi → ElectronicCats/Bombercat-GUI) y la indicación de modificación con fecha, bajo
+  (Glitchboi → ElectronicCats/EMVy_Controller) y la indicación de modificación con fecha, bajo
   AGPL-3.0-or-later.
 - **Validación de valor:** Sí — resuelve el riesgo legal del estado híbrido (§1.2, B-3) y cumple la
   sección 5 de la AGPL sobre avisos de autoría/modificación.
@@ -374,7 +374,7 @@ Sesiones 6,7,8,9 (firmware) ── independientes entre sí
   `https://github.com/Glitchboi-sudo/EMVy_Controller.git` añadido y `git fetch upstream` OK;
   `CONTRIBUTING.md`: nueva sección "Sincronización con upstream" (flujo `fetch`+`merge`/`rebase`,
   política fork-contribución, enlace a NOTICE/ADR-003) y URL de `git clone` corregida a
-  `ElectronicCats/Bombercat-GUI` (antes apuntaba a Glitchboi).
+  `ElectronicCats/EMVy_Controller` (antes apuntaba a Glitchboi).
 - **Validación de valor:** Sí — sin remote no se podía sincronizar ni medir la divergencia real; ahora
   ambas cosas son posibles (habilita Sesión 10).
 - **Cumplimiento OSS (§4):** Sí — divergencia mínima documentada; atribución al padre reforzada.
@@ -503,6 +503,19 @@ Sesiones 6,7,8,9 (firmware) ── independientes entre sí
   (trocear PRs + issue de propuesta + dependencia vendor opcional). Queda además, como acción del
   usuario, la notificación formal a los actores (§ADR-003) y la decisión del force-push de
   `feature/refactor` (Sesión 5).
+
+### Actualización — Renombrado del repositorio `origin` (2026-09-18)
+- **Qué:** el repo `origin` se renombró en GitHub de `ElectronicCats/Bombercat-GUI` a
+  **`ElectronicCats/EMVy_Controller`** (acción del usuario desde la web), para **conservar el nombre
+  del padre** y mejorar la consistencia OSS / la ruta de contribución (coherente con ADR-003
+  fork-contribución).
+- **Cambios realizados:** `git remote set-url origin git@github.com:ElectronicCats/EMVy_Controller.git`;
+  actualización de todas las referencias en repo (`NOTICE`, `CONTRIBUTING.md` —clone URL, `cd`,
+  `origin=`—, §1.2 de este plan, y el diagrama de árbol de `docs/Plan-Reestructuracion-EMVY-y-Rebrand.md`).
+- **Nota:** `origin` y `upstream` comparten ahora el nombre `EMVy_Controller` pero distinto owner
+  (`ElectronicCats/` vs `Glitchboi-sudo/`); GitHub mantiene un redirect desde el nombre antiguo, pero
+  el remote local ya apunta al nuevo. El **paquete Python** sigue siendo `cardsec` en `feature/refactor`
+  (producto) y `emvy` en la línea de contribución — el renombrado es del **repo**, no del paquete.
 
 ---
 

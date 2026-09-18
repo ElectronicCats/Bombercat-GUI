@@ -13,7 +13,7 @@ completa de arquitectura está en **[`CLAUDE.md`](CLAUDE.md)** (la wiki del proy
 ## Configurar el entorno
 
 ```sh
-git clone https://github.com/Glitchboi-sudo/EMVy_Controller.git
+git clone https://github.com/ElectronicCats/EMVy_Controller.git
 cd EMVy_Controller
 
 uv venv .venv
@@ -21,6 +21,27 @@ uv pip install --python .venv -e '.[dev,tui,gui]'
 ```
 
 Dependencias del sistema para `pyscard`: ver [`docs/INSTALACION.md`](docs/INSTALACION.md).
+
+## Sincronización con upstream
+
+Este repositorio (`origin` = `ElectronicCats/EMVy_Controller`) es un fork cuyo trabajo original
+proviene de **`Glitchboi-sudo/EMVy_Controller`** (ver [`NOTICE`](NOTICE)). La política es de
+**fork-contribución**: se prioriza aportar los cambios aditivos aguas arriba, manteniendo la
+divergencia al mínimo (ver ADR-003 en
+[`docs/Plan-Implementacion-Correcciones-OpenSource.md`](docs/Plan-Implementacion-Correcciones-OpenSource.md)).
+
+Configura el remote del padre y trae sus mejoras periódicamente:
+
+```sh
+git remote add upstream https://github.com/Glitchboi-sudo/EMVy_Controller.git
+git fetch upstream
+git log --oneline upstream/main ^HEAD | wc -l   # cuántos commits del padre faltan aquí
+git merge upstream/main                          # o: git rebase upstream/main
+```
+
+Los PRs de cambios aditivos (p. ej. la integración BomberCat) se hacen **sobre el paquete `emvy`**
+del padre y **sin renombrados**. El rebrand a `cardsec` vive sólo en la rama de producto y no se
+lleva upstream.
 
 ## Ejecutar las pruebas
 

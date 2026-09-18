@@ -1,0 +1,31 @@
+EMVy Controller — NOTICE
+========================
+
+Este proyecto es un TRABAJO DERIVADO de:
+
+  EMVy Controller
+  Autor original: Glitchboi
+  Copyright © 2026 glitchboi
+  Origen: https://github.com/Glitchboi-sudo/EMVy_Controller
+
+Distribuido bajo la licencia GNU Affero General Public License, versión 3 o
+posterior (AGPL-3.0-or-later). El texto completo de la licencia está en el
+archivo LICENSE.
+
+De acuerdo con la sección 5 de la AGPL-3.0, este derivado conserva de forma
+prominente el aviso de autoría original y la indicación de que el trabajo ha
+sido modificado, junto con la fecha de las modificaciones.
+
+Cadena de procedencia
+---------------------
+- Trabajo original:  Glitchboi-sudo/EMVy_Controller (Glitchboi)
+- Repositorio de este fork:  ElectronicCats/EMVy_Controller
+
+Modificaciones
+--------------
+Este fork añade, entre otras cosas, la integración de firmwares oficiales de
+BomberCat en la GUI, la reestructuración de pestañas de la interfaz y trabajo de
+empaquetado/gobernanza. El detalle de los cambios visibles vive en CHANGELOG.md.
+
+Nada en este aviso limita ni sustituye los términos de la AGPL-3.0; en caso de
+discrepancia, prevalece el archivo LICENSE.
