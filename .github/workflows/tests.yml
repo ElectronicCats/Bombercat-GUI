@@ -3,14 +3,14 @@ name: Tests
 on:
   push:
     paths:
-      - "emvy/**"
+      - "cardsec/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/tests.yml"
   pull_request:
     branches: [main]
     paths:
-      - "emvy/**"
+      - "cardsec/**"
       - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/tests.yml"
@@ -51,10 +51,10 @@ jobs:
           pip install -e '.[dev,tui]'
 
       - name: Smoke test del CLI
-        run: emvyctl --help
+        run: cardsec --help
 
       - name: Ejecutar la suite (offline, sin hardware)
-        run: coverage run --source=emvy -m pytest tests/ -q
+        run: coverage run --source=cardsec -m pytest tests/ -q
 
       - name: Reporte de cobertura
         if: always()
