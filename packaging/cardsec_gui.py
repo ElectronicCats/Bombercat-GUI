@@ -7,7 +7,7 @@ El firmware sí va incluido (ver EMVyController.spec) para poder compilar/flashe
 
 import sys
 
-from emvy.gui.app import run_gui
+from cardsec.gui.app import run_gui
 
 if __name__ == "__main__":
     sys.exit(run_gui(sys.argv))

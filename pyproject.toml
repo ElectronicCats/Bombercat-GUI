@@ -1,5 +1,5 @@
 [project]
-name = "emvycontroller"
+name = "cardsec"
 version = "0.5.0"
 description = "Suite funcional de pruebas de seguridad para tarjetas bancarias (chip EMV, NFC, banda magnética, BomberCat) con framework de PoCs"
 readme = "README.md"
@@ -25,14 +25,14 @@ relay = ["paho-mqtt>=1.6"]
 dev = ["pytest>=7.0"]
 
 [project.scripts]
-emvyctl = "emvy.cli:main"
+cardsec = "cardsec.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["emvyctl"]
+py-modules = ["cardsecctl"]
 
 [tool.setuptools.packages.find]
-include = ["emvy*"]
+include = ["cardsec*"]
