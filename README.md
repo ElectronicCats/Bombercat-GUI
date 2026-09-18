@@ -181,6 +181,30 @@ dispositivos — el resto sigue funcionando. Detalle en la
 
 ---
 
+## Compatibilidad de versiones
+
+<a id="compatibilidad-de-versiones"></a>
+
+La integración con el hardware **BomberCat** se apoya en el framework oficial `bombercat-tools`
+(vendorizado como submódulo en `vendor/bombercat-tools/`) y en las imágenes `.uf2` oficiales del
+repositorio `ElectronicCats/bombercat-firmware`. Esta matriz hace explícita la compatibilidad que
+soporta cada release de la aplicación:
+
+| Release de la app | `bombercat-tools` (submódulo, `PINNED_TAG`) | Firmwares `.uf2` soportados | Repo de firmware |
+|---|---|---|---|
+| **0.5.0-BETA** (actual) | `v1.3.0` | `NFCGate` (relay/config/capture) · `DetectTags` (tags) · `DetectReaders` (readers) · `MifareClassic` (mifare) · `magspoof` | `ElectronicCats/bombercat-firmware` (release `latest`, cacheada) |
+
+- El tag de `bombercat-tools` es la **fuente de verdad** de
+  `cardsec/integrations/bombercat_tools.py::PINNED_TAG` y **coincide** con el gitlink declarado en
+  `.gitmodules` (`git submodule status` → `v1.3.0`).
+- Las imágenes `.uf2` se descargan de la **última** release de `bombercat-firmware` (no se fijan
+  aquí); `WiFiWebServer` también está disponible en la release, sin *gating* de capacidad en la GUI.
+- El **firmware EMV propio** (`firmware/EMVyBomberCat`, `firmware/bombercat_emv_reader`) queda
+  **fuera de esta matriz** mientras dure su incompatibilidad con la integración de firmwares
+  oficiales (ver [`CLAUDE.md` §9](CLAUDE.md), "Estado del firmware EMV").
+
+---
+
 ## Wiki y documentación
 
 **La documentación completa vive en la [Wiki del proyecto](https://github.com/Glitchboi-sudo/EMVy_Controller/wiki)**:

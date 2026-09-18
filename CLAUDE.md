@@ -449,6 +449,21 @@ with registry.open_device(dev) as r:
 
 ## 9. BomberCat (Electronic Cats)
 
+> **Estado del firmware EMV (temporalmente inactivo — con condición de salida).**
+> El firmware **EMV propio** (`firmware/EMVyBomberCat`, `firmware/bombercat_emv_reader`) y su ruta
+> passthrough/emulación EMV (`emvy/readers/bombercat.py`) quedan **incompatibles** mientras dure la
+> integración de los firmwares **oficiales** vía `bombercat-tools` (ver §12 y
+> `docs/Plan-Integracion-Firmwares-BomberCat.md` §8). En la GUI/TUI las rutas que dependen del
+> firmware EMV propio están ocultas/deshabilitadas; los modos oficiales (tags/readers/mifare/
+> magspoof/relay) son los operativos.
+> **Condición de reactivación (criterio de salida, no "temporal" indefinido):** el firmware EMV
+> vuelve a alcance cuando (a) su sketch compila y flashea junto al resto sin romper el flasheo de
+> imágenes oficiales, y (b) su protocolo serie se declara en
+> `docs/BomberCatControl-Discovery-Contract.md` como una capacidad más gated (igual que
+> tags/readers/…), de modo que conviva con `bombercat-tools` en lugar de asumir un firmware único.
+> Hasta cumplir ambas, la funcionalidad se mantiene documentada aquí pero **no** se expone. Cambios
+> visibles al respecto se registran en `CHANGELOG.md`.
+
 Integración por USB serie (`emvy/readers/bombercat.py`), cuatro modos según el firmware:
 
 - **EMV reader (JSON)** — firmware `firmware/bombercat_emv_reader/`: lee EMV
@@ -683,11 +698,26 @@ tener que activarlo antes; se activa por ruta (`set_active_path`) y no se borra 
 
 ## 12. bombercat-tools (framework oficial) + firmware unificado
 
-**bombercat-tools** (Electronic Cats, v1.1.0.0) es el framework oficial que controla el BomberCat y
-flashea firmwares `.uf2` prebuilt (release `ElectronicCats/bombercat-firmware`, v1.2.0.0: NFCGate,
-DetectTags, DetectReaders, magspoof, WiFiWebServer…). Está **vendorizado** en
+**bombercat-tools** (Electronic Cats) es el framework oficial que controla el BomberCat y
+flashea firmwares `.uf2` prebuilt (release `ElectronicCats/bombercat-firmware`: NFCGate,
+DetectTags, DetectReaders, MifareClassic, magspoof, WiFiWebServer…). Está **vendorizado** en
 `vendor/bombercat-tools/` (ver `UPSTREAM.txt`); usa su **propio venv aislado** en
-`vendor/bombercat-tools/.venv` (deps con pines propios, no el venv de EMVy).
+`vendor/bombercat-tools/.venv` (deps con pines propios, no el venv de EMVy). EMVy lo fija al tag
+`PINNED_TAG = v1.3.0` (gitlink del submódulo = `.gitmodules`); el `VERSION` interno del upstream
+quedó en `1.2.0.0` aun en ese tag, así que `version()` reporta el **tag git real**, no ese fichero.
+
+> **Matriz de compatibilidad** (release de la app ↔ tag de `bombercat-tools` ↔ firmwares `.uf2`
+> soportados): ver [`README.md` § Compatibilidad de versiones](README.md#compatibilidad-de-versiones).
+> Mantenla en sync con `PINNED_TAG` y con `git submodule status` al subir el submódulo.
+>
+> **Alcance — streaming cancelable (decisión: no planeado).** Los comandos largos
+> (`watch`/`monitor`/`flash`/`scan`/`capture`) se resuelven con `run_capture(timeout=…)` que **acota
+> por tiempo** y siempre desarma (ver `capture_run`), no con streaming por líneas cancelable en vivo
+> (el §7.2 del Plan-Integración lo dejaba como "transversal/opcional"). Se declara **fuera de alcance**
+> a propósito: el timeout cubre el caso de uso (la operación termina o se corta) y el streaming real
+> añade complejidad de orquestación (PIPE + `progress` + cancelación cooperativa) sin valor
+> proporcional. Si en el futuro se necesita progreso en vivo, reabrir como sesión propia; hasta
+> entonces §7.2 deja de ser un pendiente sin dueño.
 
 - **Adaptador**: `emvy/integrations/bombercat_tools.py` lo maneja por **subprocess** —
   `locate()`/`ensure_venv()` (bootstrap perezoso), `run_passthrough()`, `run_json()` (extrae JSON de

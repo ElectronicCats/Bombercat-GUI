@@ -4,6 +4,19 @@ Todas las versiones notables de EMVy Controller. El formato sigue, a grandes ras
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); el proyecto está en **BETA**, por lo que
 la API y los formatos pueden cambiar entre versiones menores.
 
+## [Unreleased]
+
+### Añadido
+- **Matriz de compatibilidad de versiones** en el README (release de la app ↔ tag de
+  `bombercat-tools` ↔ firmwares `.uf2` soportados), enlazada desde `CLAUDE.md` §12 y alineada con
+  `PINNED_TAG` (`v1.3.0`) y el gitlink del submódulo `vendor/bombercat-tools`.
+
+### Cambiado
+- **Firmware EMV propio marcado como temporalmente inactivo** con **condición de reactivación
+  explícita** en `CLAUDE.md` §9 (antes "temporalmente incompatible" sin criterio de salida). Las
+  rutas EMV que dependen de ese firmware siguen ocultas/deshabilitadas en la GUI/TUI; los modos de
+  firmware oficial (tags/readers/mifare/magspoof/relay) son los operativos.
+
 ## [0.5.0-beta] — 2026-09-13
 
 Primera publicación pública (BETA).

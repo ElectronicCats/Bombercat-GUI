@@ -4,15 +4,37 @@ Las partes offline (parseo/ubicación) siempre corren; las que ejecutan el
 framework por subprocess se saltan si su venv no está listo (para no requerir
 red ni bootstrap en CI)."""
 
+import warnings
+
 import pytest
 
 from cardsec import config
 from cardsec.integrations import bombercat_tools as bt
 
 _HAS_VENDOR = (config.bombercat_tools_dir() / "bombercat.py").exists()
+_VENV_READY = bt.venv_ready() if _HAS_VENDOR else False
 pytestmark = pytest.mark.skipif(
     not _HAS_VENDOR, reason="bombercat-tools no vendorizado"
 )
+
+# B-4: si el vendor está pero su venv no, los tests de contrato *contra el
+# subprocess* (versión fijada, capability map, --help) se saltan. Un skip mudo
+# oculta deriva real, así que avisamos de forma visible (aparece en el resumen
+# de warnings de pytest) — el skip no debe pasar desapercibido.
+if _HAS_VENDOR and not _VENV_READY:
+    warnings.warn(
+        "bombercat-tools está vendorizado pero su venv no está listo: los tests "
+        "de contrato contra el vendor se SALTAN y NO detectarán deriva del CLI. "
+        "Corre 'cardsec bombercat setup' para ejecutarlos.",
+        stacklevel=2,
+    )
+
+# Versión del vendor contra la que se capturaron las tablas rich canned de este
+# módulo (_STATUS_TABLE, _RELAY_*_TABLE). Es el ancla del test de contrato por
+# versión: si PINNED_TAG cambia, re-captura las muestras y actualiza esto — así
+# un bump del submódulo obliga a re-verificar los parsers en vez de dejar que la
+# salida rich derive en silencio.
+_CONTRACT_VENDOR_TAG = "v1.3.0"
 
 
 def test_locate():
@@ -23,6 +45,28 @@ def test_locate():
 def test_version():
     v = bt.version()
     assert v and v[0].isdigit()
+
+
+def test_canned_samples_match_pinned_vendor_tag():
+    """Contrato por versión (siempre corre, sin venv): las tablas rich canned de
+    este módulo se capturaron contra `_CONTRACT_VENDOR_TAG`. Si `PINNED_TAG`
+    diverge, este test falla y obliga a re-verificar los parsers contra la nueva
+    salida del vendor en vez de dejar que la deriva pase inadvertida."""
+    assert bt.PINNED_TAG == _CONTRACT_VENDOR_TAG, (
+        "PINNED_TAG cambió respecto a la versión con la que se capturaron las "
+        "tablas canned; re-captura status/relay y actualiza _CONTRACT_VENDOR_TAG "
+        "tras verificar parse_status/parse_relay_*."
+    )
+
+
+@pytest.mark.skipif(
+    not _VENV_READY,
+    reason="venv de bombercat-tools no está listo",
+)
+def test_version_matches_pinned_tag():
+    """El checkout vendorizado (gitlink del submódulo) debe estar exactamente en
+    `PINNED_TAG`: detecta deriva del submódulo frente al pin declarado."""
+    assert bt.version() == bt.PINNED_TAG.lstrip("v")
 
 
 def test_extract_json_from_noisy_output():
@@ -45,7 +89,7 @@ def test_extract_json_none():
 
 
 @pytest.mark.skipif(
-    not bt.venv_ready() if _HAS_VENDOR else True,
+    not _VENV_READY,
     reason="venv de bombercat-tools no está listo",
 )
 def test_run_capture_help():
@@ -106,7 +150,7 @@ def test_capability_image_and_unknown():
 
 
 @pytest.mark.skipif(
-    not bt.venv_ready() if _HAS_VENDOR else True,
+    not _VENV_READY,
     reason="venv de bombercat-tools no está listo",
 )
 def test_capability_image_matches_vendor():
